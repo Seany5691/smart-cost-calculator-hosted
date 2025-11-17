@@ -14,7 +14,8 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
-
+  Filter,
+  ArrowUpDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LaterStageModal } from '@/components/leads/leads/LaterStageModal';
@@ -51,11 +52,10 @@ export default function LaterStagePage() {
   // Search state
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Sort state (default to callback date)
-  const [sortOptions, setSortOptions] = useState<LeadSortOptions>({
-    field: 'date_to_call_back',
-    direction: 'asc'
-  });
+  // Filter and sort state
+  const [filterTown, setFilterTown] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'provider' | 'town' | 'date'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Delete confirmation state
   const [deletingLeadId, setDeletingLeadId] = useState<string | null>(null);
@@ -83,9 +83,24 @@ export default function LaterStagePage() {
     return 'future';
   };
 
+  // Get unique towns
+  const uniqueTowns = useMemo(() => {
+    const towns = leads
+      .filter(l => l.status === 'later' && l.town)
+      .map(l => l.town!)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .sort();
+    return towns;
+  }, [leads]);
+
   // Filter and sort leads
   const filteredLeads = useMemo(() => {
     let result = leads.filter(lead => lead.status === 'later');
+
+    // Apply town filter
+    if (filterTown !== 'all') {
+      result = result.filter(l => l.town === filterTown);
+    }
 
     // Apply search term
     if (searchTerm) {
@@ -102,27 +117,26 @@ export default function LaterStagePage() {
 
     // Apply sorting
     result.sort((a, b) => {
-      const { field, direction } = sortOptions;
-      let valueA = a[field];
-      let valueB = b[field];
-
-      if (valueA === null || valueA === undefined) return direction === 'asc' ? 1 : -1;
-      if (valueB === null || valueB === undefined) return direction === 'asc' ? -1 : 1;
-
-      if (typeof valueA === 'string' && typeof valueB === 'string') {
-        const comparison = valueA.localeCompare(valueB);
-        return direction === 'asc' ? comparison : -comparison;
+      let comparison = 0;
+      switch (sortBy) {
+        case 'name':
+          comparison = (a.name || '').localeCompare(b.name || '');
+          break;
+        case 'provider':
+          comparison = (a.provider || '').localeCompare(b.provider || '');
+          break;
+        case 'town':
+          comparison = (a.town || '').localeCompare(b.town || '');
+          break;
+        case 'date':
+          comparison = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+          break;
       }
-
-      if (typeof valueA === 'number' && typeof valueB === 'number') {
-        return direction === 'asc' ? valueA - valueB : valueB - valueA;
-      }
-
-      return 0;
+      return sortDirection === 'asc' ? comparison : -comparison;
     });
 
     return result;
-  }, [leads, searchTerm, sortOptions]);
+  }, [leads, searchTerm, filterTown, sortBy, sortDirection]);
 
   // Group leads by callback status
   const groupedLeads = useMemo(() => {
@@ -281,6 +295,46 @@ export default function LaterStagePage() {
         </Card>
       </div>
 
+      {/* Filter and Sort Bar - Mobile Optimized */}
+      <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-lg border border-gray-200">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-gray-500" />
+          <label className="text-sm font-medium text-gray-700">Town:</label>
+          <select 
+            value={filterTown}
+            onChange={(e) => setFilterTown(e.target.value)}
+            className="pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Towns</option>
+            {uniqueTowns.map(town => (
+              <option key={town} value={town}>{town}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <ArrowUpDown className="w-4 h-4 text-gray-500" />
+          <label className="text-sm font-medium text-gray-700">Sort by:</label>
+          <select 
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'name' | 'provider' | 'town' | 'date')}
+            className="pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="name">Name</option>
+            <option value="provider">Provider</option>
+            <option value="town">Town</option>
+            <option value="date">Date Added</option>
+          </select>
+          <button
+            onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+            className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+            title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+          >
+            <ArrowUpDown className={cn("w-4 h-4", sortDirection === 'desc' && "rotate-180")} />
+          </button>
+        </div>
+      </div>
+
       {/* Search and Action Bar - Mobile Optimized */}
       <Card variant="glass" padding="sm" className="sm:p-4 mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
@@ -296,18 +350,6 @@ export default function LaterStagePage() {
               aria-label="Search leads"
             />
           </div>
-
-          {/* Sort */}
-          <select
-            value={sortOptions.field}
-            onChange={(e) => setSortOptions({ ...sortOptions, field: e.target.value as keyof Lead })}
-            className="input"
-          >
-            <option value="date_to_call_back">Sort by Callback Date</option>
-            <option value="name">Sort by Name</option>
-            <option value="provider">Sort by Provider</option>
-            <option value="updated_at">Sort by Last Updated</option>
-          </select>
 
           {/* Add Lead Button */}
           <AddLeadButton defaultStatus="later" onSuccess={() => fetchLeadsByStatus('later')} />

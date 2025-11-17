@@ -17,7 +17,9 @@ import {
   Calendar,
   Phone,
   MapPin,
-  Building2
+  Building2,
+  Filter,
+  ArrowUpDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AddLeadButton } from '@/components/leads/leads/AddLeadButton';
@@ -52,21 +54,33 @@ export default function SignedLeadsPage() {
   
   // Filter state
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'year'>('all');
-  
-  // Sort state
-  const [sortOptions, setSortOptions] = useState<LeadSortOptions>({
-    field: 'updated_at',
-    direction: 'desc'
-  });
+  const [filterTown, setFilterTown] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'provider' | 'town' | 'date'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Load leads on mount
   useEffect(() => {
     fetchLeadsByStatus('signed');
   }, [fetchLeadsByStatus]);
 
+  // Get unique towns
+  const uniqueTowns = useMemo(() => {
+    const towns = leads
+      .filter(l => l.status === 'signed' && l.town)
+      .map(l => l.town!)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .sort();
+    return towns;
+  }, [leads]);
+
   // Filter and sort leads
   const filteredLeads = useMemo(() => {
     let result = leads.filter(lead => lead.status === 'signed');
+
+    // Apply town filter
+    if (filterTown !== 'all') {
+      result = result.filter(l => l.town === filterTown);
+    }
 
     // Apply search term
     if (searchTerm) {
@@ -108,27 +122,26 @@ export default function SignedLeadsPage() {
 
     // Apply sorting
     result.sort((a, b) => {
-      const { field, direction } = sortOptions;
-      let valueA = a[field];
-      let valueB = b[field];
-
-      if (valueA === null || valueA === undefined) return direction === 'asc' ? 1 : -1;
-      if (valueB === null || valueB === undefined) return direction === 'asc' ? -1 : 1;
-
-      if (typeof valueA === 'string' && typeof valueB === 'string') {
-        const comparison = valueA.localeCompare(valueB);
-        return direction === 'asc' ? comparison : -comparison;
+      let comparison = 0;
+      switch (sortBy) {
+        case 'name':
+          comparison = (a.name || '').localeCompare(b.name || '');
+          break;
+        case 'provider':
+          comparison = (a.provider || '').localeCompare(b.provider || '');
+          break;
+        case 'town':
+          comparison = (a.town || '').localeCompare(b.town || '');
+          break;
+        case 'date':
+          comparison = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+          break;
       }
-
-      if (typeof valueA === 'number' && typeof valueB === 'number') {
-        return direction === 'asc' ? valueA - valueB : valueB - valueA;
-      }
-
-      return 0;
+      return sortDirection === 'asc' ? comparison : -comparison;
     });
 
     return result;
-  }, [leads, searchTerm, dateFilter, sortOptions]);
+  }, [leads, searchTerm, dateFilter, filterTown, sortBy, sortDirection]);
 
   // Calculate success metrics
   const metrics = useMemo(() => {
@@ -322,6 +335,46 @@ export default function SignedLeadsPage() {
           </div>
         </Card>
       )}
+
+      {/* Filter and Sort Bar */}
+      <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-lg border border-gray-200">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-gray-500" />
+          <label className="text-sm font-medium text-gray-700">Town:</label>
+          <select 
+            value={filterTown}
+            onChange={(e) => setFilterTown(e.target.value)}
+            className="pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Towns</option>
+            {uniqueTowns.map(town => (
+              <option key={town} value={town}>{town}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <ArrowUpDown className="w-4 h-4 text-gray-500" />
+          <label className="text-sm font-medium text-gray-700">Sort by:</label>
+          <select 
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'name' | 'provider' | 'town' | 'date')}
+            className="pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="name">Name</option>
+            <option value="provider">Provider</option>
+            <option value="town">Town</option>
+            <option value="date">Date Added</option>
+          </select>
+          <button
+            onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+            className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+            title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+          >
+            <ArrowUpDown className={cn("w-4 h-4", sortDirection === 'desc' && "rotate-180")} />
+          </button>
+        </div>
+      </div>
 
       {/* Search and Filter Bar */}
       <Card variant="glass" padding="md" className="mb-6">

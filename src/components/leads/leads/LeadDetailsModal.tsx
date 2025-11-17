@@ -235,19 +235,24 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div>
-              <h2 id="modal-title" className="text-2xl font-bold text-gray-900">
-                {lead.name}
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                {lead.provider && `${lead.provider} • `}
-                {lead.type_of_business}
-              </p>
+          <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-6 flex items-center justify-between rounded-t-2xl">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <StickyNote className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 id="modal-title" className="text-2xl font-bold text-white">
+                  {lead.name}
+                </h2>
+                <p className="text-sm text-white/90">
+                  {lead.provider && `${lead.provider} • `}
+                  {lead.type_of_business}
+                </p>
+              </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors touch-target"
+              className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors touch-target"
               aria-label="Close modal"
             >
               <X className="w-6 h-6" aria-hidden="true" />
@@ -255,14 +260,14 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-gray-200 px-6">
+          <div className="flex border-b border-gray-200 px-6 bg-gray-50">
             <button
               onClick={() => setActiveTab('notes')}
               className={cn(
-                'flex items-center space-x-2 px-4 py-3 border-b-2 font-medium transition-colors',
+                'flex items-center space-x-2 px-4 py-3 border-b-2 font-medium transition-all',
                 activeTab === 'notes'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-blue-500 text-blue-600 bg-white rounded-t-lg'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-white/50 rounded-t-lg'
               )}
               aria-selected={activeTab === 'notes'}
               role="tab"
@@ -270,7 +275,7 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
               <StickyNote className="w-4 h-4" aria-hidden="true" />
               <span>Notes</span>
               {notes.length > 0 && (
-                <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-semibold">
                   {notes.length}
                 </span>
               )}
@@ -278,10 +283,10 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
             <button
               onClick={() => setActiveTab('reminders')}
               className={cn(
-                'flex items-center space-x-2 px-4 py-3 border-b-2 font-medium transition-colors',
+                'flex items-center space-x-2 px-4 py-3 border-b-2 font-medium transition-all',
                 activeTab === 'reminders'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-purple-500 text-purple-600 bg-white rounded-t-lg'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-white/50 rounded-t-lg'
               )}
               aria-selected={activeTab === 'reminders'}
               role="tab"
@@ -289,7 +294,7 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
               <Bell className="w-4 h-4" aria-hidden="true" />
               <span>Reminders</span>
               {remindersCount > 0 && (
-                <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full font-semibold">
                   {remindersCount}
                 </span>
               )}
@@ -297,10 +302,10 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
             <button
               onClick={() => setActiveTab('files')}
               className={cn(
-                'flex items-center space-x-2 px-4 py-3 border-b-2 font-medium transition-colors',
+                'flex items-center space-x-2 px-4 py-3 border-b-2 font-medium transition-all',
                 activeTab === 'files'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-green-500 text-green-600 bg-white rounded-t-lg'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-white/50 rounded-t-lg'
               )}
               aria-selected={activeTab === 'files'}
               role="tab"
@@ -308,7 +313,7 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
               <Paperclip className="w-4 h-4" aria-hidden="true" />
               <span>Files</span>
               {attachments.length > 0 && (
-                <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full font-semibold">
                   {attachments.length}
                 </span>
               )}
@@ -316,10 +321,10 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
             <button
               onClick={() => setActiveTab('history')}
               className={cn(
-                'flex items-center space-x-2 px-4 py-3 border-b-2 font-medium transition-colors',
+                'flex items-center space-x-2 px-4 py-3 border-b-2 font-medium transition-all',
                 activeTab === 'history'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-orange-500 text-orange-600 bg-white rounded-t-lg'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-white/50 rounded-t-lg'
               )}
               aria-selected={activeTab === 'history'}
               role="tab"
@@ -327,7 +332,7 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
               <Activity className="w-4 h-4" aria-hidden="true" />
               <span>Activity</span>
               {interactions.length > 0 && (
-                <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">
+                <span className="px-2 py-0.5 text-xs bg-orange-100 text-orange-700 rounded-full font-semibold">
                   {interactions.length}
                 </span>
               )}

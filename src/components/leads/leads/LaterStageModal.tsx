@@ -119,16 +119,16 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-6 flex items-center justify-between rounded-t-2xl">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Calendar className="w-6 h-6 text-purple-600" />
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Calendar className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 id="later-stage-modal-title" className="text-xl font-bold text-gray-900">
+                <h2 id="later-stage-modal-title" className="text-2xl font-bold text-white">
                   Move to Later Stage
                 </h2>
-                <p className="text-sm text-gray-600 mt-0.5">
+                <p className="text-sm text-white/90">
                   {lead.name}
                 </p>
               </div>
@@ -136,10 +136,10 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
             <button
               onClick={handleCancel}
               disabled={isSubmitting}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
               aria-label="Close modal"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
           </div>
 
@@ -207,18 +207,18 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+          <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-6 flex justify-end space-x-3 rounded-b-2xl">
             <button
               onClick={handleCancel}
               disabled={isSubmitting}
-              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={isSubmitting || !callbackDate || !explanation.trim()}
-              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold"
             >
               {isSubmitting ? (
                 <>

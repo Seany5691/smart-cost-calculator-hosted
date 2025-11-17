@@ -14,16 +14,11 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
-  Phone,
-  MapPin,
-  Edit,
-  Trash2
+
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LaterStageModal } from '@/components/leads/leads/LaterStageModal';
 import { ConfirmModal } from '@/components/leads/ui/ConfirmModal';
-import { LeadNotesRemindersDropdown } from '@/components/leads/leads/LeadNotesRemindersDropdown';
-import { LeadFilesButton } from '@/components/leads/leads/LeadFilesButton';
 import { AddLeadButton } from '@/components/leads/leads/AddLeadButton';
 
 export default function LaterStagePage() {
@@ -184,23 +179,6 @@ export default function LaterStagePage() {
     }
   };
 
-  // Handle callback date update
-  const handleUpdateCallbackDate = async (leadId: string) => {
-    const newDate = prompt('Enter new callback date (YYYY-MM-DD):');
-    if (!newDate) return;
-
-    try {
-      await updateLead(leadId, { date_to_call_back: newDate });
-    } catch (err) {
-      console.error('Failed to update callback date:', err);
-    }
-  };
-
-  // Handle edit
-  const handleEdit = async (lead: Lead) => {
-    console.log('Edit lead:', lead);
-  };
-
   // Handle delete
   const handleDelete = (leadId: string) => {
     setDeletingLeadId(leadId);
@@ -246,149 +224,24 @@ export default function LaterStagePage() {
     URL.revokeObjectURL(url);
   };
 
-  // Render lead row
-  const renderLeadRow = (lead: Lead, status: string) => {
-    const statusColors = {
-      overdue: 'bg-red-50 border-red-200 ring-2 ring-red-500',
-      today: 'bg-green-50 border-green-200 ring-2 ring-green-500',
-      'two-days': 'bg-blue-50 border-blue-200 ring-2 ring-blue-400',
-      upcoming: 'bg-yellow-50 border-yellow-200',
-      future: 'bg-gray-50 border-gray-200',
-      none: 'bg-gray-50 border-gray-200'
-    };
-
-    const statusIcons = {
-      overdue: <AlertCircle className="w-5 h-5 text-red-600" />,
-      today: <CheckCircle className="w-5 h-5 text-green-600" />,
-      'two-days': <Clock className="w-5 h-5 text-blue-600" />,
-      upcoming: <Calendar className="w-5 h-5 text-yellow-600" />,
-      future: <Calendar className="w-5 h-5 text-gray-600" />,
-      none: <AlertCircle className="w-5 h-5 text-gray-400" />
-    };
-
+  // Render lead card
+  const renderLeadCard = (lead: Lead) => {
     return (
-      <Card
+      <LeadCard
         key={lead.id}
-        variant="glass"
-        padding="md"
-        className={cn(
-          'hover:shadow-lg transition-all',
-          statusColors[status as keyof typeof statusColors]
-        )}
-      >
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Status Icon */}
-          <div className="flex items-center justify-center md:justify-start">
-            {statusIcons[status as keyof typeof statusIcons]}
-          </div>
-
-          {/* Lead Info */}
-          <div className="flex-1">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">{lead.name}</h3>
-                <p className="text-sm text-gray-600">
-                  {lead.provider && (
-                    <span className={cn(
-                      'font-medium',
-                      lead.provider.toLowerCase().includes('telkom') && 'text-blue-600'
-                    )}>
-                      {lead.provider}
-                    </span>
-                  )}
-                  {lead.type_of_business && ` • ${lead.type_of_business}`}
-                </p>
-              </div>
-              <span className="text-xs font-semibold text-gray-500">
-                #{lead.number}
-              </span>
-            </div>
-
-            <div className="space-y-1 mb-3">
-              {lead.phone && (
-                <div className="flex items-center gap-2 text-sm text-gray-700">
-                  <Phone className="w-4 h-4" />
-                  <a href={`tel:${lead.phone}`} className="hover:text-blue-600">
-                    {lead.phone}
-                  </a>
-                </div>
-              )}
-              {lead.address && (
-                <div className="flex items-center gap-2 text-sm text-gray-700">
-                  <MapPin className="w-4 h-4" />
-                  <span className="line-clamp-1">{lead.address}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Callback Date */}
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-semibold text-gray-900">
-                Callback: {lead.date_to_call_back 
-                  ? new Date(lead.date_to_call_back).toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    })
-                  : 'Not set'}
-              </span>
-              <button
-                onClick={() => handleUpdateCallbackDate(lead.id)}
-                className="text-blue-600 hover:text-blue-800 text-xs underline"
-              >
-                Change
-              </button>
-            </div>
-
-            {lead.notes && (
-              <p className="text-sm text-gray-600 italic mt-2">💬 {lead.notes}</p>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="flex flex-col gap-2 min-w-[160px]">
-            {/* Files Button */}
-            <LeadFilesButton lead={lead} />
-            
-            {/* Status Dropdown */}
-            <select
-              onChange={(e) => handleStatusChange(lead.id, e.target.value as LeadStatus)}
-              className="input text-sm py-2"
-              defaultValue="later"
-            >
-              <option value="later">Later Stage</option>
-              <option value="working">Working On</option>
-              <option value="signed">Signed</option>
-              <option value="bad">Bad Lead</option>
-            </select>
-            
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-1">
-              <button
-                onClick={() => handleEdit(lead)}
-                className="btn btn-secondary text-xs p-2 flex items-center justify-center gap-1"
-                title="Edit"
-              >
-                <Edit className="w-3 h-3" />
-                <span>Edit</span>
-              </button>
-              <button
-                onClick={() => handleDelete(lead.id)}
-                className="btn btn-danger text-xs p-2 flex items-center justify-center gap-1"
-                title="Delete"
-              >
-                <Trash2 className="w-3 h-3" />
-                <span>Del</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Notes & Reminders Dropdown */}
-        <LeadNotesRemindersDropdown lead={lead} />
-      </Card>
+        lead={lead}
+        onStatusChange={handleStatusChange}
+        onDelete={handleDelete}
+        isSelected={selectedLeads.includes(lead.id)}
+        onSelect={(id) => {
+          if (selectedLeads.includes(id)) {
+            deselectLead(id);
+          } else {
+            selectLead(id);
+          }
+        }}
+        showActions={true}
+      />
     );
   };
 
@@ -497,7 +350,7 @@ export default function LaterStagePage() {
                 Overdue ({groupedLeads.overdue.length})
               </h2>
               <div className="space-y-3">
-                {groupedLeads.overdue.map(lead => renderLeadRow(lead, 'overdue'))}
+                {groupedLeads.overdue.map(lead => renderLeadCard(lead))}
               </div>
             </div>
           )}
@@ -510,7 +363,7 @@ export default function LaterStagePage() {
                 Call Today ({groupedLeads.today.length})
               </h2>
               <div className="space-y-3">
-                {groupedLeads.today.map(lead => renderLeadRow(lead, 'today'))}
+                {groupedLeads.today.map(lead => renderLeadCard(lead))}
               </div>
             </div>
           )}
@@ -523,7 +376,7 @@ export default function LaterStagePage() {
                 In 2 Days ({groupedLeads.twoDays.length})
               </h2>
               <div className="space-y-3">
-                {groupedLeads.twoDays.map(lead => renderLeadRow(lead, 'two-days'))}
+                {groupedLeads.twoDays.map(lead => renderLeadCard(lead))}
               </div>
             </div>
           )}
@@ -536,7 +389,7 @@ export default function LaterStagePage() {
                 This Week ({groupedLeads.upcoming.length})
               </h2>
               <div className="space-y-3">
-                {groupedLeads.upcoming.map(lead => renderLeadRow(lead, 'upcoming'))}
+                {groupedLeads.upcoming.map(lead => renderLeadCard(lead))}
               </div>
             </div>
           )}
@@ -549,7 +402,7 @@ export default function LaterStagePage() {
                 Future ({groupedLeads.future.length})
               </h2>
               <div className="space-y-3">
-                {groupedLeads.future.map(lead => renderLeadRow(lead, 'future'))}
+                {groupedLeads.future.map(lead => renderLeadCard(lead))}
               </div>
             </div>
           )}
@@ -562,7 +415,7 @@ export default function LaterStagePage() {
                 No Callback Date ({groupedLeads.none.length})
               </h2>
               <div className="space-y-3">
-                {groupedLeads.none.map(lead => renderLeadRow(lead, 'none'))}
+                {groupedLeads.none.map(lead => renderLeadCard(lead))}
               </div>
             </div>
           )}

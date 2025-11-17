@@ -1,43 +1,27 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { useLeadsStore } from '@/store/leads/leads';
 import { LeadCard } from '@/components/leads/leads/LeadCard';
-import { LeadTable } from '@/components/leads/leads/LeadTable';
 import { Lead, LeadStatus, LeadSortOptions } from '@/lib/leads/types';
 import { Card } from '@/components/leads/ui/Card';
 import { 
   Search, 
-  Filter, 
   Download, 
   Grid, 
   List as ListIcon,
-  X,
   Clock,
   CheckCircle,
   AlertCircle,
-  Plus,
-  Calendar,
   Bell,
-  MessageSquare,
-  ChevronRight
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { storage } from '@/lib/leads/localStorage';
 import { LaterStageModal } from '@/components/leads/leads/LaterStageModal';
-import { LeadNotesRemindersDropdown } from '@/components/leads/leads/LeadNotesRemindersDropdown';
-import { LeadFilesButton } from '@/components/leads/leads/LeadFilesButton';
 import { AddLeadButton } from '@/components/leads/leads/AddLeadButton';
-import { 
-  getLeadNotes, 
-  getLeadReminders, 
-  createLeadNote,
-  type LeadNote,
-  type LeadReminder
-} from '@/lib/leads/supabaseNotesReminders';
 import { useAuthStore } from '@/store/auth';
-import { useRemindersStore } from '@/store/reminders';
+import { useRemindersStore, useLeadReminders } from '@/store/reminders';
+import { getLeadNotes, type LeadNote } from '@/lib/leads/supabaseNotesReminders';
 
 export default function WorkingOnStatusPage() {
   const user = useAuthStore((state) => state.user);
@@ -77,21 +61,11 @@ export default function WorkingOnStatusPage() {
     direction: 'desc'
   });
 
-  // Notes and reminders state (in a real app, these would come from the database)
-  const [notes, setNotes] = useState<Record<string, LeadNote[]>>({});
-  const [reminders, setReminders] = useState<Record<string, LeadReminder[]>>({});
-  const [showNotesModal, setShowNotesModal] = useState<string | null>(null);
-  const [showReminderModal, setShowReminderModal] = useState<string | null>(null);
-  const [newNote, setNewNote] = useState('');
-  const [newReminder, setNewReminder] = useState({ date: '', note: '' });
-  const [refreshTrigger, setRefreshTrigger] = useState(0); // Trigger to refresh dropdowns
-  const [mounted, setMounted] = useState(false);
+  // Notes state for metrics
+  const [notesCount, setNotesCount] = useState<Record<string, number>>({});
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Load leads on mount and reload notes/reminders
+  // Load leads on mount
   useEffect(() => {
     const loadData = async () => {
       await fetchLeadsByStatus('working');
@@ -99,41 +73,28 @@ export default function WorkingOnStatusPage() {
     loadData();
   }, [fetchLeadsByStatus]);
 
-  // Load notes and reminders whenever leads array changes
+  // Load notes count for metrics
   useEffect(() => {
-    if (leads.length > 0) {
-      loadNotesAndReminders();
+    if (leads.length > 0 && user) {
+      loadNotesCount();
     }
-  }, [leads]); // Reload whenever leads change (including on page refresh)
+  }, [leads, user, refreshTrigger]);
 
-  // Load notes and reminders from Supabase
-  const loadNotesAndReminders = async () => {
+  const loadNotesCount = async () => {
     if (!user) return;
     
     try {
-      // Load notes for all leads
-      const allLeads = leads.filter(l => l.status === 'working');
-      const notesMap: Record<string, LeadNote[]> = {};
-      const remindersMap: Record<string, LeadReminder[]> = {};
-
-      for (const lead of allLeads) {
-        // Load notes from Supabase
+      const counts: Record<string, number> = {};
+      const workingLeads = leads.filter(l => l.status === 'working');
+      
+      for (const lead of workingLeads) {
         const leadNotes = await getLeadNotes(lead.id);
-        if (leadNotes.length > 0) {
-          notesMap[lead.id] = leadNotes as any;
-        }
-
-        // Load reminders from Supabase
-        const leadReminders = await getLeadReminders(lead.id);
-        if (leadReminders.length > 0) {
-          remindersMap[lead.id] = leadReminders;
-        }
+        counts[lead.id] = leadNotes.length;
       }
-
-      setNotes(notesMap);
-      setReminders(remindersMap);
+      
+      setNotesCount(counts);
     } catch (error) {
-      console.error('Error loading notes and reminders:', error);
+      console.error('Error loading notes count:', error);
     }
   };
 
@@ -181,12 +142,17 @@ export default function WorkingOnStatusPage() {
   // Calculate progress metrics
   const progressMetrics = useMemo(() => {
     const total = filteredLeads.length;
-    const withNotes = filteredLeads.filter(lead => 
-      notes[lead.id] && notes[lead.id].length > 0
-    ).length;
-    const withReminders = filteredLeads.filter(lead =>
-      reminders[lead.id] && reminders[lead.id].some(r => !r.completed)
-    ).length;
+    const withNotes = Object.values(notesCount).filter(count => count > 0).length;
+    
+    // Get reminders count from store
+    let withReminders = 0;
+    filteredLeads.forEach(lead => {
+      const leadReminders = useRemindersStore.getState().reminders.filter(
+        r => r.leadId === lead.id && !r.completed
+      );
+      if (leadReminders.length > 0) withReminders++;
+    });
+    
     const recentlyUpdated = filteredLeads.filter(lead => {
       const daysSinceUpdate = Math.floor(
         (Date.now() - new Date(lead.updated_at).getTime()) / (1000 * 60 * 60 * 24)
@@ -195,7 +161,7 @@ export default function WorkingOnStatusPage() {
     }).length;
 
     return { total, withNotes, withReminders, recentlyUpdated };
-  }, [filteredLeads, notes, reminders]);
+  }, [filteredLeads, notesCount]);
 
   // State for Later Stage modal
   const [showLaterStageModal, setShowLaterStageModal] = useState<Lead | null>(null);
@@ -204,7 +170,6 @@ export default function WorkingOnStatusPage() {
   const handleStatusChange = async (leadId: string, status: LeadStatus) => {
     try {
       if (status === 'later') {
-        // Find the lead and show modal
         const lead = filteredLeads.find(l => l.id === leadId);
         if (lead) {
           setShowLaterStageModal(lead);
@@ -224,7 +189,6 @@ export default function WorkingOnStatusPage() {
     try {
       await changeLeadStatus(showLaterStageModal.id, 'later', data);
       setShowLaterStageModal(null);
-      // Reload leads to reflect changes
       await fetchLeadsByStatus('working');
     } catch (err) {
       console.error('Failed to move to Later Stage:', err);
@@ -246,32 +210,10 @@ export default function WorkingOnStatusPage() {
     }
   };
 
-  // Handle bulk actions
-  const handleBulkAction = async (leadIds: string[], action: string) => {
-    try {
-      if (action === 'delete') {
-        if (confirm(`Are you sure you want to delete ${leadIds.length} lead(s)?`)) {
-          for (const id of leadIds) {
-            await deleteLead(id);
-          }
-          clearSelection();
-        }
-      } else if (action === 'export') {
-        handleExport(leadIds);
-      }
-    } catch (err) {
-      console.error('Failed to perform bulk action:', err);
-    }
-  };
-
   // Handle export
-  const handleExport = (leadIds?: string[]) => {
-    const leadsToExport = leadIds 
-      ? filteredLeads.filter(lead => leadIds.includes(lead.id))
-      : filteredLeads;
-
+  const handleExport = () => {
     const headers = ['Number', 'Name', 'Provider', 'Phone', 'Address', 'Business Type', 'Status', 'Notes', 'Last Updated'];
-    const rows = leadsToExport.map(lead => [
+    const rows = filteredLeads.map(lead => [
       lead.number,
       lead.name,
       lead.provider || '',
@@ -297,130 +239,6 @@ export default function WorkingOnStatusPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
-
-  // Handle selection change
-  const handleSelectionChange = (leadIds: string[]) => {
-    clearSelection();
-    leadIds.forEach(id => selectLead(id));
-  };
-
-  // Add note
-  const handleAddNote = async (leadId: string) => {
-    if (!newNote.trim()) return;
-
-    try {
-      // Generate note ID
-      if (!user) {
-        alert('User not authenticated');
-        return;
-      }
-
-      // Create note in Supabase
-      const createdNote = await createLeadNote(leadId, user.id, newNote.trim());
-
-      // Update local state immediately
-      const note: LeadNote = {
-        id: createdNote.id,
-        leadId,
-        content: createdNote.content,
-        createdAt: createdNote.createdAt,
-        userId: createdNote.userId
-      };
-
-      setNotes(prev => ({
-        ...prev,
-        [leadId]: [...(prev[leadId] || []), note]
-      }));
-
-      setNewNote('');
-      // Trigger dropdown refresh
-      setRefreshTrigger(prev => prev + 1);
-      // Don't close modal immediately so user can see the note was added
-      setTimeout(() => setShowNotesModal(null), 500);
-    } catch (error) {
-      console.error('Error adding note:', error);
-      alert('Failed to add note');
-    }
-  };
-
-  // Add reminder
-  const { addReminder: addReminderToStore } = useRemindersStore();
-  
-  const handleAddReminder = async (leadId: string) => {
-    console.log('[WorkingPage] handleAddReminder called for lead:', leadId);
-    console.log('[WorkingPage] Reminder data:', newReminder);
-    console.log('[WorkingPage] User:', user);
-    
-    if (!newReminder.date || !newReminder.note.trim()) {
-      console.error('[WorkingPage] Missing date or note - aborting');
-      return;
-    }
-
-    if (!user) {
-      console.error('[WorkingPage] No user - aborting');
-      alert('User not authenticated');
-      return;
-    }
-
-    try {
-      console.log('[WorkingPage] Creating reminder in store...');
-      
-      // Add reminder to Supabase via the store
-      const createdReminder = await addReminderToStore(
-        leadId,
-        user.id,
-        newReminder.date,
-        newReminder.note.trim()
-      );
-      
-      console.log('[WorkingPage] Reminder created:', createdReminder);
-
-      // Also update the lead's callback date
-      await updateLead(leadId, {
-        date_to_call_back: newReminder.date,
-        notes: newReminder.note.trim()
-      });
-
-      setNewReminder({ date: '', note: '' });
-      // Trigger dropdown refresh
-      setRefreshTrigger(prev => prev + 1);
-      // Don't close modal immediately so user can see the reminder was added
-      setTimeout(() => setShowReminderModal(null), 500);
-    } catch (error) {
-      console.error('[WorkingPage] Error adding reminder:', error);
-      alert('Failed to add reminder');
-    }
-  };
-
-  // Toggle reminder completion
-  const toggleReminderCompletion = async (leadId: string, reminderId: string) => {
-    try {
-      // Get current reminder states from localStorage
-      const reminderStates = storage.get<Record<string, boolean>>('reminder-completion-states') || {};
-      
-      // Toggle the completion state
-      const isCompleted = !reminderStates[reminderId];
-      reminderStates[reminderId] = isCompleted;
-      
-      // Save to localStorage
-      storage.set('reminder-completion-states', reminderStates);
-      
-      // Update local state
-      setReminders(prev => ({
-        ...prev,
-        [leadId]: prev[leadId].map(r =>
-          r.id === reminderId ? { ...r, completed: isCompleted } : r
-        )
-      }));
-    } catch (error) {
-      console.error('Error toggling reminder completion:', error);
-    }
-  };
-
-  // Get days since last update
-  const getDaysSinceUpdate = (updatedAt: string) => {
-    return Math.floor((Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24));
   };
 
   return (
@@ -520,7 +338,7 @@ export default function WorkingOnStatusPage() {
           
           {/* Export Button - Mobile Optimized */}
           <button
-            onClick={() => handleExport()}
+            onClick={handleExport}
             className="btn btn-success flex items-center gap-2 touch-manipulation"
             aria-label="Export leads"
           >
@@ -541,100 +359,39 @@ export default function WorkingOnStatusPage() {
       {/* Error State */}
       {error && (
         <Card variant="glass" padding="md" className="bg-red-50 border-red-200 mb-6">
-          <p className="text-red-600">{error}</p>
+          <div className="flex items-center space-x-3">
+            <AlertCircle className="w-6 h-6 text-red-600" />
+            <p className="text-red-600">{error}</p>
+          </div>
         </Card>
       )}
 
       {/* Leads Display */}
       {!isLoading && !error && (
         <>
-          {viewMode === 'table' ? (
-            <div className="space-y-4">
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredLeads.map(lead => (
-                <Card key={lead.id} variant="glass" padding="md" className="hover:shadow-lg transition-shadow">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    {/* Lead Info */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900">{lead.name}</h3>
-                          <p className="text-sm text-gray-600">
-                            {lead.provider && (
-                              <span className={cn(
-                                'font-medium',
-                                lead.provider.toLowerCase().includes('telkom') && 'text-blue-600'
-                              )}>
-                                {lead.provider}
-                              </span>
-                            )}
-                            {lead.type_of_business && ` • ${lead.type_of_business}`}
-                          </p>
-                        </div>
-                        <span className="text-xs text-gray-500">
-                          Updated {getDaysSinceUpdate(lead.updated_at)} days ago
-                        </span>
-                      </div>
-
-                      {lead.phone && (
-                        <p className="text-sm text-gray-700 mb-1">📞 {lead.phone}</p>
-                      )}
-                      {lead.address && (
-                        <p className="text-sm text-gray-700 mb-2">📍 {lead.address}</p>
-                      )}
-                      {lead.notes && (
-                        <p className="text-sm text-gray-600 italic">💬 {lead.notes}</p>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2 min-w-[180px]">
-                      {/* Quick Action Buttons */}
-                      <div className="grid grid-cols-3 gap-1">
-                        <button
-                          onClick={() => setShowNotesModal(lead.id)}
-                          className="btn btn-primary text-xs p-2 flex flex-col items-center justify-center gap-1"
-                          title="Notes"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                          <span className="text-[10px]">{notes[lead.id]?.length || 0}</span>
-                        </button>
-                        <button
-                          onClick={() => setShowReminderModal(lead.id)}
-                          className="btn btn-primary text-xs p-2 flex flex-col items-center justify-center gap-1"
-                          title="Reminders"
-                        >
-                          <Bell className="w-4 h-4" />
-                          <span className="text-[10px]">{reminders[lead.id]?.filter(r => !r.completed).length || 0}</span>
-                        </button>
-                        <LeadFilesButton lead={lead} compact />
-                      </div>
-                      
-                      {/* Status Dropdown */}
-                      <select
-                        onChange={(e) => handleStatusChange(lead.id, e.target.value as LeadStatus)}
-                        className="input text-sm py-2"
-                        defaultValue="working"
-                      >
-                        <option value="working">Working On</option>
-                        <option value="later">Later Stage</option>
-                        <option value="signed">Signed</option>
-                        <option value="bad">Bad Lead</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Notes & Reminders Dropdown */}
-                  <LeadNotesRemindersDropdown
-                    lead={lead}
-                    onNotesClick={() => setShowNotesModal(lead.id)}
-                    onRemindersClick={() => setShowReminderModal(lead.id)}
-                    refreshTrigger={refreshTrigger}
-                  />
-                </Card>
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onStatusChange={handleStatusChange}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  isSelected={selectedLeads.includes(lead.id)}
+                  onSelect={(id) => {
+                    if (selectedLeads.includes(id)) {
+                      deselectLead(id);
+                    } else {
+                      selectLead(id);
+                    }
+                  }}
+                  showActions={true}
+                />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-4">
               {filteredLeads.map(lead => (
                 <LeadCard
                   key={lead.id}
@@ -667,238 +424,6 @@ export default function WorkingOnStatusPage() {
             </Card>
           )}
         </>
-      )}
-
-      {/* Notes Modal */}
-      {showNotesModal && mounted && createPortal(
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] transition-opacity"
-            onClick={() => setShowNotesModal(null)}
-            aria-hidden="true"
-          />
-
-          {/* Modal */}
-          <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[calc(100vh-4rem)] transition-opacity duration-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <MessageSquare className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">Notes</h2>
-                    <p className="text-sm text-gray-600 mt-0.5">
-                      {filteredLeads.find(l => l.id === showNotesModal)?.name}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowNotesModal(null)}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  aria-label="Close modal"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto p-6">
-
-
-            {/* Existing Notes */}
-            <div className="space-y-3 mb-4">
-              {notes[showNotesModal]?.map(note => (
-                <div key={note.id} className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-gray-800">{note.content}</p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {new Date(note.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              ))}
-              {(!notes[showNotesModal] || notes[showNotesModal].length === 0) && (
-                <p className="text-gray-500 text-center py-4">No notes yet</p>
-              )}
-            </div>
-
-            {/* Add Note */}
-            <div className="border-t pt-4 mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Add New Note
-              </label>
-              <textarea
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                placeholder="Type your note here..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                rows={4}
-              />
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
-            <button
-              onClick={() => setShowNotesModal(null)}
-              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleAddNote(showNotesModal)}
-              disabled={!newNote.trim()}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Note</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </>,
-        document.body
-      )}
-
-      {/* Reminder Modal */}
-      {showReminderModal && mounted && createPortal(
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] transition-opacity"
-            onClick={() => setShowReminderModal(null)}
-            aria-hidden="true"
-          />
-
-          {/* Modal */}
-          <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[calc(100vh-4rem)] transition-opacity duration-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Bell className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">Reminders</h2>
-                    <p className="text-sm text-gray-600 mt-0.5">
-                      {filteredLeads.find(l => l.id === showReminderModal)?.name}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowReminderModal(null)}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  aria-label="Close modal"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto p-6">
-
-
-            {/* Existing Reminders */}
-            <div className="space-y-3 mb-4">
-              {reminders[showReminderModal]?.map(reminder => (
-                <div
-                  key={reminder.id}
-                  className={cn(
-                    'bg-gray-50 p-3 rounded-lg flex items-start gap-3',
-                    reminder.completed && 'opacity-50'
-                  )}
-                >
-                  <input
-                    type="checkbox"
-                    checked={reminder.completed}
-                    onChange={() => toggleReminderCompletion(showReminderModal, reminder.id)}
-                    className="mt-1 rounded"
-                  />
-                  <div className="flex-1">
-                    <p className={cn(
-                      'text-gray-800',
-                      reminder.completed && 'line-through'
-                    )}>
-                      {reminder.note}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      📅 {new Date(reminder.reminderDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {(!reminders[showReminderModal] || reminders[showReminderModal].length === 0) && (
-                <p className="text-gray-500 text-center py-4">No reminders yet</p>
-              )}
-            </div>
-
-            {/* Add Reminder */}
-            <div className="border-t pt-4 mt-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  Reminder Date
-                </label>
-                <input
-                  type="date"
-                  value={newReminder.date}
-                  onChange={(e) => setNewReminder({ ...newReminder, date: e.target.value })}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Reminder Note
-                </label>
-                <input
-                  type="text"
-                  value={newReminder.note}
-                  onChange={(e) => setNewReminder({ ...newReminder, note: e.target.value })}
-                  placeholder="What should you remember?"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
-            <button
-              onClick={() => setShowReminderModal(null)}
-              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleAddReminder(showReminderModal)}
-              disabled={!newReminder.date || !newReminder.note.trim()}
-              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Reminder</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </>,
-        document.body
       )}
 
       {/* Later Stage Modal */}

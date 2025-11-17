@@ -20,10 +20,7 @@ import {
   Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { LeadNotesRemindersDropdown } from '@/components/leads/leads/LeadNotesRemindersDropdown';
-import { LeadFilesButton } from '@/components/leads/leads/LeadFilesButton';
 import { AddLeadButton } from '@/components/leads/leads/AddLeadButton';
-import { StatusManager } from '@/components/leads/leads/StatusManager';
 
 export default function SignedLeadsPage() {
   const {
@@ -233,6 +230,17 @@ export default function SignedLeadsPage() {
     }
   };
 
+  // Handle delete
+  const handleDelete = async (leadId: string) => {
+    try {
+      const { deleteLead } = useLeadsStore.getState();
+      await deleteLead(leadId);
+    } catch (error) {
+      console.error('Failed to delete lead:', error);
+      throw error;
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
@@ -402,128 +410,43 @@ export default function SignedLeadsPage() {
       {!isLoading && !error && (
         <>
           {viewMode === 'table' ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {filteredLeads.map(lead => (
-                <Card
+                <LeadCard
                   key={lead.id}
-                  variant="glass"
-                  padding="md"
-                  className="bg-green-50 border-green-200 hover:shadow-lg transition-shadow"
-                >
-                  <div className="flex flex-col md:flex-row gap-4">
-                    {/* Success Icon */}
-                    <div className="flex items-center justify-center md:justify-start">
-                      <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-7 h-7 text-white" />
-                      </div>
-                    </div>
-
-                    {/* Lead Info */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900">{lead.name}</h3>
-                          <p className="text-sm text-gray-600">
-                            {lead.provider && (
-                              <span className={cn(
-                                'font-medium',
-                                lead.provider.toLowerCase().includes('telkom') && 'text-blue-600'
-                              )}>
-                                {lead.provider}
-                              </span>
-                            )}
-                            {lead.type_of_business && ` • ${lead.type_of_business}`}
-                          </p>
-                        </div>
-                        <span className="text-xs font-semibold text-gray-500">
-                          #{lead.number}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 mb-2">
-                        {lead.phone && (
-                          <div className="flex items-center gap-2 text-sm text-gray-700">
-                            <Phone className="w-4 h-4" />
-                            <a href={`tel:${lead.phone}`} className="hover:text-blue-600">
-                              {lead.phone}
-                            </a>
-                          </div>
-                        )}
-                        {lead.address && (
-                          <div className="flex items-center gap-2 text-sm text-gray-700">
-                            <MapPin className="w-4 h-4" />
-                            <span className="line-clamp-1">{lead.address}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {lead.notes && (
-                        <p className="text-sm text-gray-600 italic mb-2">💬 {lead.notes}</p>
-                      )}
-
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" />
-                          Signed {getDaysSinceSigned(lead.updated_at)} days ago
-                        </span>
-                        <span>
-                          {new Date(lead.updated_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Success Badge and Actions */}
-                    <div className="flex flex-col items-center justify-center gap-3 min-w-[120px]">
-                      <div className="bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap">
-                        ✓ Signed
-                      </div>
-                      <LeadFilesButton lead={lead} />
-                    </div>
-                  </div>
-
-                  {/* Status Manager - Compact Dropdown */}
-                  <div className="mt-3 pt-3 border-t border-green-200">
-                    <label className="text-xs font-medium text-gray-600 mb-1 block">
-                      Change Status:
-                    </label>
-                    <StatusManager
-                      lead={lead}
-                      onStatusChange={handleStatusChange}
-                      compact={true}
-                    />
-                  </div>
-
-                  {/* Notes & Reminders Dropdown */}
-                  <LeadNotesRemindersDropdown lead={lead} />
-                </Card>
+                  lead={lead}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDelete}
+                  isSelected={selectedLeads.includes(lead.id)}
+                  onSelect={(id) => {
+                    if (selectedLeads.includes(id)) {
+                      deselectLead(id);
+                    } else {
+                      selectLead(id);
+                    }
+                  }}
+                  showActions={true}
+                />
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredLeads.map(lead => (
-                <div key={lead.id} className="relative space-y-2">
-                  <LeadCard
-                    lead={lead}
-                    onStatusChange={() => {}}
-                    onEdit={() => {}}
-                    onDelete={() => {}}
-                    isSelected={selectedLeads.includes(lead.id)}
-                    onSelect={(id) => {
-                      if (selectedLeads.includes(id)) {
-                        deselectLead(id);
-                      } else {
-                        selectLead(id);
-                      }
-                    }}
-                    showActions={false}
-                  />
-                  <div className="absolute top-2 right-2">
-                    <div className="bg-green-500 text-white p-2 rounded-full">
-                      <CheckCircle className="w-5 h-5" />
-                    </div>
-                  </div>
-                  <LeadNotesRemindersDropdown lead={lead} />
-                </div>
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDelete}
+                  isSelected={selectedLeads.includes(lead.id)}
+                  onSelect={(id) => {
+                    if (selectedLeads.includes(id)) {
+                      deselectLead(id);
+                    } else {
+                      selectLead(id);
+                    }
+                  }}
+                  showActions={true}
+                />
               ))}
             </div>
           )}

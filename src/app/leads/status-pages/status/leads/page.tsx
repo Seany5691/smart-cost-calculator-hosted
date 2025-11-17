@@ -18,13 +18,17 @@ import {
   AlertCircle,
   Plus,
   ArrowRight,
-  Edit
+  Edit,
+  MessageSquare,
+  Bell,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LeadDetailsModal } from '@/components/leads/leads/LeadDetailsModal';
 import { LaterStageModal } from '@/components/leads/leads/LaterStageModal';
-import { LeadNotesRemindersDropdown } from '@/components/leads/leads/LeadNotesRemindersDropdown';
 import { AddLeadButton } from '@/components/leads/leads/AddLeadButton';
+import { AddNoteModal } from '@/components/leads/leads/AddNoteModal';
+import { AddReminderModal } from '@/components/leads/leads/AddReminderModal';
 import { LEAD_STATUSES } from '@/lib/leads/types';
 
 export default function LeadsStatusPage() {
@@ -66,8 +70,9 @@ export default function LeadsStatusPage() {
 
   // Modal states
   const [selectedLeadForDetails, setSelectedLeadForDetails] = useState<Lead | null>(null);
-  const [editingNotes, setEditingNotes] = useState<{ leadId: string; notes: string } | null>(null);
   const [showLaterStageModal, setShowLaterStageModal] = useState<Lead | null>(null);
+  const [showNoteModal, setShowNoteModal] = useState<{ leadId: string; leadName: string } | null>(null);
+  const [showReminderModal, setShowReminderModal] = useState<{ leadId: string; leadName: string } | null>(null);
 
   // Load leads on mount
   useEffect(() => {
@@ -375,19 +380,17 @@ export default function LeadsStatusPage() {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredLeads.map((lead) => (
-            <div key={lead.id} className="space-y-2">
-              <LeadCard
-                lead={lead}
-                onStatusChange={handleStatusChange}
-                onUpdate={handleLeadUpdate}
-                onDelete={handleLeadDelete}
-                onViewDetails={() => setSelectedLeadForDetails(lead)}
-                isSelected={selectedLeads.includes(lead.id)}
-                onSelect={() => selectLead(lead.id)}
-                onDeselect={() => deselectLead(lead.id)}
-              />
-              <LeadNotesRemindersDropdown lead={lead} />
-            </div>
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              onStatusChange={handleStatusChange}
+              onUpdate={handleLeadUpdate}
+              onDelete={handleLeadDelete}
+              onViewDetails={() => setSelectedLeadForDetails(lead)}
+              isSelected={selectedLeads.includes(lead.id)}
+              onSelect={() => selectLead(lead.id)}
+              onDeselect={() => deselectLead(lead.id)}
+            />
           ))}
         </div>
       ) : (
@@ -412,7 +415,6 @@ export default function LeadsStatusPage() {
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Provider</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Phone</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Notes</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                 <th className="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
               </tr>
@@ -452,47 +454,6 @@ export default function LeadsStatusPage() {
                   </td>
                   <td className="py-3 px-4 text-gray-600 whitespace-nowrap">{lead.phone || 'N/A'}</td>
                   <td className="py-3 px-4">
-                    {editingNotes?.leadId === lead.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={editingNotes.notes}
-                          onChange={(e) => setEditingNotes({ leadId: lead.id, notes: e.target.value })}
-                          className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                          autoFocus
-                        />
-                        <button
-                          onClick={async () => {
-                            await handleLeadUpdate(lead.id, { notes: editingNotes.notes });
-                            setEditingNotes(null);
-                          }}
-                          className="px-2 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingNotes(null)}
-                          className="px-2 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600 truncate max-w-xs">
-                          {lead.notes || 'No notes'}
-                        </span>
-                        <button
-                          onClick={() => setEditingNotes({ leadId: lead.id, notes: lead.notes || '' })}
-                          className="text-blue-600 hover:text-blue-700"
-                          title="Edit notes"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
                     <select
                       value={lead.status}
                       onChange={(e) => handleStatusChange(lead.id, e.target.value as LeadStatus)}
@@ -506,12 +467,30 @@ export default function LeadsStatusPage() {
                     </select>
                   </td>
                   <td className="py-3 px-4">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-1.5">
+                      <button
+                        onClick={() => setShowNoteModal({ leadId: lead.id, leadName: lead.name })}
+                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200 transition-colors"
+                        title="Add Note"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Note</span>
+                      </button>
+                      <button
+                        onClick={() => setShowReminderModal({ leadId: lead.id, leadName: lead.name })}
+                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded border border-purple-200 transition-colors"
+                        title="Add Reminder"
+                      >
+                        <Bell className="w-3.5 h-3.5" />
+                        <span>Remind</span>
+                      </button>
                       <button
                         onClick={() => setSelectedLeadForDetails(lead)}
-                        className="btn btn-sm btn-info"
+                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors"
+                        title="View Details"
                       >
-                        Details
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Details</span>
                       </button>
                       <button
                         onClick={() => {
@@ -519,9 +498,11 @@ export default function LeadsStatusPage() {
                             handleLeadDelete(lead.id);
                           }
                         }}
-                        className="btn btn-sm btn-danger"
+                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded border border-red-200 transition-colors"
+                        title="Delete Lead"
                       >
-                        Delete
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
                       </button>
                     </div>
                   </td>
@@ -549,6 +530,26 @@ export default function LeadsStatusPage() {
           isOpen={true}
           onClose={() => setShowLaterStageModal(null)}
           onConfirm={handleLaterStageConfirm}
+        />
+      )}
+
+      {/* Add Note Modal */}
+      {showNoteModal && (
+        <AddNoteModal
+          isOpen={true}
+          onClose={() => setShowNoteModal(null)}
+          leadId={showNoteModal.leadId}
+          leadName={showNoteModal.leadName}
+        />
+      )}
+
+      {/* Add Reminder Modal */}
+      {showReminderModal && (
+        <AddReminderModal
+          isOpen={true}
+          onClose={() => setShowReminderModal(null)}
+          leadId={showReminderModal.leadId}
+          leadName={showReminderModal.leadName}
         />
       )}
     </div>

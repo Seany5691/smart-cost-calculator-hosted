@@ -5,7 +5,6 @@ import { Lead } from '@/lib/leads/types';
 import { ChevronRight, MessageSquare, Bell, Calendar } from 'lucide-react';
 import { 
   getLeadNotes,
-  createLeadNote,
   type LeadNote,
 } from '@/lib/leads/supabaseNotesReminders';
 import { useAuthStore } from '@/store/auth';
@@ -71,53 +70,11 @@ export const LeadNotesRemindersDropdown = ({
   };
 
   const [showCompleted, setShowCompleted] = useState(false);
-  const [showAddNote, setShowAddNote] = useState(false);
-  const [showAddReminder, setShowAddReminder] = useState(false);
-  const [newNoteContent, setNewNoteContent] = useState('');
-  const [newReminderDate, setNewReminderDate] = useState('');
-  const [newReminderNote, setNewReminderNote] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const { addReminder } = useRemindersStore();
   
   const activeReminders = reminders.filter(r => !r.completed);
   const completedReminders = reminders.filter(r => r.completed);
   const displayReminders = showCompleted ? reminders : activeReminders;
   const totalItems = notes.length + activeReminders.length;
-  
-  const handleAddNote = async () => {
-    if (!user || !newNoteContent.trim()) return;
-    
-    setIsSubmitting(true);
-    try {
-      await createLeadNote(lead.id, user.id, newNoteContent.trim());
-      setNewNoteContent('');
-      setShowAddNote(false);
-      await loadNotes(); // Refresh notes
-    } catch (error) {
-      console.error('Error adding note:', error);
-      alert('Failed to add note');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  
-  const handleAddReminder = async () => {
-    if (!user || !newReminderDate || !newReminderNote.trim()) return;
-    
-    setIsSubmitting(true);
-    try {
-      await addReminder(lead.id, user.id, newReminderDate, newReminderNote.trim());
-      setNewReminderDate('');
-      setNewReminderNote('');
-      setShowAddReminder(false);
-    } catch (error) {
-      console.error('Error adding reminder:', error);
-      alert('Failed to add reminder');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   // Always show the dropdown so users know they can add notes/reminders
   return (
@@ -142,33 +99,7 @@ export const LeadNotesRemindersDropdown = ({
               <MessageSquare className="w-3 h-3" />
               Notes ({notes.length})
             </p>
-            <button
-              onClick={() => setShowAddNote(!showAddNote)}
-              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-            >
-              {showAddNote ? 'Cancel' : '+ Add'}
-            </button>
           </div>
-          
-          {showAddNote && (
-            <div className="mb-2 p-2 bg-blue-50 rounded border border-blue-200">
-              <textarea
-                value={newNoteContent}
-                onChange={(e) => setNewNoteContent(e.target.value)}
-                placeholder="Enter note..."
-                className="w-full text-xs p-2 border rounded resize-none"
-                rows={2}
-                disabled={isSubmitting}
-              />
-              <button
-                onClick={handleAddNote}
-                disabled={!newNoteContent.trim() || isSubmitting}
-                className="mt-1 text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-              >
-                {isSubmitting ? 'Saving...' : 'Save Note'}
-              </button>
-            </div>
-          )}
           
           {notes.length > 0 ? (
             <div className="space-y-2">
@@ -189,8 +120,8 @@ export const LeadNotesRemindersDropdown = ({
                 </button>
               )}
             </div>
-          ) : !showAddNote && (
-            <p className="text-xs text-gray-500 italic">No notes yet</p>
+          ) : (
+            <p className="text-xs text-gray-500 italic">No notes yet. Use the Note button above to add one.</p>
           )}
         </div>
 
@@ -201,54 +132,18 @@ export const LeadNotesRemindersDropdown = ({
               <Bell className="w-3 h-3" />
               Reminders ({activeReminders.length})
             </p>
-            <div className="flex items-center gap-2">
-              {completedReminders.length > 0 && (
-                <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showCompleted}
-                    onChange={(e) => setShowCompleted(e.target.checked)}
-                    className="rounded w-3 h-3"
-                  />
-                  Completed
-                </label>
-              )}
-              <button
-                onClick={() => setShowAddReminder(!showAddReminder)}
-                className="text-xs text-purple-600 hover:text-purple-700 font-medium"
-              >
-                {showAddReminder ? 'Cancel' : '+ Add'}
-              </button>
-            </div>
+            {completedReminders.length > 0 && (
+              <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showCompleted}
+                  onChange={(e) => setShowCompleted(e.target.checked)}
+                  className="rounded w-3 h-3"
+                />
+                Completed
+              </label>
+            )}
           </div>
-          
-          {showAddReminder && (
-            <div className="mb-2 p-2 bg-purple-50 rounded border border-purple-200 space-y-2">
-              <input
-                type="date"
-                value={newReminderDate}
-                onChange={(e) => setNewReminderDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full text-xs p-2 border rounded"
-                disabled={isSubmitting}
-              />
-              <input
-                type="text"
-                value={newReminderNote}
-                onChange={(e) => setNewReminderNote(e.target.value)}
-                placeholder="Reminder note..."
-                className="w-full text-xs p-2 border rounded"
-                disabled={isSubmitting}
-              />
-              <button
-                onClick={handleAddReminder}
-                disabled={!newReminderDate || !newReminderNote.trim() || isSubmitting}
-                className="text-xs px-2 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
-              >
-                {isSubmitting ? 'Saving...' : 'Save Reminder'}
-              </button>
-            </div>
-          )}
           
           {displayReminders.length > 0 ? (
             <div className="space-y-2">
@@ -267,8 +162,8 @@ export const LeadNotesRemindersDropdown = ({
                 </div>
               ))}
             </div>
-          ) : !showAddReminder && (
-            <p className="text-xs text-gray-500 italic">No reminders yet</p>
+          ) : (
+            <p className="text-xs text-gray-500 italic">No reminders yet. Use the Reminder button above to add one.</p>
           )}
         </div>
       </div>

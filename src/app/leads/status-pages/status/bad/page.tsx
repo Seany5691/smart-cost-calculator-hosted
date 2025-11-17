@@ -20,8 +20,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { showToast } from '@/lib/leads/toast';
-import { LeadNotesRemindersDropdown } from '@/components/leads/leads/LeadNotesRemindersDropdown';
-import { LeadFilesButton } from '@/components/leads/leads/LeadFilesButton';
 import { AddLeadButton } from '@/components/leads/leads/AddLeadButton';
 
 export default function BadLeadsPage() {
@@ -177,6 +175,15 @@ export default function BadLeadsPage() {
   // Handle edit
   const handleEdit = async (lead: Lead) => {
     console.log('Edit lead:', lead);
+  };
+
+  // Handle status change
+  const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
+    try {
+      await changeLeadStatus(leadId, newStatus);
+    } catch (err) {
+      console.error('Failed to change lead status:', err);
+    }
   };
 
   // Handle delete
@@ -424,120 +431,43 @@ export default function BadLeadsPage() {
       {!isLoading && !error && (
         <>
           {viewMode === 'table' ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {filteredLeads.map(lead => (
-                <Card
+                <LeadCard
                   key={lead.id}
-                  variant="glass"
-                  padding="md"
-                  className="bg-red-50 border-red-200 hover:shadow-lg transition-shadow"
-                >
-                  <div className="flex flex-col md:flex-row gap-4">
-                    {/* Checkbox */}
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedLeads.includes(lead.id)}
-                        onChange={() => {
-                          if (selectedLeads.includes(lead.id)) {
-                            deselectLead(lead.id);
-                          } else {
-                            selectLead(lead.id);
-                          }
-                        }}
-                        className="w-5 h-5 rounded"
-                      />
-                    </div>
-
-                    {/* Lead Info */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900">{lead.name}</h3>
-                          <p className="text-sm text-gray-600">
-                            {lead.provider && (
-                              <span className="font-medium">{lead.provider}</span>
-                            )}
-                            {lead.type_of_business && ` • ${lead.type_of_business}`}
-                          </p>
-                        </div>
-                        <span className="text-xs font-semibold text-gray-500">
-                          #{lead.number}
-                        </span>
-                      </div>
-
-                      {lead.phone && (
-                        <p className="text-sm text-gray-700 mb-1">📞 {lead.phone}</p>
-                      )}
-                      {lead.address && (
-                        <p className="text-sm text-gray-700 mb-2">📍 {lead.address}</p>
-                      )}
-                      {lead.notes && (
-                        <p className="text-sm text-gray-600 italic">💬 {lead.notes}</p>
-                      )}
-                      <p className="text-xs text-gray-500 mt-2">
-                        Marked bad on {new Date(lead.updated_at).toLocaleDateString()}
-                      </p>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2 min-w-[140px]">
-                      {/* Files Button */}
-                      <LeadFilesButton lead={lead} />
-                      
-                      {/* Action Buttons */}
-                      <button
-                        onClick={() => handleRecoverLead(lead.id)}
-                        className="btn btn-success flex items-center justify-center gap-2 text-sm py-2"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        <span>Recover</span>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(lead.id)}
-                        className="btn btn-danger flex items-center justify-center gap-2 text-sm py-2"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Notes & Reminders Dropdown */}
-                  <LeadNotesRemindersDropdown lead={lead} />
-                </Card>
+                  lead={lead}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDelete}
+                  isSelected={selectedLeads.includes(lead.id)}
+                  onSelect={(id) => {
+                    if (selectedLeads.includes(id)) {
+                      deselectLead(id);
+                    } else {
+                      selectLead(id);
+                    }
+                  }}
+                  showActions={true}
+                />
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredLeads.map(lead => (
-                <div key={lead.id} className="relative space-y-2">
-                  <LeadCard
-                    lead={lead}
-                    onStatusChange={() => handleRecoverLead(lead.id)}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    isSelected={selectedLeads.includes(lead.id)}
-                    onSelect={(id) => {
-                      if (selectedLeads.includes(id)) {
-                        deselectLead(id);
-                      } else {
-                        selectLead(id);
-                      }
-                    }}
-                    showActions={false}
-                  />
-                  <div className="absolute top-2 right-2 flex gap-2">
-                    <button
-                      onClick={() => handleRecoverLead(lead.id)}
-                      className="btn btn-success btn-sm"
-                      title="Recover lead"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <LeadNotesRemindersDropdown lead={lead} />
-                </div>
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDelete}
+                  isSelected={selectedLeads.includes(lead.id)}
+                  onSelect={(id) => {
+                    if (selectedLeads.includes(id)) {
+                      deselectLead(id);
+                    } else {
+                      selectLead(id);
+                    }
+                  }}
+                  showActions={true}
+                />
               ))}
             </div>
           )}

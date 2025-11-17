@@ -800,7 +800,7 @@ export default function MainLeadsPage() {
                         className="btn btn-sm btn-danger flex-1 inline-flex items-center justify-center"
                       >
                         <XCircle className="w-4 h-4 mr-2" />
-                        No Good
+                        Bad
                       </button>
                     </div>
                   </div>
@@ -862,26 +862,29 @@ export default function MainLeadsPage() {
                           <td className="py-3 px-4 text-gray-600 whitespace-nowrap">{lead.phone || 'N/A'}</td>
                           <td className="py-3 px-4 text-gray-600">{lead.type_of_business || 'N/A'}</td>
                           <td className="py-3 px-4">
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-end gap-1.5">
                               <button
                                 onClick={() => handleOpenMaps(lead.maps_address)}
-                                className="btn btn-sm btn-primary"
+                                className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200 transition-colors"
                                 title="Open in Google Maps"
                               >
-                                <ExternalLink className="w-4 h-4" />
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span>Maps</span>
                               </button>
                               <button
                                 onClick={() => handleSelectLead(lead.id)}
                                 disabled={workingLeads.length >= WORKING_AREA_LIMIT}
-                                className="btn btn-sm btn-success"
+                                className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded border border-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                Select
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                <span>Select</span>
                               </button>
                               <button
                                 onClick={() => handleNoGood(lead.id)}
-                                className="btn btn-sm btn-danger"
+                                className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded border border-red-200 transition-colors"
                               >
-                                No Good
+                                <XCircle className="w-3.5 h-3.5" />
+                                <span>Bad</span>
                               </button>
                             </div>
                           </td>

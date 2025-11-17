@@ -174,16 +174,18 @@ export const LeadFilesButton = ({ lead, compact = false }: LeadFilesButtonProps)
     <>
       {/* Files Button */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
         className={compact 
-          ? "btn btn-primary text-xs p-2 flex flex-col items-center justify-center gap-1 relative w-full"
+          ? "flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded border border-green-200 transition-colors w-full"
           : "btn btn-primary flex items-center gap-2 relative"
         }
         title="View and manage files"
       >
-        <Paperclip className="w-4 h-4" />
-        {!compact && <span>Files</span>}
-        {compact && <span className="text-[10px]">{fileCount}</span>}
+        <Paperclip className="w-3.5 h-3.5" />
+        {compact ? <span>Files</span> : <span>Files</span>}
         {!compact && fileCount > 0 && (
           <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
             {fileCount}

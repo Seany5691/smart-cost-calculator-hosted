@@ -200,7 +200,11 @@ const LeadCardComponent = ({
               
               {lead.maps_address && (
                 <a
-                  href={lead.maps_address}
+                  href={
+                    lead.maps_address.startsWith('http://') || lead.maps_address.startsWith('https://')
+                      ? lead.maps_address
+                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.maps_address)}`
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}

@@ -767,6 +767,8 @@ function transformLeadFromDb(dbLead: any): Lead {
     phone: dbLead.phone,
     provider: dbLead.provider,
     address: dbLead.address,
+    town: dbLead.town,
+    contact_person: dbLead.contactPerson,
     type_of_business: dbLead.typeOfBusiness,
     status: dbLead.status,
     notes: dbLead.notes,
@@ -794,6 +796,8 @@ function transformLeadToDb(lead: Partial<Lead>): any {
   if (lead.phone !== undefined) dbLead.phone = lead.phone;
   if (lead.provider !== undefined) dbLead.provider = lead.provider;
   if (lead.address !== undefined) dbLead.address = lead.address;
+  if (lead.town !== undefined) dbLead.town = lead.town;
+  if (lead.contact_person !== undefined) dbLead.contactPerson = lead.contact_person;
   if (lead.type_of_business !== undefined) dbLead.typeOfBusiness = lead.type_of_business;
   if (lead.status !== undefined) dbLead.status = lead.status;
   if (lead.notes !== undefined) dbLead.notes = lead.notes;

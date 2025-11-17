@@ -24,6 +24,7 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
   const [speechSupported, setSpeechSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef<string>('');
+  const lastProcessedIndexRef = useRef<number>(0);
 
   useEffect(() => {
     setMounted(true);
@@ -39,25 +40,19 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
         recognitionRef.current.lang = 'en-US';
 
         recognitionRef.current.onresult = (event: any) => {
-          let finalTranscript = '';
+          let newTranscript = '';
 
-          // Only process final results to avoid duplicates
-          for (let i = event.resultIndex; i < event.results.length; i++) {
+          // Process only new final results (mobile-friendly approach)
+          for (let i = lastProcessedIndexRef.current; i < event.results.length; i++) {
             if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript + ' ';
+              newTranscript += event.results[i][0].transcript + ' ';
+              lastProcessedIndexRef.current = i + 1; // Track what we've processed
             }
           }
 
-          // Only add new final transcript
-          if (finalTranscript) {
-            transcriptRef.current += finalTranscript;
-            setNote(prev => {
-              // Avoid adding duplicate text
-              if (!prev.endsWith(finalTranscript.trim())) {
-                return prev + finalTranscript;
-              }
-              return prev;
-            });
+          // Only add if we have new transcript
+          if (newTranscript.trim()) {
+            setNote(prev => prev + newTranscript);
           }
         };
 
@@ -87,7 +82,8 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
       setNote('');
       setError(null);
       setIsListening(false);
-      transcriptRef.current = ''; // Reset transcript tracking
+      transcriptRef.current = '';
+      lastProcessedIndexRef.current = 0; // Reset index tracking
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
@@ -100,10 +96,12 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
     if (isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
-      transcriptRef.current = ''; // Reset transcript tracking
+      transcriptRef.current = '';
+      lastProcessedIndexRef.current = 0; // Reset index tracking
     } else {
       try {
-        transcriptRef.current = ''; // Reset transcript tracking
+        transcriptRef.current = '';
+        lastProcessedIndexRef.current = 0; // Reset index tracking
         recognitionRef.current.start();
         setIsListening(true);
         setError(null);

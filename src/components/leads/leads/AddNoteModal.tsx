@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, MessageSquare, AlertTriangle } from 'lucide-react';
+import { X, MessageSquare, AlertTriangle, Mic, MicOff } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { createLeadNote } from '@/lib/leads/supabaseNotesReminders';
 
@@ -20,17 +20,90 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     setMounted(true);
+    
+    // Check if speech recognition is supported
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        setSpeechSupported(true);
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+        recognitionRef.current.lang = 'en-US';
+
+        recognitionRef.current.onresult = (event: any) => {
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+
+          if (finalTranscript) {
+            setNote(prev => prev + finalTranscript);
+          }
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsListening(false);
+          if (event.error === 'not-allowed') {
+            setError('Microphone access denied. Please allow microphone access in your browser settings.');
+          }
+        };
+
+        recognitionRef.current.onend = () => {
+          setIsListening(false);
+        };
+      }
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
   }, []);
 
   useEffect(() => {
     if (isOpen) {
       setNote('');
       setError(null);
+      setIsListening(false);
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
     }
   }, [isOpen]);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) return;
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+        setError(null);
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        setError('Failed to start speech recognition');
+      }
+    }
+  };
 
   const handleSubmit = async () => {
     if (!user) {
@@ -103,17 +176,49 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
           {/* Content */}
           <div className="p-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Note *
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Note *
+                </label>
+                {speechSupported && (
+                  <button
+                    type="button"
+                    onClick={toggleListening}
+                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-all ${
+                      isListening
+                        ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                    title={isListening ? 'Stop recording' : 'Start voice input'}
+                  >
+                    {isListening ? (
+                      <>
+                        <MicOff className="w-4 h-4" />
+                        <span className="text-sm font-medium">Stop</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-4 h-4" />
+                        <span className="text-sm font-medium">Speak</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Enter your note here..."
+                placeholder={isListening ? "Listening... speak now" : "Type your note or click 'Speak' to use voice input..."}
                 rows={6}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 autoFocus
               />
+              {isListening && (
+                <p className="text-xs text-blue-600 mt-1 flex items-center">
+                  <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></span>
+                  Recording... Speak clearly into your microphone
+                </p>
+              )}
             </div>
 
             {error && (

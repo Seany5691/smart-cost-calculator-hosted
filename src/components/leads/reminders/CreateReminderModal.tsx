@@ -403,9 +403,9 @@ export const CreateReminderModal = ({ isOpen, onClose, leads, routes }: CreateRe
                         onChange={(e) => setReminderTime(`${reminderTime.split(':')[0]}:${e.target.value}`)}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       >
-                        {['00', '15', '30', '45'].map(minute => (
-                          <option key={minute} value={minute}>
-                            {minute}
+                        {Array.from({ length: 12 }, (_, i) => i * 5).map(minute => (
+                          <option key={minute} value={minute.toString().padStart(2, '0')}>
+                            {minute.toString().padStart(2, '0')}
                           </option>
                         ))}
                       </select>

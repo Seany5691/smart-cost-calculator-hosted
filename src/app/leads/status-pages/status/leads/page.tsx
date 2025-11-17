@@ -444,8 +444,24 @@ export default function LeadsStatusPage() {
           ))}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <>
+          {/* Mobile: Show message instead of table */}
+          <div className="md:hidden">
+            <Card className="p-6 text-center bg-blue-50 border-blue-200">
+              <p className="text-sm text-blue-900 mb-2">📱 Table view works best on larger screens</p>
+              <p className="text-xs text-blue-700 mb-4">Switch to Grid view for better mobile experience</p>
+              <button
+                onClick={() => setViewMode('grid')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+              >
+                Switch to Grid View
+              </button>
+            </Card>
+          </div>
+          
+          {/* Desktop: Show table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
                 <th className="text-left py-3 px-4">
@@ -459,7 +475,7 @@ export default function LeadsStatusPage() {
                         clearSelection();
                       }
                     }}
-                    className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                    className="w-[14px] h-[14px] md:w-4 md:h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                   />
                 </th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
@@ -486,7 +502,7 @@ export default function LeadsStatusPage() {
                           deselectLead(lead.id);
                         }
                       }}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                      className="w-[14px] h-[14px] md:w-4 md:h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                     />
                   </td>
                   <td className="py-3 px-4">
@@ -557,6 +573,7 @@ export default function LeadsStatusPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Lead Details Modal */}

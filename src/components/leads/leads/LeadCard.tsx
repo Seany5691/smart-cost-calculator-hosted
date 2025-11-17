@@ -336,7 +336,7 @@ const LeadCardComponent = ({
                     type="checkbox"
                     checked={showCompleted}
                     onChange={(e) => setShowCompleted(e.target.checked)}
-                    className="rounded w-3 h-3"
+                    className="rounded w-[14px] h-[14px] md:w-3 md:h-3"
                   />
                   Completed
                 </label>
@@ -359,7 +359,7 @@ const LeadCardComponent = ({
                       type="checkbox"
                       checked={reminder.completed}
                       onChange={() => handleToggleReminderCompletion(reminder.id)}
-                      className="rounded"
+                      className="rounded w-[14px] h-[14px] md:w-4 md:h-4"
                       onClick={(e) => e.stopPropagation()}
                     />
                     <Calendar className="w-4 h-4 text-purple-600" />

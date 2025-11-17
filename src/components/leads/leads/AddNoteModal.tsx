@@ -35,37 +35,42 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
       if (SpeechRecognition) {
         setSpeechSupported(true);
         recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
         recognitionRef.current.lang = 'en-US';
+        recognitionRef.current.maxAlternatives = 1;
 
         recognitionRef.current.onresult = (event: any) => {
-          let newTranscript = '';
+          // Get the final transcript
+          const transcript = event.results[0][0].transcript;
+          transcriptRef.current = transcript;
+        };
 
-          // Process only new final results (mobile-friendly approach)
-          for (let i = lastProcessedIndexRef.current; i < event.results.length; i++) {
-            if (event.results[i].isFinal) {
-              newTranscript += event.results[i][0].transcript + ' ';
-              lastProcessedIndexRef.current = i + 1; // Track what we've processed
-            }
+        recognitionRef.current.onend = () => {
+          // Add the transcript when recognition ends
+          if (transcriptRef.current.trim()) {
+            setNote(prev => prev + transcriptRef.current + ' ');
+            transcriptRef.current = '';
           }
-
-          // Only add if we have new transcript
-          if (newTranscript.trim()) {
-            setNote(prev => prev + newTranscript);
+          
+          // Auto-restart if button is still pressed
+          if (isListening) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              console.error('Failed to restart:', e);
+              setIsListening(false);
+            }
           }
         };
 
         recognitionRef.current.onerror = (event: any) => {
           console.error('Speech recognition error:', event.error);
           setIsListening(false);
+          transcriptRef.current = '';
           if (event.error === 'not-allowed') {
             setError('Microphone access denied. Please allow microphone access in your browser settings.');
           }
-        };
-
-        recognitionRef.current.onend = () => {
-          setIsListening(false);
         };
       }
     }
@@ -94,14 +99,15 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
     if (!recognitionRef.current) return;
 
     if (isListening) {
-      recognitionRef.current.stop();
       setIsListening(false);
+      recognitionRef.current.stop();
       transcriptRef.current = '';
-      lastProcessedIndexRef.current = 0; // Reset index tracking
+      lastProcessedIndexRef.current = 0;
     } else {
       try {
+        // Store the current note length to know where speech starts
         transcriptRef.current = '';
-        lastProcessedIndexRef.current = 0; // Reset index tracking
+        lastProcessedIndexRef.current = 0;
         recognitionRef.current.start();
         setIsListening(true);
         setError(null);

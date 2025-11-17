@@ -646,7 +646,7 @@ export default function MainLeadsPage() {
               <select
                 value={filterListName}
                 onChange={(e) => setFilterListName(e.target.value)}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                className="pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
               >
                 <option value="all">All Lists</option>
                 {uniqueListNames.map(listName => (
@@ -696,7 +696,7 @@ export default function MainLeadsPage() {
               <select
                 value={filterProvider}
                 onChange={(e) => setFilterProvider(e.target.value)}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Providers</option>
                 {uniqueProviders.map(provider => (
@@ -711,7 +711,7 @@ export default function MainLeadsPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'number' | 'name' | 'provider')}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-3 pr-8 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="number">Number</option>
                 <option value="name">Name</option>

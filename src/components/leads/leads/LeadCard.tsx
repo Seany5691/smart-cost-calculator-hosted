@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { AddNoteModal } from './AddNoteModal';
 import { AddReminderModal } from './AddReminderModal';
 import { LeadFilesButton } from './LeadFilesButton';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import { 
   MapPin, 
   Phone, 
@@ -46,6 +47,7 @@ const LeadCardComponent = ({
   const user = useAuthStore((state) => state.user);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [showCompleted, setShowCompleted] = useState(false);
   const statusColor = STATUS_COLORS[lead.status];
@@ -199,9 +201,7 @@ const LeadCardComponent = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (confirm(`Delete ${lead.name}?`)) {
-                    onDelete?.(lead.id);
-                  }
+                  setShowDeleteConfirm(true);
                 }}
                 className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded border border-red-200 transition-colors"
                 title="Delete Lead"
@@ -344,6 +344,19 @@ const LeadCardComponent = ({
         onClose={() => setShowReminderModal(false)}
         leadId={lead.id}
         leadName={lead.name}
+      />
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          if (onDelete) {
+            onDelete(lead.id);
+          }
+        }}
+        title="Delete Lead"
+        message={`Are you sure you want to delete ${lead.name}? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
       />
     </Card>
   );

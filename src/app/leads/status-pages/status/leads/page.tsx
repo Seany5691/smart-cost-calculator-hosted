@@ -29,6 +29,8 @@ import { LaterStageModal } from '@/components/leads/leads/LaterStageModal';
 import { AddLeadButton } from '@/components/leads/leads/AddLeadButton';
 import { AddNoteModal } from '@/components/leads/leads/AddNoteModal';
 import { AddReminderModal } from '@/components/leads/leads/AddReminderModal';
+import { ConfirmModal } from '@/components/leads/ui/ConfirmModal';
+import { showToast } from '@/lib/leads/toast';
 import { LEAD_STATUSES } from '@/lib/leads/types';
 
 export default function LeadsStatusPage() {
@@ -73,6 +75,9 @@ export default function LeadsStatusPage() {
   const [showLaterStageModal, setShowLaterStageModal] = useState<Lead | null>(null);
   const [showNoteModal, setShowNoteModal] = useState<{ leadId: string; leadName: string } | null>(null);
   const [showReminderModal, setShowReminderModal] = useState<{ leadId: string; leadName: string } | null>(null);
+  const [bulkStatusConfirm, setBulkStatusConfirm] = useState<{ status: LeadStatus; count: number } | null>(null);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState<number | null>(null);
+  const [singleDeleteConfirm, setSingleDeleteConfirm] = useState<{ leadId: string; leadName: string } | null>(null);
 
   // Load leads on mount
   useEffect(() => {
@@ -316,12 +321,12 @@ export default function LeadsStatusPage() {
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <select
-                onChange={async (e) => {
-                  if (e.target.value && confirm(`Change status of ${selectedLeads.length} leads?`)) {
-                    for (const leadId of selectedLeads) {
-                      await handleStatusChange(leadId, e.target.value as LeadStatus);
-                    }
-                    clearSelection();
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setBulkStatusConfirm({ 
+                      status: e.target.value as LeadStatus, 
+                      count: selectedLeads.length 
+                    });
                   }
                   e.target.value = '';
                 }}
@@ -336,18 +341,7 @@ export default function LeadsStatusPage() {
                 ))}
               </select>
               <button
-                onClick={async () => {
-                  if (confirm(`Delete ${selectedLeads.length} lead${selectedLeads.length > 1 ? 's' : ''}? This cannot be undone.`)) {
-                    // Delete all at once without individual confirmations
-                    try {
-                      await Promise.all(selectedLeads.map(leadId => deleteLead(leadId)));
-                      clearSelection();
-                    } catch (error) {
-                      console.error('Error deleting leads:', error);
-                      alert('Some leads could not be deleted. Please try again.');
-                    }
-                  }
-                }}
+                onClick={() => setBulkDeleteConfirm(selectedLeads.length)}
                 className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-xs sm:text-sm font-medium touch-manipulation active:scale-95 transition-transform"
               >
                 Delete
@@ -493,11 +487,7 @@ export default function LeadsStatusPage() {
                         <span>Details</span>
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm(`Delete ${lead.name}? This cannot be undone.`)) {
-                            handleLeadDelete(lead.id);
-                          }
-                        }}
+                        onClick={() => setSingleDeleteConfirm({ leadId: lead.id, leadName: lead.name })}
                         className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded border border-red-200 transition-colors"
                         title="Delete Lead"
                       >
@@ -552,6 +542,64 @@ export default function LeadsStatusPage() {
           leadName={showReminderModal.leadName}
         />
       )}
+
+      {/* Bulk Status Change Confirmation */}
+      <ConfirmModal
+        isOpen={bulkStatusConfirm !== null}
+        onClose={() => setBulkStatusConfirm(null)}
+        onConfirm={async () => {
+          if (bulkStatusConfirm) {
+            for (const leadId of selectedLeads) {
+              await handleStatusChange(leadId, bulkStatusConfirm.status);
+            }
+            clearSelection();
+          }
+          setBulkStatusConfirm(null);
+        }}
+        title="Change Status"
+        message={`Change status of ${bulkStatusConfirm?.count} lead${bulkStatusConfirm?.count !== 1 ? 's' : ''}?`}
+        confirmText="Change Status"
+        variant="warning"
+      />
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmModal
+        isOpen={bulkDeleteConfirm !== null}
+        onClose={() => setBulkDeleteConfirm(null)}
+        onConfirm={async () => {
+          if (bulkDeleteConfirm) {
+            try {
+              await Promise.all(selectedLeads.map(leadId => deleteLead(leadId)));
+              clearSelection();
+              showToast('success', `Successfully deleted ${bulkDeleteConfirm} lead${bulkDeleteConfirm > 1 ? 's' : ''}`);
+            } catch (error) {
+              console.error('Error deleting leads:', error);
+              showToast('error', 'Some leads could not be deleted. Please try again.');
+            }
+          }
+          setBulkDeleteConfirm(null);
+        }}
+        title="Delete Leads"
+        message={`Delete ${bulkDeleteConfirm} lead${bulkDeleteConfirm !== 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
+
+      {/* Single Delete Confirmation */}
+      <ConfirmModal
+        isOpen={singleDeleteConfirm !== null}
+        onClose={() => setSingleDeleteConfirm(null)}
+        onConfirm={async () => {
+          if (singleDeleteConfirm) {
+            await handleLeadDelete(singleDeleteConfirm.leadId);
+          }
+          setSingleDeleteConfirm(null);
+        }}
+        title="Delete Lead"
+        message={`Delete ${singleDeleteConfirm?.leadName}? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   );
 }

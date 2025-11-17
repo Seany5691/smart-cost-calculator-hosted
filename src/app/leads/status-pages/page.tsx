@@ -28,6 +28,7 @@ import { useAuthStore } from '@/store/auth';
 import { Lead } from '@/lib/leads/types';
 import { storage, STORAGE_KEYS } from '@/lib/leads/localStorage';
 import { LeadCard } from '@/components/leads/leads/LeadCard';
+import { ConfirmModal } from '@/components/leads/ui/ConfirmModal';
 import ExcelImporter from '@/components/leads/import/ExcelImporter';
 import ScrapedListSelector from '@/components/leads/import/ScrapedListSelector';
 
@@ -67,6 +68,8 @@ export default function MainLeadsPage() {
   const [leadsPerPage] = useState(50); // Show 50 leads per page
   const [isMounted, setIsMounted] = useState(false);
   const [allListNames, setAllListNames] = useState<string[]>([]);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState<number | null>(null);
+  const [deleteListConfirm, setDeleteListConfirm] = useState<string | null>(null);
 
   // Track if component is mounted (client-side)
   useEffect(() => {

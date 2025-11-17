@@ -3,6 +3,7 @@
 import { memo, useState } from 'react';
 import { Lead, LeadStatus, LeadSortOptions, STATUS_COLORS } from '@/lib/leads/types';
 import { cn } from '@/lib/utils';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import {
   ArrowUpDown,
   ArrowUp,
@@ -42,6 +43,7 @@ const LeadTableComponent = ({
 }: LeadTableProps) => {
   const [editingCell, setEditingCell] = useState<{ leadId: string; field: keyof Lead } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ leadId: string; leadName: string } | null>(null);
 
   const handleSort = (field: keyof Lead) => {
     const newDirection = 
@@ -377,11 +379,7 @@ const LeadTableComponent = ({
                     )}
                     {onDelete && (
                       <button
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this lead?')) {
-                            onDelete(lead.id);
-                          }
-                        }}
+                        onClick={() => setDeleteConfirm({ leadId: lead.id, leadName: lead.name })}
                         className="text-gray-600 hover:text-red-600 transition-colors touch-target"
                         aria-label="Delete lead"
                       >
@@ -410,6 +408,22 @@ const LeadTableComponent = ({
           💡 Tip: For better table viewing on mobile, try rotating your device to landscape mode or use the card view.
         </p>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirm !== null}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => {
+          if (deleteConfirm && onDelete) {
+            onDelete(deleteConfirm.leadId);
+          }
+          setDeleteConfirm(null);
+        }}
+        title="Delete Lead"
+        message={`Are you sure you want to delete ${deleteConfirm?.leadName}? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   );
 };

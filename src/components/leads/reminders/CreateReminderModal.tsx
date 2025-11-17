@@ -384,6 +384,15 @@ export const CreateReminderModal = ({ isOpen, onClose, leads, routes }: CreateRe
                   Time
                 </label>
                 <div className="space-y-2">
+                  {!isAllDay && (
+                    <input
+                      type="time"
+                      value={reminderTime}
+                      onChange={(e) => setReminderTime(e.target.value)}
+                      onFocus={(e) => e.target.showPicker?.()}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  )}
                   <label className="flex items-center space-x-2">
                     <input
                       type="checkbox"
@@ -393,14 +402,6 @@ export const CreateReminderModal = ({ isOpen, onClose, leads, routes }: CreateRe
                     />
                     <span className="text-sm text-gray-700">All Day</span>
                   </label>
-                  {!isAllDay && (
-                    <input
-                      type="time"
-                      value={reminderTime}
-                      onChange={(e) => setReminderTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  )}
                 </div>
               </div>
             </div>

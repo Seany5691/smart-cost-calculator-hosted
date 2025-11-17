@@ -41,6 +41,8 @@ export interface Lead {
   phone: string | null;
   provider: string | null;
   address: string | null;
+  town: string | null; // NEW: Town/City field
+  contact_person: string | null; // NEW: Contact person name
   type_of_business: string | null;
   status: LeadStatus;
   notes: string | null;

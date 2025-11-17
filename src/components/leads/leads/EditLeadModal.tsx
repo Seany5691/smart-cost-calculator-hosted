@@ -25,6 +25,8 @@ export const EditLeadModal = ({ isOpen, onClose, lead, onLeadUpdated }: EditLead
     phone: '',
     provider: '',
     address: '',
+    town: '',
+    contact_person: '',
     type_of_business: '',
     notes: '',
   });
@@ -41,6 +43,8 @@ export const EditLeadModal = ({ isOpen, onClose, lead, onLeadUpdated }: EditLead
         phone: lead.phone || '',
         provider: lead.provider || '',
         address: lead.address || '',
+        town: lead.town || '',
+        contact_person: lead.contact_person || '',
         type_of_business: lead.type_of_business || '',
         notes: lead.notes || '',
       });
@@ -64,6 +68,8 @@ export const EditLeadModal = ({ isOpen, onClose, lead, onLeadUpdated }: EditLead
         phone: formData.phone.trim() || undefined,
         provider: formData.provider.trim() || undefined,
         address: formData.address.trim() || undefined,
+        town: formData.town.trim() || undefined,
+        contact_person: formData.contact_person.trim() || undefined,
         type_of_business: formData.type_of_business.trim() || undefined,
         notes: formData.notes.trim() || undefined,
       });
@@ -193,6 +199,36 @@ export const EditLeadModal = ({ isOpen, onClose, lead, onLeadUpdated }: EditLead
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 placeholder="Street address"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Town */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <MapPin className="w-4 h-4 inline mr-1" />
+                Town/City
+              </label>
+              <input
+                type="text"
+                value={formData.town}
+                onChange={(e) => setFormData({ ...formData, town: e.target.value })}
+                placeholder="e.g., Potchefstroom, Klerksdorp"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Contact Person */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <User className="w-4 h-4 inline mr-1" />
+                Contact Person
+              </label>
+              <input
+                type="text"
+                value={formData.contact_person}
+                onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                placeholder="Name of contact person"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
             </div>

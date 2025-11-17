@@ -19,7 +19,8 @@ import {
   Bell,
   Calendar,
   ChevronRight,
-  Edit
+  Edit,
+  User
 } from 'lucide-react';
 import { getLeadNotes, type LeadNote } from '@/lib/leads/supabaseNotesReminders';
 import { useAuthStore } from '@/store/auth';
@@ -158,6 +159,22 @@ const LeadCardComponent = ({
             <div className="flex items-start gap-1.5 text-sm">
               <MapPin className="w-3.5 h-3.5 text-gray-500 flex-shrink-0 mt-0.5" />
               <span className="text-gray-700 line-clamp-2">{lead.address}</span>
+            </div>
+          )}
+
+          {/* Town */}
+          {lead.town && (
+            <div className="flex items-center gap-1.5 text-sm">
+              <MapPin className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+              <span className="text-gray-700 font-medium">{lead.town}</span>
+            </div>
+          )}
+
+          {/* Contact Person */}
+          {lead.contact_person && (
+            <div className="flex items-center gap-1.5 text-sm">
+              <User className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+              <span className="text-gray-700">Contact: {lead.contact_person}</span>
             </div>
           )}
 

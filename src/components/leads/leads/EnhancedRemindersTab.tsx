@@ -270,203 +270,214 @@ export const EnhancedRemindersTab = ({ leadId }: EnhancedRemindersTabProps) => {
 
       {/* Add/Edit Reminder Form */}
       {showAddForm && (
-        <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-6 rounded-xl border-2 border-blue-200 space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-            <Bell className="w-5 h-5 mr-2 text-blue-600" />
-            {editingReminder ? 'Edit Reminder' : 'Create New Reminder'}
-          </h3>
-
-          {/* Reminder Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type *
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {reminderTypes.map((type) => (
-                <button
-                  key={type.value}
-                  type="button"
-                  onClick={() => setReminderType(type.value)}
-                  className={cn(
-                    'p-3 rounded-lg border-2 transition-all text-center',
-                    reminderType === type.value
-                      ? 'border-blue-500 bg-blue-50 shadow-md'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  )}
-                >
-                  <div className="text-2xl mb-1">{type.icon}</div>
-                  <div className="text-xs font-medium">{type.label}</div>
-                </button>
-              ))}
-            </div>
+        <div className="bg-white rounded-xl border-2 border-purple-200 shadow-lg overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-4">
+            <h3 className="text-xl font-bold text-white flex items-center">
+              <Bell className="w-6 h-6 mr-2" />
+              {editingReminder ? 'Edit Reminder' : 'Create New Reminder'}
+            </h3>
+            <p className="text-purple-100 text-sm mt-1">
+              Set up a reminder for this lead
+            </p>
           </div>
 
-          {/* Priority */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Priority *
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['high', 'medium', 'low'] as ReminderPriority[]).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setPriority(p)}
-                  className={cn(
-                    'p-3 rounded-lg border-2 transition-all font-medium',
-                    priority === p
-                      ? p === 'high' ? 'border-red-500 bg-red-50 text-red-700'
-                        : p === 'medium' ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
-                        : 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  )}
-                >
-                  {p === 'high' ? '🔴 High' : p === 'medium' ? '🟡 Medium' : '🟢 Low'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Date and Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Content */}
+          <div className="p-6 space-y-6">
+            {/* Reminder Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="w-4 h-4 inline mr-1" />
-                Date *
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Type *
               </label>
-              <input
-                type="date"
-                value={reminderDate}
-                onChange={(e) => setReminderDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Clock className="w-4 h-4 inline mr-1" />
-                Time
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={isAllDay}
-                    onChange={(e) => setIsAllDay(e.target.checked)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">All Day</span>
-                </label>
-                {!isAllDay && (
-                  <input
-                    type="time"
-                    value={reminderTime}
-                    onChange={(e) => setReminderTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                )}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {reminderTypes.map((type) => (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => setReminderType(type.value)}
+                    className={cn(
+                      'p-3 rounded-lg border-2 transition-all text-center hover:scale-105',
+                      reminderType === type.value
+                        ? 'border-purple-500 bg-purple-50 shadow-md'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    )}
+                  >
+                    <div className="text-2xl mb-1">{type.icon}</div>
+                    <div className="text-xs font-medium">{type.label}</div>
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
 
-          {/* Note */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Note *
-            </label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="What is this reminder for?"
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            />
-          </div>
+            {/* Priority */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Priority *
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {(['high', 'medium', 'low'] as ReminderPriority[]).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPriority(p)}
+                    className={cn(
+                      'p-4 rounded-lg border-2 transition-all font-semibold hover:scale-105',
+                      priority === p
+                        ? p === 'high' ? 'border-red-500 bg-red-50 text-red-700 shadow-md'
+                          : p === 'medium' ? 'border-yellow-500 bg-yellow-50 text-yellow-700 shadow-md'
+                          : 'border-green-500 bg-green-50 text-green-700 shadow-md'
+                        : 'border-gray-200 bg-white hover:border-gray-300 text-gray-700'
+                    )}
+                  >
+                    {p === 'high' ? '🔴 High Priority' : p === 'medium' ? '🟡 Medium Priority' : '🟢 Low Priority'}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {/* Recurring */}
-          <div>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isRecurring}
-                onChange={(e) => setIsRecurring(e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            {/* Date and Time */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  Date *
+                </label>
+                <input
+                  type="date"
+                  value={reminderDate}
+                  onChange={(e) => setReminderDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  Time
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isAllDay}
+                      onChange={(e) => setIsAllDay(e.target.checked)}
+                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                    />
+                    <span className="text-sm text-gray-700 font-medium">All Day</span>
+                  </label>
+                  {!isAllDay && (
+                    <input
+                      type="time"
+                      value={reminderTime}
+                      onChange={(e) => setReminderTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Note */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Note *
+              </label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="What is this reminder for?"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
               />
-              <Repeat className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">Recurring Reminder</span>
-            </label>
+            </div>
 
-            {isRecurring && (
-              <div className="mt-3 p-4 bg-white rounded-lg border border-gray-200 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Repeat Every
-                    </label>
-                    <select
-                      value={recurrenceType}
-                      onChange={(e) => setRecurrenceType(e.target.value as any)}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="daily">Day(s)</option>
-                      <option value="weekly">Week(s)</option>
-                      <option value="monthly">Month(s)</option>
-                    </select>
+            {/* Recurring */}
+            <div>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isRecurring}
+                  onChange={(e) => setIsRecurring(e.target.checked)}
+                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                />
+                <Repeat className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">Recurring Reminder</span>
+              </label>
+
+              {isRecurring && (
+                <div className="mt-3 p-4 bg-purple-50 rounded-lg border border-purple-200 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Repeat Every
+                      </label>
+                      <select
+                        value={recurrenceType}
+                        onChange={(e) => setRecurrenceType(e.target.value as any)}
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="daily">Day(s)</option>
+                        <option value="weekly">Week(s)</option>
+                        <option value="monthly">Month(s)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Interval
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={recurrenceInterval}
+                        onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Interval
+                      End Date (Optional)
                     </label>
                     <input
-                      type="number"
-                      min="1"
-                      max="365"
-                      value={recurrenceInterval}
-                      onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      type="date"
+                      value={recurrenceEndDate}
+                      onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                      min={reminderDate || new Date().toISOString().split('T')[0]}
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    End Date (Optional)
-                  </label>
-                  <input
-                    type="date"
-                    value={recurrenceEndDate}
-                    onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                    min={reminderDate || new Date().toISOString().split('T')[0]}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
+          {/* Error Message */}
           {error && (
             <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
+              <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
 
-          <div className="flex space-x-2">
-            <button
-              onClick={handleSaveReminder}
-              disabled={loading}
-              className="btn btn-primary flex-1"
-            >
-              {loading ? 'Saving...' : editingReminder ? 'Update Reminder' : 'Save Reminder'}
-            </button>
+          {/* Footer */}
+          <div className="bg-gray-50 border-t border-gray-200 p-4 flex justify-end space-x-3 -mx-6 -mb-6 mt-6">
             <button
               onClick={() => {
                 setShowAddForm(false);
                 resetForm();
               }}
-              className="btn btn-secondary"
+              className="px-6 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
+            </button>
+            <button
+              onClick={handleSaveReminder}
+              disabled={loading}
+              className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+            >
+              {loading ? 'Saving...' : editingReminder ? 'Update Reminder' : 'Create Reminder'}
             </button>
           </div>
         </div>

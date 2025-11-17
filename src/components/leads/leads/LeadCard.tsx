@@ -6,6 +6,7 @@ import { Card } from '@/components/leads/ui/Card';
 import { cn } from '@/lib/utils';
 import { AddNoteModal } from './AddNoteModal';
 import { AddReminderModal } from './AddReminderModal';
+import { EditLeadModal } from './EditLeadModal';
 import { LeadFilesButton } from './LeadFilesButton';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { 
@@ -17,7 +18,8 @@ import {
   MessageSquare,
   Bell,
   Calendar,
-  ChevronRight
+  ChevronRight,
+  Edit
 } from 'lucide-react';
 import { getLeadNotes, type LeadNote } from '@/lib/leads/supabaseNotesReminders';
 import { useAuthStore } from '@/store/auth';
@@ -47,6 +49,7 @@ const LeadCardComponent = ({
   const user = useAuthStore((state) => state.user);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -194,6 +197,18 @@ const LeadCardComponent = ({
               >
                 <Bell className="w-3.5 h-3.5" />
                 <span>Remind</span>
+              </button>
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowEditModal(true);
+                }}
+                className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 rounded border border-orange-200 transition-colors"
+                title="Edit Lead"
+              >
+                <Edit className="w-3.5 h-3.5" />
+                <span>Edit</span>
               </button>
               
               <LeadFilesButton lead={lead} compact />
@@ -362,6 +377,15 @@ const LeadCardComponent = ({
         onClose={() => setShowReminderModal(false)}
         leadId={lead.id}
         leadName={lead.name}
+      />
+      <EditLeadModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        lead={lead}
+        onLeadUpdated={() => {
+          // Optionally refresh data here
+          setShowEditModal(false);
+        }}
       />
       <ConfirmModal
         isOpen={showDeleteConfirm}

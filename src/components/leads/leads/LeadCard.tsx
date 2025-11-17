@@ -198,6 +198,20 @@ const LeadCardComponent = ({
               
               <LeadFilesButton lead={lead} compact />
               
+              {lead.maps_address && (
+                <a
+                  href={lead.maps_address}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded border border-green-200 transition-colors"
+                  title="View on Google Maps"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Maps</span>
+                </a>
+              )}
+              
               <button
                 onClick={(e) => {
                   e.stopPropagation();

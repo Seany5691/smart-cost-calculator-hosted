@@ -6,6 +6,7 @@ import { FileUp, Database, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from '
 import Link from 'next/link';
 import ExcelImporter from '@/components/leads/import/ExcelImporter';
 import ScrapedListSelector from '@/components/leads/import/ScrapedListSelector';
+import { ConfirmModal } from '@/components/leads/ui/ConfirmModal';
 import { useImportStore } from '@/store/leads/import';
 import { useAuthStore } from '@/store/auth';
 
@@ -24,6 +25,7 @@ export default function ImportPage() {
   
   const [selectedMethod, setSelectedMethod] = useState<ImportMethod>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showBackConfirm, setShowBackConfirm] = useState(false);
 
   const handleMethodSelect = (method: ImportMethod) => {
     setSelectedMethod(method);
@@ -39,8 +41,8 @@ export default function ImportPage() {
 
   const handleBack = () => {
     if (isImporting) {
-      const confirm = window.confirm('Import is in progress. Are you sure you want to go back?');
-      if (!confirm) return;
+      setShowBackConfirm(true);
+      return;
     }
     setSelectedMethod(null);
     clearError();
@@ -296,6 +298,21 @@ export default function ImportPage() {
           <ExcelImporter onImportComplete={handleImportComplete} />
         )}
       </div>
+
+      {/* Back Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showBackConfirm}
+        onClose={() => setShowBackConfirm(false)}
+        onConfirm={() => {
+          setShowBackConfirm(false);
+          setSelectedMethod(null);
+          clearError();
+        }}
+        title="Import in Progress"
+        message="Import is currently in progress. Are you sure you want to go back? This will cancel the import."
+        confirmText="Go Back"
+        variant="warning"
+      />
     </div>
   );
 }

@@ -118,12 +118,12 @@ const LeadCardComponent = ({
         isSelected && 'ring-2 ring-blue-500 bg-blue-50/50'
       )}
     >
-      {/* Main Content - Horizontal Layout */}
-      <div className="flex gap-4 items-start">
+      {/* Main Content - Responsive Layout: Vertical on mobile, Horizontal on desktop */}
+      <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch md:items-start">
         {/* Left Side - Lead Information */}
         <div className="flex-1 space-y-2">
           {/* Name */}
-          <h3 className="text-base font-bold text-gray-900 line-clamp-1" title={lead.name}>
+          <h3 className="text-base font-bold text-gray-900 line-clamp-2 md:line-clamp-1" title={lead.name}>
             {lead.name}
           </h3>
 
@@ -189,9 +189,9 @@ const LeadCardComponent = ({
 
         {/* Right Side - Actions */}
         {showActions && (
-          <div className="flex flex-col gap-2 min-w-[140px]">
+          <div className="flex flex-col gap-2 w-full md:min-w-[140px] md:w-auto">
             {/* Compact Action Buttons */}
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-3 md:grid-cols-2 gap-1.5">
               <button
                 onClick={(e) => {
                   e.stopPropagation();

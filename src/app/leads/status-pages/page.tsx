@@ -655,33 +655,7 @@ export default function MainLeadsPage() {
               </select>
               {filterListName !== 'all' && (
                 <button
-                  onClick={async () => {
-                    if (confirm(`Are you sure you want to delete the entire "${filterListName}" list? This will permanently delete all leads in this list and cannot be undone.`)) {
-                      try {
-                        setError(null);
-                        const listToDelete = filterListName;
-                        
-                        // Switch to "all" view first
-                        setFilterListName('all');
-                        
-                        // Delete the list
-                        const result = await useLeadsStore.getState().deleteList(listToDelete);
-                        
-                        // Refresh list names
-                        const updatedListNames = await useLeadsStore.getState().getUniqueListNames();
-                        setAllListNames(updatedListNames);
-                        
-                        // Force refresh leads
-                        await fetchLeads();
-                        
-                        setSuccessMessage(`Successfully deleted "${listToDelete}" list (${result.deletedCount} leads removed)`);
-                        setShowSuccess(true);
-                        setTimeout(() => setShowSuccess(false), 5000);
-                      } catch (err: any) {
-                        setError(err.message || 'Failed to delete list');
-                      }
-                    }
-                  }}
+                  onClick={() => setDeleteListConfirm(filterListName)}
                   className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   title={`Delete "${filterListName}" list`}
                 >
@@ -1066,6 +1040,44 @@ export default function MainLeadsPage() {
         </div>,
         document.body
       )}
+
+      {/* Delete List Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteListConfirm !== null}
+        onClose={() => setDeleteListConfirm(null)}
+        onConfirm={async () => {
+          if (deleteListConfirm) {
+            try {
+              setError(null);
+              const listToDelete = deleteListConfirm;
+              
+              // Switch to "all" view first
+              setFilterListName('all');
+              
+              // Delete the list
+              const result = await useLeadsStore.getState().deleteList(listToDelete);
+              
+              // Refresh list names
+              const updatedListNames = await useLeadsStore.getState().getUniqueListNames();
+              setAllListNames(updatedListNames);
+              
+              // Force refresh leads
+              await fetchLeads();
+              
+              setSuccessMessage(`Successfully deleted "${listToDelete}" list (${result.deletedCount} leads removed)`);
+              setShowSuccess(true);
+              setTimeout(() => setShowSuccess(false), 5000);
+            } catch (err: any) {
+              setError(err.message || 'Failed to delete list');
+            }
+          }
+          setDeleteListConfirm(null);
+        }}
+        title="Delete Entire List"
+        message={`Are you sure you want to delete the entire "${deleteListConfirm}" list? This will permanently delete all leads in this list and cannot be undone.`}
+        confirmText="Delete List"
+        variant="danger"
+      />
     </div>
   );
 }

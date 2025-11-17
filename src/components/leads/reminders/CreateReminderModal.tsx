@@ -385,13 +385,31 @@ export const CreateReminderModal = ({ isOpen, onClose, leads, routes }: CreateRe
                 </label>
                 <div className="space-y-2">
                   {!isAllDay && (
-                    <input
-                      type="time"
-                      value={reminderTime}
-                      onChange={(e) => setReminderTime(e.target.value)}
-                      onFocus={(e) => e.target.showPicker?.()}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
+                    <div className="flex gap-2">
+                      <select
+                        value={reminderTime.split(':')[0]}
+                        onChange={(e) => setReminderTime(`${e.target.value}:${reminderTime.split(':')[1]}`)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      >
+                        {Array.from({ length: 24 }, (_, i) => i).map(hour => (
+                          <option key={hour} value={hour.toString().padStart(2, '0')}>
+                            {hour.toString().padStart(2, '0')}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="flex items-center text-gray-500 font-semibold">:</span>
+                      <select
+                        value={reminderTime.split(':')[1]}
+                        onChange={(e) => setReminderTime(`${reminderTime.split(':')[0]}:${e.target.value}`)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      >
+                        {['00', '15', '30', '45'].map(minute => (
+                          <option key={minute} value={minute}>
+                            {minute}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   )}
                   <label className="flex items-center space-x-2">
                     <input

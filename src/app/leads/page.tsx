@@ -30,6 +30,7 @@ const LaterPageContent = lazy(() => import('@/app/leads/status-pages/status/late
 const BadPageContent = lazy(() => import('@/app/leads/status-pages/status/bad/page'));
 const SignedPageContent = lazy(() => import('@/app/leads/status-pages/status/signed/page'));
 const RoutesPageContent = lazy(() => import('@/app/leads/routes-pages/page'));
+const RemindersPageContent = lazy(() => import('@/app/leads/reminders-page/page'));
 
 export default function LeadsManagerPage() {
   const router = useRouter();
@@ -197,6 +198,7 @@ export default function LeadsManagerPage() {
     { name: 'Bad Leads', icon: '❌' },
     { name: 'Signed', icon: '🏆' },
     { name: 'Routes', icon: '🗺️' },
+    { name: 'Reminders', icon: '🔔' },
   ];
 
   const handleTabChange = (index: number) => {
@@ -547,6 +549,17 @@ export default function LeadsManagerPage() {
                     </div>
                   }>
                     <RoutesPageContent />
+                  </Suspense>
+                )}
+                
+                {tabIndex === 8 && (
+                  <Suspense fallback={
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                      <span className="ml-3 text-gray-600">Loading reminders...</span>
+                    </div>
+                  }>
+                    <RemindersPageContent />
                   </Suspense>
                 )}
               </div>

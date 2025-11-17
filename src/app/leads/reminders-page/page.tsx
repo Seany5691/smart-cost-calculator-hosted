@@ -18,9 +18,9 @@ import {
   Grid,
   RefreshCw
 } from 'lucide-react';
-import { ReminderCalendar } from '@/components/leads/reminders/ReminderCalendar';
+// import { ReminderCalendar } from '@/components/leads/reminders/ReminderCalendar'; // TODO: Create this
+// import { CreateReminderModal } from '@/components/leads/reminders/CreateReminderModal'; // TODO: Create this
 import { RemindersList } from '@/components/leads/reminders/RemindersList';
-import { CreateReminderModal } from '@/components/leads/reminders/CreateReminderModal';
 import { ReminderFilters } from '@/components/leads/reminders/ReminderFilters';
 import { ReminderStats } from '@/components/leads/reminders/ReminderStats';
 import type { ReminderType, ReminderPriority } from '@/lib/leads/supabaseNotesReminders';
@@ -32,8 +32,8 @@ export default function RemindersPage() {
   const { allLeads, fetchAllLeadsForStats } = useLeadsStore();
   const { routes, fetchRoutes } = useRoutesStore();
   
-  const [view, setView] = useState<'calendar' | 'list'>('calendar');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  // const [view, setView] = useState<'calendar' | 'list'>('list'); // Calendar coming soon
+  // const [showCreateModal, setShowCreateModal] = useState(false); // Modal coming soon
   const [filterType, setFilterType] = useState<ReminderType | 'all'>('all');
   const [filterPriority, setFilterPriority] = useState<ReminderPriority | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<'active' | 'completed' | 'all'>('active');
@@ -144,82 +144,34 @@ export default function RemindersPage() {
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn btn-primary flex items-center"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Reminder
-          </button>
+          {/* TODO: Add Create Reminder Modal */}
+          <div className="text-sm text-gray-600 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+            💡 Tip: Create reminders from lead details pages
+          </div>
         </div>
       </div>
 
       {/* Stats */}
       <ReminderStats reminders={reminders} />
 
-      {/* View Toggle and Filters */}
+      {/* Filters */}
       <div className="glass-card p-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          {/* View Toggle */}
-          <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setView('calendar')}
-              className={`px-4 py-2 rounded-md transition-all ${
-                view === 'calendar'
-                  ? 'bg-white shadow-md text-purple-600 font-semibold'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <CalendarIcon className="w-4 h-4 inline mr-2" />
-              Calendar
-            </button>
-            <button
-              onClick={() => setView('list')}
-              className={`px-4 py-2 rounded-md transition-all ${
-                view === 'list'
-                  ? 'bg-white shadow-md text-purple-600 font-semibold'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <List className="w-4 h-4 inline mr-2" />
-              List
-            </button>
-          </div>
-
-          {/* Filters */}
-          <ReminderFilters
-            filterType={filterType}
-            filterPriority={filterPriority}
-            filterStatus={filterStatus}
-            filterDateRange={filterDateRange}
-            onTypeChange={setFilterType}
-            onPriorityChange={setFilterPriority}
-            onStatusChange={setFilterStatus}
-            onDateRangeChange={setFilterDateRange}
-          />
-        </div>
+        <ReminderFilters
+          filterType={filterType}
+          filterPriority={filterPriority}
+          filterStatus={filterStatus}
+          filterDateRange={filterDateRange}
+          onTypeChange={setFilterType}
+          onPriorityChange={setFilterPriority}
+          onStatusChange={setFilterStatus}
+          onDateRangeChange={setFilterDateRange}
+        />
       </div>
 
-      {/* Main Content */}
-      {view === 'calendar' ? (
-        <ReminderCalendar 
-          reminders={filteredReminders}
-          leads={allLeads}
-          routes={routes}
-        />
-      ) : (
-        <RemindersList
-          reminders={filteredReminders}
-          leads={allLeads}
-          routes={routes}
-        />
-      )}
-
-      {/* Create Reminder Modal */}
-      <CreateReminderModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        leads={allLeads.filter(l => l.status !== 'new')} // Exclude main sheet
+      {/* Main Content - List View */}
+      <RemindersList
+        reminders={filteredReminders}
+        leads={allLeads}
         routes={routes}
       />
     </div>

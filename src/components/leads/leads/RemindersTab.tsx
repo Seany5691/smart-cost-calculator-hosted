@@ -10,7 +10,17 @@ interface RemindersTabProps {
   leadId: string;
 }
 
+// Import the enhanced version
+import { EnhancedRemindersTab } from './EnhancedRemindersTab';
+
 export const RemindersTab = ({ leadId }: RemindersTabProps) => {
+  // Use the enhanced version
+  return <EnhancedRemindersTab leadId={leadId} />;
+};
+
+// Keep old version as backup (commented out)
+/*
+export const RemindersTabOld = ({ leadId }: RemindersTabProps) => {
   console.log('[RemindersTab] Component mounted for lead:', leadId);
   
   const user = useAuthStore((state) => state.user);
@@ -270,3 +280,5 @@ export const RemindersTab = ({ leadId }: RemindersTabProps) => {
     </div>
   );
 };
+
+*/

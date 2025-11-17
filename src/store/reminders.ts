@@ -19,9 +19,15 @@ interface RemindersState {
   // Actions
   fetchAllReminders: (userId: string, force?: boolean) => Promise<void>;
   fetchLeadReminders: (leadId: string) => Promise<LeadReminder[]>;
-  addReminder: (leadId: string, userId: string, reminderDate: string, note: string) => Promise<LeadReminder>;
+  addReminder: (
+    leadId: string | null, 
+    userId: string, 
+    reminderDate: string, 
+    note: string,
+    options?: any
+  ) => Promise<LeadReminder>;
   toggleComplete: (reminderId: string) => Promise<void>;
-  updateReminder: (reminderId: string, updates: Partial<Pick<LeadReminder, 'reminderDate' | 'note' | 'completed'>>) => Promise<void>;
+  updateReminder: (reminderId: string, updates: Partial<Omit<LeadReminder, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
   deleteReminder: (reminderId: string) => Promise<void>;
   clearReminders: () => void;
 }
@@ -63,17 +69,35 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
   },
 
   // Add a new reminder
-  addReminder: async (leadId: string, userId: string, reminderDate: string, note: string) => {
+  addReminder: async (
+    leadId: string | null, 
+    userId: string, 
+    reminderDate: string, 
+    note: string,
+    options?: {
+      reminderTime?: string | null;
+      isAllDay?: boolean;
+      reminderType?: any;
+      priority?: any;
+      routeId?: string | null;
+      title?: string | null;
+      description?: string | null;
+      isRecurring?: boolean;
+      recurrencePattern?: any;
+    }
+  ) => {
     try {
-      console.log('[RemindersStore] Adding reminder:', { leadId, userId, reminderDate, note });
-      const newReminder = await createLeadReminder(leadId, userId, reminderDate, note);
+      console.log('[RemindersStore] Adding reminder:', { leadId, userId, reminderDate, note, options });
+      const newReminder = await createLeadReminder(leadId, userId, reminderDate, note, options);
       console.log('[RemindersStore] Reminder created:', newReminder);
       
       // Add to local state
       set((state) => {
         const updatedReminders = [...state.reminders, newReminder];
         console.log('[RemindersStore] Updated reminders count:', updatedReminders.length);
-        console.log('[RemindersStore] Reminders for lead', leadId, ':', updatedReminders.filter(r => r.leadId === leadId));
+        if (leadId) {
+          console.log('[RemindersStore] Reminders for lead', leadId, ':', updatedReminders.filter(r => r.leadId === leadId));
+        }
         return {
           reminders: updatedReminders,
         };
@@ -104,7 +128,7 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
   },
 
   // Update a reminder
-  updateReminder: async (reminderId: string, updates: Partial<Pick<LeadReminder, 'reminderDate' | 'note' | 'completed'>>) => {
+  updateReminder: async (reminderId: string, updates: Partial<Omit<LeadReminder, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) => {
     try {
       const updatedReminder = await updateLeadReminder(reminderId, updates);
       

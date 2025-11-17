@@ -23,6 +23,7 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef<string>('');
 
   useEffect(() => {
     setMounted(true);
@@ -38,20 +39,25 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
         recognitionRef.current.lang = 'en-US';
 
         recognitionRef.current.onresult = (event: any) => {
-          let interimTranscript = '';
           let finalTranscript = '';
 
+          // Only process final results to avoid duplicates
           for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
-              finalTranscript += transcript + ' ';
-            } else {
-              interimTranscript += transcript;
+              finalTranscript += event.results[i][0].transcript + ' ';
             }
           }
 
+          // Only add new final transcript
           if (finalTranscript) {
-            setNote(prev => prev + finalTranscript);
+            transcriptRef.current += finalTranscript;
+            setNote(prev => {
+              // Avoid adding duplicate text
+              if (!prev.endsWith(finalTranscript.trim())) {
+                return prev + finalTranscript;
+              }
+              return prev;
+            });
           }
         };
 
@@ -81,6 +87,7 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
       setNote('');
       setError(null);
       setIsListening(false);
+      transcriptRef.current = ''; // Reset transcript tracking
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
@@ -93,8 +100,10 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
     if (isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
+      transcriptRef.current = ''; // Reset transcript tracking
     } else {
       try {
+        transcriptRef.current = ''; // Reset transcript tracking
         recognitionRef.current.start();
         setIsListening(true);
         setError(null);

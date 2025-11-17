@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, FileText, AlertCircle } from 'lucide-react';
+import { X, Calendar, FileText, AlertCircle, Clock } from 'lucide-react';
 import { Lead } from '@/lib/leads/types';
+import type { ReminderType, ReminderPriority } from '@/lib/leads/supabaseNotesReminders';
 import { useRemindersStore } from '@/store/reminders';
 import { useAuthStore } from '@/store/auth';
 import { createLeadNote } from '@/lib/leads/supabaseNotesReminders';
+import { cn } from '@/lib/utils';
 
 interface LaterStageModalProps {
   lead: Lead;
@@ -19,7 +21,11 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
   const user = useAuthStore((state) => state.user);
   const { addReminder } = useRemindersStore();
   const [callbackDate, setCallbackDate] = useState('');
+  const [callbackTime, setCallbackTime] = useState('09:00');
+  const [isAllDay, setIsAllDay] = useState(false);
   const [explanation, setExplanation] = useState('');
+  const [reminderType, setReminderType] = useState<ReminderType>('followup');
+  const [priority, setPriority] = useState<ReminderPriority>('medium');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -55,12 +61,18 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
     try {
       console.log('[LaterStageModal] Creating reminder...');
       
-      // Create a reminder for the callback date
+      // Create a reminder for the callback date with all options
       await addReminder(
         lead.id,
         user.id,
         callbackDate,
-        explanation.trim()
+        explanation.trim(),
+        {
+          reminderTime: isAllDay ? null : callbackTime,
+          isAllDay,
+          reminderType,
+          priority,
+        }
       );
       
       console.log('[LaterStageModal] Reminder created successfully');
@@ -79,7 +91,11 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
 
       // Reset form
       setCallbackDate('');
+      setCallbackTime('09:00');
+      setIsAllDay(false);
       setExplanation('');
+      setReminderType('followup');
+      setPriority('medium');
       onClose();
     } catch (err: any) {
       console.error('[LaterStageModal] Error:', err);
@@ -91,7 +107,11 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
 
   const handleCancel = () => {
     setCallbackDate('');
+    setCallbackTime('09:00');
+    setIsAllDay(false);
     setExplanation('');
+    setReminderType('followup');
+    setPriority('medium');
     setError('');
     onClose();
   };
@@ -109,13 +129,13 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
 
       {/* Modal */}
       <div
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="later-stage-modal-title"
       >
         <div
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-lg transition-opacity duration-200"
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transition-opacity duration-200"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -178,24 +198,109 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
               </p>
             </div>
 
-            {/* Callback Date Field */}
+            {/* Reminder Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Reminder Type *
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { value: 'call' as ReminderType, label: 'Phone Call', icon: '📞' },
+                  { value: 'email' as ReminderType, label: 'Email', icon: '📧' },
+                  { value: 'meeting' as ReminderType, label: 'Meeting', icon: '📅' },
+                  { value: 'followup' as ReminderType, label: 'Follow-up', icon: '🔔' },
+                ].map((type) => (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => setReminderType(type.value)}
+                    disabled={isSubmitting}
+                    className={cn(
+                      'p-3 rounded-lg border-2 transition-all text-center',
+                      reminderType === type.value
+                        ? 'border-purple-500 bg-purple-50 shadow-md'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    )}
+                  >
+                    <div className="text-2xl mb-1">{type.icon}</div>
+                    <div className="text-xs font-medium">{type.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Priority */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="w-4 h-4 inline mr-1" />
-                Callback Date *
+                Priority *
               </label>
-              <input
-                type="date"
-                value={callbackDate}
-                onChange={(e) => setCallbackDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                disabled={isSubmitting}
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                When should you follow up with this lead?
-              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {(['high', 'medium', 'low'] as ReminderPriority[]).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPriority(p)}
+                    disabled={isSubmitting}
+                    className={cn(
+                      'p-3 rounded-lg border-2 transition-all font-medium',
+                      priority === p
+                        ? p === 'high' ? 'border-red-500 bg-red-50 text-red-700'
+                          : p === 'medium' ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                          : 'border-green-500 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    )}
+                  >
+                    {p === 'high' ? '🔴 High' : p === 'medium' ? '🟡 Medium' : '🟢 Low'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Date and Time */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  Callback Date *
+                </label>
+                <input
+                  type="date"
+                  value={callbackDate}
+                  onChange={(e) => setCallbackDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  Time
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={isAllDay}
+                      onChange={(e) => setIsAllDay(e.target.checked)}
+                      disabled={isSubmitting}
+                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                    />
+                    <span className="text-sm text-gray-700">All Day</span>
+                  </label>
+                  {!isAllDay && (
+                    <input
+                      type="time"
+                      value={callbackTime}
+                      onChange={(e) => setCallbackTime(e.target.value)}
+                      disabled={isSubmitting}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Error Message */}

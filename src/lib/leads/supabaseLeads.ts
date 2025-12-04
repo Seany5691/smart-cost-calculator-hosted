@@ -184,9 +184,16 @@ export const supabaseLeads = {
     userId: string,
     leadId: string,
     newStatus: LeadStatus,
-    additionalData?: { notes?: string; date_to_call_back?: string }
+    additionalData?: { notes?: string; date_to_call_back?: string; dateSigned?: string }
   ): Promise<void> {
     try {
+      console.log('[changeLeadStatus] Called with:', { 
+        leadId, 
+        newStatus, 
+        additionalData,
+        hasDateSigned: !!additionalData?.dateSigned 
+      });
+
       // Get the lead
       const { data: lead, error: fetchError } = await supabase
         .from('leads')
@@ -210,9 +217,31 @@ export const supabaseLeads = {
         updatedAt: new Date().toISOString(),
       };
 
+      // Handle date_to_call_back for "later" status
       if (additionalData?.date_to_call_back) {
         updates.dateToCallBack = additionalData.date_to_call_back;
       }
+
+      // Handle dateSigned for "signed" status
+      console.log('[changeLeadStatus] Checking dateSigned:', {
+        newStatus,
+        isSignedStatus: newStatus === 'signed',
+        hasAdditionalData: !!additionalData,
+        dateSigned: additionalData?.dateSigned,
+        hasDateSigned: !!additionalData?.dateSigned
+      });
+      
+      if (newStatus === 'signed' && additionalData?.dateSigned) {
+        updates.dateSigned = additionalData.dateSigned;
+        console.log('[changeLeadStatus] Setting dateSigned to:', additionalData.dateSigned);
+      }
+
+      // Clear dateSigned if moving away from "signed" status
+      if (oldStatus === 'signed' && newStatus !== 'signed') {
+        updates.dateSigned = null;
+      }
+
+      console.log('[changeLeadStatus] Updates to apply:', updates);
 
       const { error: updateError } = await supabase
         .from('leads')
@@ -220,7 +249,12 @@ export const supabaseLeads = {
         .eq('id', leadId)
         .eq('userId', userId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('[changeLeadStatus] Update error:', updateError);
+        throw updateError;
+      }
+
+      console.log('[changeLeadStatus] Lead updated successfully');
 
       // Renumber the old status category if status changed
       if (oldStatus !== newStatus) {
@@ -759,7 +793,7 @@ export const supabaseLeads = {
  * Transform database lead (camelCase) to app lead (snake_case)
  */
 function transformLeadFromDb(dbLead: any): Lead {
-  return {
+  const transformed = {
     id: dbLead.id,
     maps_address: dbLead.mapsAddress,
     number: dbLead.number,
@@ -773,6 +807,7 @@ function transformLeadFromDb(dbLead: any): Lead {
     status: dbLead.status,
     notes: dbLead.notes,
     date_to_call_back: dbLead.dateToCallBack,
+    dateSigned: dbLead.dateSigned,
     coordinates: dbLead.coordinates,
     background_color: dbLead.backgroundColor,
     list_name: dbLead.listName,
@@ -781,6 +816,18 @@ function transformLeadFromDb(dbLead: any): Lead {
     created_at: dbLead.createdAt,
     updated_at: dbLead.updatedAt,
   };
+  
+  // Debug logging for signed leads
+  if (transformed.status === 'signed') {
+    console.log('[transformLeadFromDb] Signed lead:', {
+      name: transformed.name,
+      dateSigned: transformed.dateSigned,
+      dbDateSigned: dbLead.dateSigned,
+      updated_at: transformed.updated_at
+    });
+  }
+  
+  return transformed;
 }
 
 /**
@@ -802,6 +849,7 @@ function transformLeadToDb(lead: Partial<Lead>): any {
   if (lead.status !== undefined) dbLead.status = lead.status;
   if (lead.notes !== undefined) dbLead.notes = lead.notes;
   if (lead.date_to_call_back !== undefined) dbLead.dateToCallBack = lead.date_to_call_back;
+  if (lead.dateSigned !== undefined) dbLead.dateSigned = lead.dateSigned;
   if (lead.coordinates !== undefined) dbLead.coordinates = lead.coordinates;
   if (lead.background_color !== undefined) dbLead.backgroundColor = lead.background_color;
   if (lead.list_name !== undefined) dbLead.listName = lead.list_name;

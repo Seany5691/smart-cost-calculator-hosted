@@ -23,6 +23,8 @@ import {
 import { cn } from '@/lib/utils';
 import { showToast } from '@/lib/leads/toast';
 import { AddLeadButton } from '@/components/leads/leads/AddLeadButton';
+import { SignedModal } from '@/components/leads/leads/SignedModal';
+import { LaterStageModal } from '@/components/leads/leads/LaterStageModal';
 
 export default function BadLeadsPage() {
   const {
@@ -72,6 +74,12 @@ export default function BadLeadsPage() {
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [showBulkRecoverModal, setShowBulkRecoverModal] = useState(false);
   const [mounted, setMounted] = useState(false);
+  
+  // State for Signed modal
+  const [showSignedModal, setShowSignedModal] = useState<Lead | null>(null);
+  
+  // State for Later Stage modal
+  const [showLaterStageModal, setShowLaterStageModal] = useState<Lead | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -195,9 +203,49 @@ export default function BadLeadsPage() {
   // Handle status change
   const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
     try {
-      await changeLeadStatus(leadId, newStatus);
+      if (newStatus === 'signed') {
+        const lead = filteredLeads.find(l => l.id === leadId);
+        if (lead) {
+          setShowSignedModal(lead);
+        }
+      } else if (newStatus === 'later') {
+        const lead = filteredLeads.find(l => l.id === leadId);
+        if (lead) {
+          setShowLaterStageModal(lead);
+        }
+      } else {
+        await changeLeadStatus(leadId, newStatus);
+      }
     } catch (err) {
       console.error('Failed to change lead status:', err);
+    }
+  };
+
+  // Handle Signed confirmation
+  const handleSignedConfirm = async (data: { dateSigned: string; notes: string }) => {
+    if (!showSignedModal) return;
+    
+    try {
+      await changeLeadStatus(showSignedModal.id, 'signed', data);
+      setShowSignedModal(null);
+      await fetchLeadsByStatus('bad');
+    } catch (err) {
+      console.error('Failed to mark as Signed:', err);
+      throw err;
+    }
+  };
+
+  // Handle Later Stage confirmation
+  const handleLaterStageConfirm = async (data: { date_to_call_back: string; notes: string }) => {
+    if (!showLaterStageModal) return;
+    
+    try {
+      await changeLeadStatus(showLaterStageModal.id, 'later', data);
+      setShowLaterStageModal(null);
+      await fetchLeadsByStatus('bad');
+    } catch (err) {
+      console.error('Failed to move to Later Stage:', err);
+      throw err;
     }
   };
 
@@ -705,6 +753,26 @@ export default function BadLeadsPage() {
         confirmText="Recover All"
         variant="info"
       />
+
+      {/* Signed Modal */}
+      {showSignedModal && (
+        <SignedModal
+          lead={showSignedModal}
+          isOpen={true}
+          onClose={() => setShowSignedModal(null)}
+          onConfirm={handleSignedConfirm}
+        />
+      )}
+
+      {/* Later Stage Modal */}
+      {showLaterStageModal && (
+        <LaterStageModal
+          lead={showLaterStageModal}
+          isOpen={true}
+          onClose={() => setShowLaterStageModal(null)}
+          onConfirm={handleLaterStageConfirm}
+        />
+      )}
     </div>
   );
 }

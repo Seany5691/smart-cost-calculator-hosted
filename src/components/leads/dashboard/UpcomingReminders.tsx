@@ -15,7 +15,7 @@ interface ReminderWithLead extends LeadReminder {
 interface UpcomingRemindersProps {
   leads: Lead[];
   onLeadClick?: (lead: Lead) => void;
-  daysAhead?: number;
+  daysAhead?: number; // Set to 0 or negative to show all reminders
 }
 
 export const UpcomingReminders = ({ leads, onLeadClick, daysAhead = 30 }: UpcomingRemindersProps) => {
@@ -79,8 +79,10 @@ export const UpcomingReminders = ({ leads, onLeadClick, daysAhead = 30 }: Upcomi
     const endOfNextWeek = new Date(endOfWeek);
     endOfNextWeek.setDate(endOfNextWeek.getDate() + 7);
 
-    const maxDate = new Date(today);
-    maxDate.setDate(maxDate.getDate() + daysAhead);
+    const maxDate = daysAhead > 0 ? new Date(today) : null;
+    if (maxDate) {
+      maxDate.setDate(maxDate.getDate() + daysAhead);
+    }
 
     remindersWithLeads.forEach(reminder => {
       if (!showCompleted && reminder.completed) return;
@@ -89,7 +91,7 @@ export const UpcomingReminders = ({ leads, onLeadClick, daysAhead = 30 }: Upcomi
       reminderDate.setHours(0, 0, 0, 0);
       const reminderTime = reminderDate.getTime();
 
-      if (reminderTime > maxDate.getTime()) return;
+      if (maxDate && reminderTime > maxDate.getTime()) return;
 
       if (reminderTime < today.getTime()) {
         groups.overdue.push(reminder);
@@ -166,13 +168,13 @@ export const UpcomingReminders = ({ leads, onLeadClick, daysAhead = 30 }: Upcomi
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatReminderDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
-    });
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
+    return `${weekday}, ${day}/${month}/${year}`;
   };
 
   return (
@@ -341,7 +343,7 @@ export const UpcomingReminders = ({ leads, onLeadClick, daysAhead = 30 }: Upcomi
                               <div className="flex items-center space-x-1">
                                 <Calendar className="w-3 h-3" />
                                 <span className={reminder.completed ? 'line-through' : ''}>
-                                  {formatDate(reminder.reminderDate)}
+                                  {formatReminderDate(reminder.reminderDate)}
                                 </span>
                               </div>
                               {lead.phone && (

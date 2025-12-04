@@ -109,12 +109,11 @@ export const RemindersList = ({ reminders, leads, routes }: RemindersListProps) 
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
-    });
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
+    return `${weekday}, ${day}/${month}/${year}`;
   };
 
   const getPriorityBadge = (priority: string) => {

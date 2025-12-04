@@ -47,6 +47,7 @@ export interface Lead {
   status: LeadStatus;
   notes: string | null;
   date_to_call_back: string | null; // ISO date string
+  dateSigned: string | null; // NEW: Date when lead was signed (ISO date string) - matches DB column "dateSigned"
   coordinates: Coordinates | null;
   background_color: string | null; // For "No Good" marking
   list_name: string | null; // NEW: List name for multi-list management (e.g., "Potchefstroom", "Klerksdorp")

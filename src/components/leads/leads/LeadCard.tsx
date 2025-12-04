@@ -25,6 +25,7 @@ import {
 import { getLeadNotes, type LeadNote } from '@/lib/leads/supabaseNotesReminders';
 import { useAuthStore } from '@/store/auth';
 import { useRemindersStore, useLeadReminders } from '@/store/reminders';
+import { formatDate } from '@/lib/dateUtils';
 
 interface LeadCardProps {
   lead: Lead;
@@ -96,6 +97,8 @@ const LeadCardComponent = ({
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value as LeadStatus;
+    
+    // Pass the status change to the parent - let the parent handle modals
     if (onStatusChange) {
       onStatusChange(lead.id, newStatus);
     }
@@ -183,6 +186,19 @@ const LeadCardComponent = ({
             <div className="flex items-center gap-1.5 text-sm">
               <Briefcase className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
               <span className="text-gray-700">{lead.type_of_business}</span>
+            </div>
+          )}
+
+          {/* Date Signed - Only show for signed leads */}
+          {lead.status === 'signed' && (
+            <div className="flex items-center gap-1.5 text-sm bg-green-50 p-2 rounded border border-green-200">
+              <Calendar className="w-4 h-4 text-green-600 flex-shrink-0" />
+              <span className="text-green-700 font-bold">
+                Signed: {lead.dateSigned ? formatDate(lead.dateSigned) : formatDate(lead.updated_at)}
+              </span>
+              {!lead.dateSigned && (
+                <span className="text-xs text-green-600 italic">(using last updated date)</span>
+              )}
             </div>
           )}
         </div>
@@ -308,7 +324,7 @@ const LeadCardComponent = ({
                   <div key={note.id} className="text-sm text-gray-700 bg-gray-50 p-2 rounded border border-gray-200">
                     <p>{note.content}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {new Date(note.createdAt).toLocaleString()}
+                      {formatDate(note.createdAt)} {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 ))}
@@ -367,7 +383,7 @@ const LeadCardComponent = ({
                       'text-gray-700 flex-1 text-xs',
                       reminder.completed && 'line-through'
                     )}>
-                      {new Date(reminder.reminderDate).toLocaleDateString()} - {reminder.note}
+                      {formatDate(reminder.reminderDate)} - {reminder.note}
                     </span>
                   </div>
                 ))}

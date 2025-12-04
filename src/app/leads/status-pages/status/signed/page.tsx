@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AddLeadButton } from '@/components/leads/leads/AddLeadButton';
+import { LaterStageModal } from '@/components/leads/leads/LaterStageModal';
 
 export default function SignedLeadsPage() {
   const {
@@ -57,6 +58,9 @@ export default function SignedLeadsPage() {
   const [filterTown, setFilterTown] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'provider' | 'town' | 'date'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // State for Later Stage modal
+  const [showLaterStageModal, setShowLaterStageModal] = useState<Lead | null>(null);
 
   // Load leads on mount
   useEffect(() => {
@@ -202,7 +206,7 @@ export default function SignedLeadsPage() {
       lead.phone || '',
       lead.address || '',
       lead.type_of_business || '',
-      new Date(lead.updated_at).toLocaleDateString(),
+      getSignedDateDisplay(lead),
       lead.notes || ''
     ]);
 
@@ -223,23 +227,53 @@ export default function SignedLeadsPage() {
   };
 
   // Get days since signed
-  const getDaysSinceSigned = (updatedAt: string) => {
-    return Math.floor((Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24));
+  const getDaysSinceSigned = (lead: Lead) => {
+    const dateToUse = lead.dateSigned || lead.updated_at;
+    return Math.floor((Date.now() - new Date(dateToUse).getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  // Format signed date for display (DD/MM/YYYY)
+  const getSignedDateDisplay = (lead: Lead) => {
+    const dateToUse = lead.dateSigned || lead.updated_at;
+    const date = new Date(dateToUse);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   // Handle status change
   const handleStatusChange = async (leadId: string, newStatus: string, additionalData?: any) => {
     try {
-      await updateLead(leadId, {
-        status: newStatus as any,
-        ...additionalData,
-        updated_at: new Date().toISOString()
-      });
-      // Refresh the leads list
-      fetchLeadsByStatus('signed');
+      if (newStatus === 'later') {
+        const lead = filteredLeads.find(l => l.id === leadId);
+        if (lead) {
+          setShowLaterStageModal(lead);
+        }
+      } else {
+        const { changeLeadStatus } = useLeadsStore.getState();
+        await changeLeadStatus(leadId, newStatus as any, additionalData);
+        // Refresh the leads list
+        fetchLeadsByStatus('signed');
+      }
     } catch (error) {
       console.error('Failed to update lead status:', error);
       throw error;
+    }
+  };
+
+  // Handle Later Stage confirmation
+  const handleLaterStageConfirm = async (data: { date_to_call_back: string; notes: string }) => {
+    if (!showLaterStageModal) return;
+    
+    try {
+      const { changeLeadStatus } = useLeadsStore.getState();
+      await changeLeadStatus(showLaterStageModal.id, 'later', data);
+      setShowLaterStageModal(null);
+      await fetchLeadsByStatus('signed');
+    } catch (err) {
+      console.error('Failed to move to Later Stage:', err);
+      throw err;
     }
   };
 
@@ -520,6 +554,16 @@ export default function SignedLeadsPage() {
             </Card>
           )}
         </>
+      )}
+
+      {/* Later Stage Modal */}
+      {showLaterStageModal && (
+        <LaterStageModal
+          lead={showLaterStageModal}
+          isOpen={true}
+          onClose={() => setShowLaterStageModal(null)}
+          onConfirm={handleLaterStageConfirm}
+        />
       )}
     </div>
   );

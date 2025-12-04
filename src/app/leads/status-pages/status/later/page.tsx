@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LaterStageModal } from '@/components/leads/leads/LaterStageModal';
+import { SignedModal } from '@/components/leads/leads/SignedModal';
 import { ConfirmModal } from '@/components/leads/ui/ConfirmModal';
 import { AddLeadButton } from '@/components/leads/leads/AddLeadButton';
 
@@ -184,12 +185,36 @@ export default function LaterStagePage() {
     upcoming: groupedLeads.upcoming.length
   }), [filteredLeads, groupedLeads]);
 
+  // State for Signed modal
+  const [showSignedModal, setShowSignedModal] = useState<Lead | null>(null);
+
   // Handle status change
-  const handleStatusChange = async (leadId: string, status: LeadStatus) => {
+  const handleStatusChange = async (leadId: string, status: LeadStatus, additionalData?: any) => {
     try {
-      await changeLeadStatus(leadId, status);
+      if (status === 'signed') {
+        const lead = filteredLeads.find(l => l.id === leadId);
+        if (lead) {
+          setShowSignedModal(lead);
+        }
+      } else {
+        await changeLeadStatus(leadId, status, additionalData);
+      }
     } catch (err) {
       console.error('Failed to change lead status:', err);
+    }
+  };
+
+  // Handle Signed confirmation
+  const handleSignedConfirm = async (data: { dateSigned: string; notes: string }) => {
+    if (!showSignedModal) return;
+    
+    try {
+      await changeLeadStatus(showSignedModal.id, 'signed', data);
+      setShowSignedModal(null);
+      await fetchLeadsByStatus('later');
+    } catch (err) {
+      console.error('Failed to mark as Signed:', err);
+      throw err;
     }
   };
 
@@ -485,6 +510,16 @@ export default function LaterStagePage() {
         confirmText="Delete"
         variant="danger"
       />
+
+      {/* Signed Modal */}
+      {showSignedModal && (
+        <SignedModal
+          lead={showSignedModal}
+          isOpen={true}
+          onClose={() => setShowSignedModal(null)}
+          onConfirm={handleSignedConfirm}
+        />
+      )}
     </div>
   );
 }

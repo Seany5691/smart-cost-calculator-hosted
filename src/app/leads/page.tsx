@@ -289,94 +289,102 @@ export default function LeadsManagerPage() {
                     </div>
 
                     {/* Statistics Grid - Mobile Optimized */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-                      {/* Total Leads */}
-                      <div className="glass-card p-4 sm:p-6 hover:scale-105 transition-transform duration-200 touch-manipulation">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+                      {/* Leads Card */}
+                      <button
+                        onClick={() => handleTabChange(2)}
+                        className="glass-card p-4 sm:p-6 hover:scale-105 transition-transform duration-200 touch-manipulation text-left group"
+                      >
                         <div className="flex items-center justify-between mb-3 sm:mb-4">
-                          <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
-                            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                          <div className="flex items-center space-x-2">
+                            <span className="text-2xl">📝</span>
+                            <h3 className="text-lg font-semibold text-gray-900">Leads</h3>
                           </div>
-                          <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+                          <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
                         </div>
-                        <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.totalLeads}</h3>
-                        <p className="text-xs sm:text-sm text-gray-600">Total Leads</p>
-                        <div className="mt-2 sm:mt-3 text-xs text-gray-500">
-                          {stats.activeLeads} active
-                        </div>
-                      </div>
+                        <div className="text-3xl sm:text-4xl font-bold text-purple-600 mb-2">{stats.activeLeads}</div>
+                        <p className="text-sm text-gray-600">Active lead pipeline</p>
+                      </button>
 
-                      {/* Working Leads */}
-                      <div className="glass-card p-4 sm:p-6 hover:scale-105 transition-transform duration-200 touch-manipulation">
+                      {/* Working On Card */}
+                      <button
+                        onClick={() => handleTabChange(3)}
+                        className="glass-card p-4 sm:p-6 hover:scale-105 transition-transform duration-200 touch-manipulation text-left group"
+                      >
                         <div className="flex items-center justify-between mb-3 sm:mb-4">
-                          <div className="p-2 sm:p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-                            <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                          <div className="flex items-center space-x-2">
+                            <span className="text-2xl">👥</span>
+                            <h3 className="text-lg font-semibold text-gray-900">Working On</h3>
                           </div>
+                          <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-yellow-600 group-hover:translate-x-1 transition-all" />
                         </div>
-                        <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.workingLeads}</h3>
-                        <p className="text-xs sm:text-sm text-gray-600">Working On</p>
-                        <div className="mt-2 sm:mt-3 text-xs text-gray-500">
-                          {stats.laterStageLeads} in later stage
-                        </div>
-                      </div>
+                        <div className="text-3xl sm:text-4xl font-bold text-yellow-600 mb-2">{stats.workingLeads}</div>
+                        <p className="text-sm text-gray-600">Leads in progress</p>
+                      </button>
 
-                      {/* Signed Leads */}
-                      <div className="glass-card p-4 sm:p-6 hover:scale-105 transition-transform duration-200 touch-manipulation">
+                      {/* Later Stage Card */}
+                      <button
+                        onClick={() => handleTabChange(4)}
+                        className="glass-card p-4 sm:p-6 hover:scale-105 transition-transform duration-200 touch-manipulation text-left group"
+                      >
                         <div className="flex items-center justify-between mb-3 sm:mb-4">
-                          <div className="p-2 sm:p-3 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg">
-                            <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                          <div className="flex items-center space-x-2">
+                            <span className="text-2xl">⏰</span>
+                            <h3 className="text-lg font-semibold text-gray-900">Later Stage</h3>
                           </div>
+                          <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
                         </div>
-                        <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.signedLeads}</h3>
-                        <p className="text-xs sm:text-sm text-gray-600">Signed</p>
-                        <div className="mt-2 sm:mt-3 text-xs text-gray-500">
-                          {stats.badLeads} bad leads
-                        </div>
-                      </div>
+                        <div className="text-3xl sm:text-4xl font-bold text-indigo-600 mb-2">{stats.laterStageLeads}</div>
+                        <p className="text-sm text-gray-600">Scheduled callbacks</p>
+                      </button>
 
-                      {/* Routes Generated */}
-                      <div className="glass-card p-4 sm:p-6 hover:scale-105 transition-transform duration-200 touch-manipulation">
+                      {/* Bad Leads Card */}
+                      <button
+                        onClick={() => handleTabChange(5)}
+                        className="glass-card p-4 sm:p-6 hover:scale-105 transition-transform duration-200 touch-manipulation text-left group"
+                      >
                         <div className="flex items-center justify-between mb-3 sm:mb-4">
-                          <div className="p-2 sm:p-3 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
-                            <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                          <div className="flex items-center space-x-2">
+                            <span className="text-2xl">❌</span>
+                            <h3 className="text-lg font-semibold text-gray-900">Bad Leads</h3>
                           </div>
+                          <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-red-600 group-hover:translate-x-1 transition-all" />
                         </div>
-                        <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stats.totalRoutes}</h3>
-                        <p className="text-xs sm:text-sm text-gray-600">Routes Generated</p>
-                        <div className="mt-2 sm:mt-3 text-xs text-gray-500">
-                          {stats.recentImports} recent imports
-                        </div>
-                      </div>
-                    </div>
+                        <div className="text-3xl sm:text-4xl font-bold text-red-600 mb-2">{stats.badLeads}</div>
+                        <p className="text-sm text-gray-600">Not viable leads</p>
+                      </button>
 
-                    {/* Quick Actions - Mobile Optimized */}
-                    <div className="glass-card p-4 sm:p-6 mb-6 sm:mb-8">
-                      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4 sm:mb-6">Quick Actions</h2>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                        {quickActions.map((action) => (
-                          <button
-                            key={action.title}
-                            onClick={action.onClick}
-                            className="group relative overflow-hidden rounded-xl p-4 sm:p-6 bg-white border border-gray-200 hover:border-transparent hover:shadow-xl transition-all duration-300 text-left touch-manipulation active:scale-95"
-                          >
-                            <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
-                            <div className="relative">
-                              <div className={`inline-flex p-2 sm:p-3 rounded-lg bg-gradient-to-br ${action.color} mb-3 sm:mb-4`}>
-                                <action.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                              </div>
-                              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 group-hover:text-gray-700">
-                                {action.title}
-                              </h3>
-                              <p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">
-                                {action.description}
-                              </p>
-                              <div className="flex items-center text-xs sm:text-sm font-medium text-gray-900 group-hover:text-blue-600">
-                                Get started
-                                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
+                      {/* Signed Card */}
+                      <button
+                        onClick={() => handleTabChange(6)}
+                        className="glass-card p-4 sm:p-6 hover:scale-105 transition-transform duration-200 touch-manipulation text-left group"
+                      >
+                        <div className="flex items-center justify-between mb-3 sm:mb-4">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-2xl">🏆</span>
+                            <h3 className="text-lg font-semibold text-gray-900">Signed</h3>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
+                        </div>
+                        <div className="text-3xl sm:text-4xl font-bold text-green-600 mb-2">{stats.signedLeads}</div>
+                        <p className="text-sm text-gray-600">Successfully converted</p>
+                      </button>
+
+                      {/* Routes Card */}
+                      <button
+                        onClick={() => handleTabChange(7)}
+                        className="glass-card p-4 sm:p-6 hover:scale-105 transition-transform duration-200 touch-manipulation text-left group"
+                      >
+                        <div className="flex items-center justify-between mb-3 sm:mb-4">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-2xl">🗺️</span>
+                            <h3 className="text-lg font-semibold text-gray-900">Routes</h3>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                        </div>
+                        <div className="text-3xl sm:text-4xl font-bold text-blue-600 mb-2">{stats.totalRoutes}</div>
+                        <p className="text-sm text-gray-600">Field visit planning</p>
+                      </button>
                     </div>
 
                     {/* Calendar and Upcoming Events - Mobile Optimized */}
@@ -413,8 +421,39 @@ export default function LeadsManagerPage() {
                           };
                           setTabIndex(tabMap[lead.status] || 0);
                         }}
-                        daysAhead={30}
+                        daysAhead={0}
                       />
+                    </div>
+
+                    {/* Quick Actions - Mobile Optimized */}
+                    <div className="glass-card p-4 sm:p-6 mb-6 sm:mb-8">
+                      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4 sm:mb-6">Quick Actions</h2>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        {quickActions.map((action) => (
+                          <button
+                            key={action.title}
+                            onClick={action.onClick}
+                            className="group relative overflow-hidden rounded-xl p-4 sm:p-6 bg-white border border-gray-200 hover:border-transparent hover:shadow-xl transition-all duration-300 text-left touch-manipulation active:scale-95"
+                          >
+                            <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+                            <div className="relative">
+                              <div className={`inline-flex p-2 sm:p-3 rounded-lg bg-gradient-to-br ${action.color} mb-3 sm:mb-4`}>
+                                <action.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                              </div>
+                              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 group-hover:text-gray-700">
+                                {action.title}
+                              </h3>
+                              <p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">
+                                {action.description}
+                              </p>
+                              <div className="flex items-center text-xs sm:text-sm font-medium text-gray-900 group-hover:text-blue-600">
+                                Get started
+                                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Recent Activity - Mobile Optimized */}

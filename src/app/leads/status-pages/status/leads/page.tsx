@@ -27,6 +27,7 @@ import {
 import { cn } from '@/lib/utils';
 import { LeadDetailsModal } from '@/components/leads/leads/LeadDetailsModal';
 import { LaterStageModal } from '@/components/leads/leads/LaterStageModal';
+import { SignedModal } from '@/components/leads/leads/SignedModal';
 import { AddLeadButton } from '@/components/leads/leads/AddLeadButton';
 import { AddNoteModal } from '@/components/leads/leads/AddNoteModal';
 import { AddReminderModal } from '@/components/leads/leads/AddReminderModal';
@@ -73,6 +74,7 @@ export default function LeadsStatusPage() {
   // Modal states
   const [selectedLeadForDetails, setSelectedLeadForDetails] = useState<Lead | null>(null);
   const [showLaterStageModal, setShowLaterStageModal] = useState<Lead | null>(null);
+  const [showSignedModal, setShowSignedModal] = useState<Lead | null>(null);
   const [showNoteModal, setShowNoteModal] = useState<{ leadId: string; leadName: string } | null>(null);
   const [showReminderModal, setShowReminderModal] = useState<{ leadId: string; leadName: string } | null>(null);
   const [bulkStatusConfirm, setBulkStatusConfirm] = useState<{ status: LeadStatus; count: number } | null>(null);
@@ -148,6 +150,11 @@ export default function LeadsStatusPage() {
         if (lead) {
           setShowLaterStageModal(lead);
         }
+      } else if (newStatus === 'signed') {
+        const lead = filteredLeads.find(l => l.id === leadId);
+        if (lead) {
+          setShowSignedModal(lead);
+        }
       } else {
         await changeLeadStatus(leadId, newStatus, additionalData);
       }
@@ -167,6 +174,21 @@ export default function LeadsStatusPage() {
       await fetchLeadsByStatus('leads');
     } catch (error) {
       console.error('Failed to move lead to Later Stage:', error);
+    }
+  };
+
+  // Handle Signed confirmation
+  const handleSignedConfirm = async (data: { dateSigned: string; notes: string }) => {
+    if (!showSignedModal) return;
+    
+    try {
+      await changeLeadStatus(showSignedModal.id, 'signed', data);
+      setShowSignedModal(null);
+      // Reload leads to reflect changes
+      await fetchLeadsByStatus('leads');
+    } catch (error) {
+      console.error('Failed to mark as Signed:', error);
+      throw error;
     }
   };
 
@@ -593,6 +615,16 @@ export default function LeadsStatusPage() {
           isOpen={true}
           onClose={() => setShowLaterStageModal(null)}
           onConfirm={handleLaterStageConfirm}
+        />
+      )}
+
+      {/* Signed Modal */}
+      {showSignedModal && (
+        <SignedModal
+          lead={showSignedModal}
+          isOpen={true}
+          onClose={() => setShowSignedModal(null)}
+          onConfirm={handleSignedConfirm}
         />
       )}
 

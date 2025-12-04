@@ -32,7 +32,7 @@ export default function RemindersPage() {
   const { allLeads, fetchAllLeadsForStats } = useLeadsStore();
   const { routes, fetchRoutes } = useRoutesStore();
   
-  const [view, setView] = useState<'calendar' | 'list'>('calendar');
+  const [view, setView] = useState<'calendar' | 'list'>('list');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filterType, setFilterType] = useState<ReminderType | 'all'>('all');
   const [filterPriority, setFilterPriority] = useState<ReminderPriority | 'all'>('all');

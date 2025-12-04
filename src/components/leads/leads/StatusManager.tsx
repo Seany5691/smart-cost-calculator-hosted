@@ -5,6 +5,8 @@ import { Lead, LeadStatus, LEAD_STATUSES, STATUS_COLORS } from '@/lib/leads/type
 import { cn } from '@/lib/utils';
 import { Calendar, CheckCircle, AlertCircle } from 'lucide-react';
 import { LaterStageModal } from './LaterStageModal';
+import { SignedModal } from './SignedModal';
+import { formatDate } from '@/lib/dateUtils';
 
 interface StatusManagerProps {
   lead: Lead;
@@ -21,6 +23,7 @@ const StatusManagerComponent = ({
 }: StatusManagerProps) => {
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus>(lead.status);
   const [showLaterStageModal, setShowLaterStageModal] = useState(false);
+  const [showSignedModal, setShowSignedModal] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const handleStatusChange = async (newStatus: LeadStatus) => {
@@ -30,6 +33,13 @@ const StatusManagerComponent = ({
     if (newStatus === 'later') {
       setSelectedStatus(newStatus);
       setShowLaterStageModal(true);
+      return;
+    }
+
+    // If changing to "Signed", show modal for date signed
+    if (newStatus === 'signed') {
+      setSelectedStatus(newStatus);
+      setShowSignedModal(true);
       return;
     }
 
@@ -64,6 +74,26 @@ const StatusManagerComponent = ({
 
   const handleLaterStageCancel = () => {
     setShowLaterStageModal(false);
+    setSelectedStatus(lead.status);
+  };
+
+  const handleSignedConfirm = async (data: { dateSigned: string; notes: string }) => {
+    setIsTransitioning(true);
+
+    try {
+      await onStatusChange(lead.id, 'signed', data);
+      setShowSignedModal(false);
+    } catch (error) {
+      console.error('Failed to change status to Signed:', error);
+      setSelectedStatus(lead.status); // Revert on error
+      throw error; // Re-throw to show error in modal
+    } finally {
+      setIsTransitioning(false);
+    }
+  };
+
+  const handleSignedCancel = () => {
+    setShowSignedModal(false);
     setSelectedStatus(lead.status);
   };
 
@@ -131,6 +161,14 @@ const StatusManagerComponent = ({
           isOpen={showLaterStageModal}
           onClose={handleLaterStageCancel}
           onConfirm={handleLaterStageConfirm}
+        />
+
+        {/* Signed Modal */}
+        <SignedModal
+          lead={lead}
+          isOpen={showSignedModal}
+          onClose={handleSignedCancel}
+          onConfirm={handleSignedConfirm}
         />
       </div>
     );
@@ -205,13 +243,32 @@ const StatusManagerComponent = ({
         onConfirm={handleLaterStageConfirm}
       />
 
+      {/* Signed Modal */}
+      <SignedModal
+        lead={lead}
+        isOpen={showSignedModal}
+        onClose={handleSignedCancel}
+        onConfirm={handleSignedConfirm}
+      />
+
       {/* Current Status Info */}
       {lead.date_to_call_back && lead.status === 'later' && (
         <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
           <div className="flex items-center space-x-2 text-sm">
             <Calendar className="w-4 h-4 text-purple-600" aria-hidden="true" />
             <span className="font-medium text-purple-900">
-              Callback scheduled for: {new Date(lead.date_to_call_back).toLocaleDateString()}
+              Callback scheduled for: {formatDate(lead.date_to_call_back)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {lead.dateSigned && lead.status === 'signed' && (
+        <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+          <div className="flex items-center space-x-2 text-sm">
+            <Calendar className="w-4 h-4 text-green-600" aria-hidden="true" />
+            <span className="font-medium text-green-900">
+              Signed on: {formatDate(lead.dateSigned)}
             </span>
           </div>
         </div>

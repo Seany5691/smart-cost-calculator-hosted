@@ -13,12 +13,18 @@ import type { LaunchOptions } from 'puppeteer-core';
  */
 export const isProduction = process.env.NODE_ENV === 'production';
 export const isVercel = process.env.VERCEL === '1';
+export const isDocker = process.env.PUPPETEER_EXECUTABLE_PATH === '/usr/bin/chromium';
 export const isServerless = isVercel || process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined;
 
 /**
  * Get the Chromium executable path for the current environment
  */
 export async function getChromiumPath(): Promise<string> {
+  // If we're in Docker with system Chromium, use that
+  if (isDocker) {
+    return '/usr/bin/chromium';
+  }
+  
   if (isServerless) {
     // Use @sparticuz/chromium for Vercel/serverless
     const chromium = await import('@sparticuz/chromium');
@@ -35,8 +41,8 @@ export async function getChromiumPath(): Promise<string> {
  */
 export function getBrowserLaunchOptions(headless: boolean = true): LaunchOptions {
   const baseOptions: LaunchOptions = {
-    // Always use headless in production/serverless
-    headless: isServerless ? true : headless,
+    // Always use headless in production/serverless/docker
+    headless: (isServerless || isDocker) ? true : headless,
     
     // Chromium args optimized for serverless
     args: [
@@ -191,8 +197,8 @@ export function getRecommendedTimeoutSeconds(): number {
  * Get Puppeteer instance configured for the current environment
  */
 export async function getPuppeteer() {
-  if (isServerless) {
-    // Use puppeteer-core for serverless (smaller bundle)
+  if (isServerless || isDocker) {
+    // Use puppeteer-core for serverless and Docker (smaller bundle)
     return await import('puppeteer-core');
   } else {
     // Use full puppeteer for local development

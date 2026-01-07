@@ -1,6 +1,6 @@
 // API routes for individual lead operations
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, listAppHelpers } from '@/lib/supabase';
+import { supabase, supabaseHelpers } from '@/lib/supabase';
 import { validateLead, sanitizeLeadData, validateUUID } from '@/lib/leads/validation';
 import { validateStatusTransition, extractCoordinates } from '@/lib/leads/leadUtils';
 import { LeadFormData, LeadStatus } from '@/lib/leads/types';
@@ -145,7 +145,7 @@ export async function PUT(
       }
 
       // Get next number for new status category
-      const newStatusLeads = await listAppHelpers.getLeadsByStatus(
+      const newStatusLeads = await supabaseHelpers.getLeadsByStatus(
         user.id,
         sanitizedData.status
       );
@@ -153,7 +153,7 @@ export async function PUT(
       (sanitizedData as any).number = maxNumber + 1;
 
       // Renumber old status category
-      await listAppHelpers.renumberLeads(user.id, existingLead.status);
+      await supabaseHelpers.renumberLeads(user.id, existingLead.status);
     }
 
     // Extract coordinates if maps_address is updated
@@ -164,7 +164,7 @@ export async function PUT(
     }
 
     // Update lead in database
-    const updatedLead = await listAppHelpers.updateLead(id, updates);
+    const updatedLead = await supabaseHelpers.updateLead(id, updates);
 
     return NextResponse.json({
       data: updatedLead,
@@ -226,10 +226,10 @@ export async function DELETE(
     }
 
     // Delete lead from database
-    await listAppHelpers.deleteLead(id);
+    await supabaseHelpers.deleteLead(id);
 
     // Renumber remaining leads in the same status category
-    await listAppHelpers.renumberLeads(user.id, existingLead.status);
+    await supabaseHelpers.renumberLeads(user.id, existingLead.status);
 
     return NextResponse.json({
       data: { id, deleted: true },

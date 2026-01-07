@@ -1,6 +1,6 @@
 // API routes for individual route operations
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, listAppHelpers } from '@/lib/supabase';
+import { supabase, supabaseHelpers } from '@/lib/supabase';
 import { validateUUID } from '@/lib/validation';
 
 // GET /api/routes/[id] - Get a single route
@@ -104,7 +104,7 @@ export async function DELETE(
     }
 
     // Delete route from database
-    await listAppHelpers.deleteRoute(id);
+    await supabaseHelpers.deleteRoute(id);
 
     return NextResponse.json({
       data: { id, deleted: true },

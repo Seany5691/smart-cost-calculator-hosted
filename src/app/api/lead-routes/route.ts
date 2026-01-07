@@ -1,6 +1,6 @@
 // API routes for route management
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, listAppHelpers } from '@/lib/supabase';
+import { supabase, supabaseHelpers } from '@/lib/supabase';
 import { validateRoute } from '@/lib/leads/validation';
 import { generateRoute, validateRouteLeads } from '@/lib/leads/routeUtils';
 import { RouteFormData, Lead } from '@/lib/leads/types';
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch all routes for the user
-    const routes = await listAppHelpers.getRoutes(user.id);
+    const routes = await supabaseHelpers.getRoutes(user.id);
 
     return NextResponse.json({
       data: routes,
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Insert route into database
-    const newRoute = await listAppHelpers.createRoute(newRouteData);
+    const newRoute = await supabaseHelpers.createRoute(newRouteData);
 
     // Return route with warnings if any
     return NextResponse.json(

@@ -1,6 +1,6 @@
 // API route for importing data from Smart Cost Calculator scraper
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, listAppHelpers } from '@/lib/supabase';
+import { supabase, supabaseHelpers } from '@/lib/supabase';
 import {
   transformScraperData,
   validateImportData,
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create import session
-    const importSession = await listAppHelpers.createImportSession({
+    const importSession = await supabaseHelpers.createImportSession({
       source_type: 'scraper',
       source_id: sessionId,
       total_records: scraperResults.length,
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     const { validRecords, invalidRecords } = validateImportData(normalizedData);
 
     // Get existing leads for duplicate detection
-    const existingLeads = await listAppHelpers.getLeads(user.id);
+    const existingLeads = await supabaseHelpers.getLeads(user.id);
 
     // Detect duplicates
     const { duplicates, unique } = detectDuplicates(validRecords, existingLeads);
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     for (const batch of batches) {
       try {
         // Get next number for 'new' status (Main Sheet)
-        const currentLeads = await listAppHelpers.getLeadsByStatus(user.id, 'new');
+        const currentLeads = await supabaseHelpers.getLeadsByStatus(user.id, 'new');
         let nextNumber = getNextLeadNumber(currentLeads);
 
         // Prepare leads for insertion
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Insert batch
-        await listAppHelpers.bulkCreateLeads(leadsToInsert);
+        await supabaseHelpers.bulkCreateLeads(leadsToInsert);
         importedCount += batch.length;
       } catch (error) {
         console.error('Error importing batch:', error);
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update import session
-    await listAppHelpers.updateImportSession(importSession.id, {
+    await supabaseHelpers.updateImportSession(importSession.id, {
       status: errors.length > 0 ? 'completed' : 'completed',
       imported_records: importedCount,
       failed_records: invalidRecords.length + errors.length,

@@ -1,6 +1,6 @@
 // API routes for lead management
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, listAppHelpers } from '@/lib/supabase';
+import { supabase, supabaseHelpers } from '@/lib/supabase';
 import { validateLead, sanitizeLeadData } from '@/lib/leads/validation';
 import { getNextLeadNumber, extractCoordinates } from '@/lib/leads/leadUtils';
 import { LeadFormData, LeadStatus } from '@/lib/leads/types';
@@ -37,13 +37,13 @@ export async function GET(request: NextRequest) {
         dateFrom: dateFrom || undefined,
         dateTo: dateTo || undefined,
       };
-      leads = await listAppHelpers.searchLeads(user.id, searchTerm, filters);
+      leads = await supabaseHelpers.searchLeads(user.id, searchTerm, filters);
     } else if (status) {
       // Filter by status
-      leads = await listAppHelpers.getLeadsByStatus(user.id, status);
+      leads = await supabaseHelpers.getLeadsByStatus(user.id, status);
     } else {
       // Get all leads
-      leads = await listAppHelpers.getLeads(user.id);
+      leads = await supabaseHelpers.getLeads(user.id);
     }
 
     return NextResponse.json({
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     // Get the next number for the status category
     const status = sanitizedData.status || 'leads';
-    const existingLeads = await listAppHelpers.getLeadsByStatus(user.id, status);
+    const existingLeads = await supabaseHelpers.getLeadsByStatus(user.id, status);
     const nextNumber = getNextLeadNumber(existingLeads);
 
     // Create lead object
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Insert lead into database
-    const newLead = await listAppHelpers.createLead(leadData);
+    const newLead = await supabaseHelpers.createLead(leadData);
 
     return NextResponse.json(
       {

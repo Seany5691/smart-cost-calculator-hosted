@@ -8,7 +8,7 @@ services:
     container_name: smart-cost-calculator
     restart: unless-stopped
     ports:
-      - "3001:3000"  # External:Internal - Use 3001 externally, 3000 internally
+      - "8547:3000"  # External:Internal - Use port 8547 externally (unlikely to conflict)
     environment:
       # Node environment
       - NODE_ENV=production

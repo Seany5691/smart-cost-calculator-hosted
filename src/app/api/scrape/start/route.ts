@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { StartScrapeRequest, StartScrapeResponse } from '@/lib/scraper/types';
+import { StartScrapeRequest, StartScrapeResponse, ScrapingConfig } from '@/lib/scraper/types';
 import { randomUUID } from 'crypto';
 import { createSession } from '@/lib/scraper/supabaseSessionStore';
 import { errorLogger } from '@/lib/scraper/ErrorLogger';

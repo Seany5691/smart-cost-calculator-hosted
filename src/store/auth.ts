@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { AuthState, User } from '@/lib/types';
 
 const DEFAULT_ADMIN: User = {
-  id: 'admin-1',
+  id: '550e8400-e29b-41d4-a716-446655440000', // Proper UUID format
   username: 'Camryn',
   password: 'Elliot6242!',
   role: 'admin',
@@ -17,7 +17,7 @@ const DEFAULT_ADMIN: User = {
 
 const SAMPLE_USERS: User[] = [
   {
-    id: 'user-1',
+    id: '550e8400-e29b-41d4-a716-446655440001', // Proper UUID format
     username: 'john',
     password: 'password123',
     role: 'manager',
@@ -29,7 +29,7 @@ const SAMPLE_USERS: User[] = [
     updatedAt: new Date('2024-01-01')
   },
   {
-    id: 'user-2',
+    id: '550e8400-e29b-41d4-a716-446655440002', // Proper UUID format
     username: 'jane',
     password: 'password123',
     role: 'user',

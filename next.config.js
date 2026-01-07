@@ -16,6 +16,8 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  // Enable standalone output for Docker
+  output: 'standalone',
   // Performance optimizations
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? {

@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smart-cost-calculator
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Node environment
+      - NODE_ENV=production
+      - PORT=3000
+      
+      # Supabase configuration (replace with your values)
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      
+      # Puppeteer configuration
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - CHROME_BIN=/usr/bin/chromium
+      
+      # Application settings
+      - NEXT_TELEMETRY_DISABLED=1
+    
+    # Resource limits for scraping operations
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Volumes for persistent data (optional)
+    volumes:
+      - ./output:/app/output
+    
+    # Network
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

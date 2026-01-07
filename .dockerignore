@@ -1,0 +1,89 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js
+.next
+out
+build
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+*.log
+*.md
+!README.md
+.prettierrc
+.eslintrc.json
+
+# Documentation
+*.md
+!README.md
+CHROME-PROMPTS-*.md
+CLEANUP_*.md
+DASHBOARD_*.md
+ENHANCED_*.md
+FINAL_*.md
+FIX_*.md
+IMPLEMENTATION_*.md
+INTEGRATED-*.md
+LATER-*.md
+LEADS_*.md
+LEAD_*.md
+MIGRATION*.md
+MOBILE-*.md
+MODAL-*.md
+MULTI_*.md
+NOTES-*.md
+NOTES_*.md
+PHASE*.md
+PRE-*.md
+REFACTOR-*.md
+REMINDERS_*.md
+REPLACE-*.md
+SCRAPER_*.md
+SERVERLESS_*.md
+SIGNED_*.md
+SUPABASE_*.md
+TESTING-*.md
+TODO-*.md
+TROUBLESHOOTING_*.md
+VISUAL-*.md
+
+# SQL files
+*.sql
+
+# Workspace files
+*.code-workspace
+
+# PowerShell scripts
+*.ps1
+
+# Text files
+*.txt

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { storage, STORAGE_KEYS } from '@/lib/leads/localStorage';
-import { LeadNote } from '@/lib/leads/types';
 
 // PUT /api/leads/[id]/notes/[noteId] - Update a note
 export async function PUT(
@@ -24,7 +23,7 @@ export async function PUT(
     }
     
     // Get all notes from localStorage
-    const allNotes = storage.get<LeadNote[]>(STORAGE_KEYS.NOTES) || [];
+    const allNotes = storage.get<any[]>(STORAGE_KEYS.NOTES) || [];
     
     // Find and update the note
     const noteIndex = allNotes.findIndex(note => note.id === noteId);
@@ -41,7 +40,7 @@ export async function PUT(
     }
     
     // Update the note
-    const updatedNote: LeadNote = {
+    const updatedNote: any = {
       ...allNotes[noteIndex],
       content: content.trim(),
       updated_at: new Date().toISOString()
@@ -77,7 +76,7 @@ export async function DELETE(
     const { noteId } = params;
     
     // Get all notes from localStorage
-    const allNotes = storage.get<LeadNote[]>(STORAGE_KEYS.NOTES) || [];
+    const allNotes = storage.get<any[]>(STORAGE_KEYS.NOTES) || [];
     
     // Find the note
     const noteIndex = allNotes.findIndex(note => note.id === noteId);

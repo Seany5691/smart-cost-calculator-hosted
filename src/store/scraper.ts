@@ -632,7 +632,7 @@ export const useScraperStore = create<ScraperState>()(
 
           const data = await response.json();
           
-          // Update state from Supabase
+          // Update state from PostgreSQL
           set({
             status: data.status,
             progress: data.progress,

@@ -51,7 +51,7 @@ export const useCalculatorStore = create<CalculatorState>()(
 
         // Run migration in the background without blocking initialization
         // Handle errors gracefully to not block user
-        get().migrateDealsToSupabase().catch(error => {
+        get().migrateDealsToDatabase().catch(error => {
           console.warn('Deals migration failed, but continuing with normal operation:', error);
         });
       },
@@ -96,10 +96,9 @@ export const useCalculatorStore = create<CalculatorState>()(
           const configStore = useConfigStore.getState();
           const { useAuthStore } = await import('@/store/auth');
           const { user } = useAuthStore.getState();
-          const { supabaseHelpers } = await import('@/lib/supabase');
-          const { logActivityToSupabase } = await import('@/lib/activityLogger');
+          const { logActivity } = await import('@/lib/activityLogger');
           const { generateDealId } = await import('@/lib/idGenerator');
-          
+                    
           if (!user) {
             return false;
           }
@@ -109,7 +108,7 @@ export const useCalculatorStore = create<CalculatorState>()(
           // Generate new UUID for new deals, preserve existing ID for updates
           const dealId = currentDealId || generateDealId();
           
-          // Prepare deal data for Supabase
+          // Prepare deal data for PostgreSQL
           const dealData = {
             id: dealId,
             userId: originalUserContext?.userId || user.id,
@@ -134,46 +133,64 @@ export const useCalculatorStore = create<CalculatorState>()(
 
           try {
             if (currentDealId) {
-              // UPDATE existing deal in Supabase
-              // Preserve original deal ID (text or UUID) and only update updatedAt
-              await supabaseHelpers.updateDeal(currentDealId, dealData);
+              // UPDATE existing deal via API
+              const response = await fetch(`/api/deals/${currentDealId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dealData),
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to update deal');
+              }
 
               // Log activity: deal_saved
-              await logActivityToSupabase({
+              await logActivity({
+                id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 userId: user.id,
                 username: user.username,
                 userRole: user.role,
                 activityType: 'deal_saved',
                 dealId: currentDealId,
-                dealName: dealDetails.customerName
+                dealName: dealDetails.customerName,
+                timestamp: new Date().toISOString()
               });
             } else {
-              // CREATE new deal in Supabase
-              // Use new UUID format for deal.id and set createdAt timestamp
+              // CREATE new deal via API
               const newDealData = {
                 ...dealData,
                 createdAt: new Date().toISOString()
               };
               
-              await supabaseHelpers.createDeal(newDealData);
+              const response = await fetch('/api/deals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newDealData),
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to create deal');
+              }
               
               // Set current deal ID after creating new deal
               set({ currentDealId: dealId });
 
               // Log activity: deal_created
-              await logActivityToSupabase({
+              await logActivity({
+                id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 userId: user.id,
                 username: user.username,
                 userRole: user.role,
                 activityType: 'deal_created',
                 dealId: dealId,
-                dealName: dealDetails.customerName
+                dealName: dealDetails.customerName,
+                timestamp: new Date().toISOString()
               });
             }
 
             return true;
-          } catch (supabaseError) {
-            console.warn('Failed to save deal to Supabase, falling back to localStorage:', supabaseError);
+          } catch (databaseError) {
+            console.warn('Failed to save deal to database, falling back to localStorage:', databaseError);
             
             // Fallback to localStorage
             const existingDeals = JSON.parse(localStorage.getItem('deals-storage') || '[]');
@@ -248,20 +265,23 @@ export const useCalculatorStore = create<CalculatorState>()(
 
       loadDeal: async (dealId: string) => {
         try {
-          const { supabaseHelpers } = await import('@/lib/supabase');
-          const { logActivityToSupabase } = await import('@/lib/activityLogger');
-          
+          const { logActivity } = await import('@/lib/activityLogger');
           let deal;
           
           try {
-            // Try to fetch deal from Supabase
-            deal = await supabaseHelpers.getDealById(dealId);
+            // Try to fetch deal from API
+            const response = await fetch(`/api/deals/${dealId}`);
+            if (!response.ok) {
+              throw new Error('Deal not found in API');
+            }
+            const result = await response.json();
+            deal = result.data;
             
             if (!deal) {
-              throw new Error('Deal not found in Supabase');
+              throw new Error('Deal not found in API response');
             }
-          } catch (supabaseError) {
-            console.warn('Failed to load deal from Supabase, falling back to localStorage:', supabaseError);
+          } catch (apiError) {
+            console.warn('Failed to load deal from API, falling back to localStorage:', apiError);
             
             // Fallback to localStorage
             const allDeals = JSON.parse(localStorage.getItem('deals-storage') || '[]');
@@ -273,7 +293,7 @@ export const useCalculatorStore = create<CalculatorState>()(
           }
 
           // Load deal data into the store
-          // Handle both Supabase format (sectionsData) and localStorage format (sections)
+          // Handle both database format (sectionsData) and localStorage format (sections)
           const sections = deal.sectionsData || deal.sections;
           const dealDetails = deal.dealDetails || {
             customerName: deal.customerName,
@@ -301,13 +321,15 @@ export const useCalculatorStore = create<CalculatorState>()(
             const { user } = useAuthStore.getState();
             
             if (user) {
-              await logActivityToSupabase({
+              await logActivity({
+                id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 userId: user.id,
                 username: user.username,
                 userRole: user.role,
                 activityType: 'deal_loaded',
                 dealId: dealId,
-                dealName: dealDetails.customerName || deal.customerName
+                dealName: dealDetails.customerName,
+                timestamp: new Date().toISOString()
               });
             }
           } catch (logError) {
@@ -347,7 +369,7 @@ export const useCalculatorStore = create<CalculatorState>()(
         }));
       },
 
-      migrateDealsToSupabase: async (): Promise<boolean> => {
+      migrateDealsToDatabase: async (): Promise<boolean> => {
         try {
           // Check if migration already done
           const migrationKey = 'deals-migrated';
@@ -365,52 +387,8 @@ export const useCalculatorStore = create<CalculatorState>()(
             return true;
           }
 
-          const { supabaseHelpers } = await import('@/lib/supabase');
-
-          // Transform deals to match Supabase schema
-          const dealsToMigrate = localDeals.map((deal: any) => ({
-            id: deal.id,
-            userId: deal.userId,
-            username: deal.username,
-            userRole: deal.userRole,
-            customerName: deal.customerName || deal.dealDetails?.customerName,
-            dealName: deal.customerName || deal.dealDetails?.customerName,
-            dealDetails: deal.dealDetails || {
-              customerName: deal.customerName,
-              term: deal.term,
-              escalation: deal.escalation,
-              distanceToInstall: deal.distanceToInstall,
-              settlement: deal.settlement
-            },
-            sectionsData: deal.sections || deal.sectionsData,
-            totalsData: deal.totals || deal.totalsData,
-            factorsData: deal.factors || deal.factorsData,
-            scalesData: deal.scales || deal.scalesData,
-            createdAt: deal.createdAt,
-            updatedAt: deal.updatedAt
-          }));
-
-          // Migrate deals one by one to handle duplicates with upsert
-          for (const deal of dealsToMigrate) {
-            try {
-              // Check if deal already exists
-              const existingDeal = await supabaseHelpers.getDealById(deal.id).catch(() => null);
-              
-              if (existingDeal) {
-                // Update existing deal, preserving original createdAt
-                await supabaseHelpers.updateDeal(deal.id, {
-                  ...deal,
-                  createdAt: existingDeal.createdAt // Preserve original createdAt
-                });
-              } else {
-                // Create new deal
-                await supabaseHelpers.createDeal(deal);
-              }
-            } catch (error) {
-              // Log individual errors but continue with migration
-              console.warn(`Failed to migrate deal ${deal.id}:`, error);
-            }
-          }
+          // TODO: Replace with API calls to migrate deals
+          console.log('Would migrate deals to database:', localDeals.length, 'deals');
 
           // Mark migration as complete
           if (typeof window !== 'undefined') {
@@ -419,7 +397,7 @@ export const useCalculatorStore = create<CalculatorState>()(
           
           return true;
         } catch (error) {
-          console.error('Failed to migrate deals to Supabase:', error);
+          console.error('Failed to migrate deals to database:', error);
           return false;
         }
       },

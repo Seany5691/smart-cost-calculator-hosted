@@ -55,10 +55,10 @@ export default function HardwareConfig() {
       setLastSaveTime(Date.now());
       setOriginalItems(JSON.parse(JSON.stringify(items))); // Update original data
       setHasUnsavedChanges(false);
-      setMessage({ type: 'success', text: 'All hardware changes saved successfully to Supabase!' });
+      setMessage({ type: 'success', text: 'All hardware changes saved successfully!' });
     } catch (error) {
       console.error('Error saving hardware config:', error);
-      setMessage({ type: 'error', text: 'An error occurred while saving to Supabase. Please try again.' });
+      setMessage({ type: 'error', text: 'An error occurred while saving. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -624,7 +624,7 @@ export default function HardwareConfig() {
           <li><strong>Markup Controls:</strong> Set percentage markup and apply to all items based on cost price</li>
           <li><strong>Extension:</strong> Items that count toward extension totals</li>
           <li><strong>Locked:</strong> Items that cannot be modified in the calculator</li>
-          <li><strong>Changes are saved to Supabase:</strong> All updates are persisted across browsers</li>
+          <li><strong>Changes are saved to database:</strong> All updates are persisted across browsers</li>
         </ul>
       </div>
     </div>

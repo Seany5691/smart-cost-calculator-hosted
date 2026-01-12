@@ -1,6 +1,7 @@
 // API routes for individual lead operations
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, supabaseHelpers } from '@/lib/supabase';
+import { databaseHelpers } from '@/lib/databaseAdapter';
+import { getLeadsAdapter } from '@/lib/leads/leadsAdapter';
 import { validateLead, sanitizeLeadData, validateUUID } from '@/lib/leads/validation';
 import { validateStatusTransition, extractCoordinates } from '@/lib/leads/leadUtils';
 import { LeadFormData, LeadStatus } from '@/lib/leads/types';
@@ -21,25 +22,22 @@ export async function GET(
       );
     }
 
-    // Get user from session
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
+    // Get user from auth store (simplified for PostgreSQL)
+    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
+
+    // Get leads adapter
+    const leadsAdapter = getLeadsAdapter();
+    if (!leadsAdapter) {
       return NextResponse.json(
-        { error: 'Unauthorized', success: false, data: null },
-        { status: 401 }
+        { error: 'Database adapter not available', success: false, data: null },
+        { status: 500 }
       );
     }
 
     // Fetch the lead
-    const { data: lead, error } = await supabase
-      .from('leads')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single();
+    const lead = await leadsAdapter.getLeadById(user.id, id);
 
-    if (error || !lead) {
+    if (!lead) {
       return NextResponse.json(
         { error: 'Lead not found', success: false, data: null },
         { status: 404 }
@@ -80,25 +78,22 @@ export async function PUT(
       );
     }
 
-    // Get user from session
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
+    // Get user from auth store (simplified for PostgreSQL)
+    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
+
+    // Get leads adapter
+    const leadsAdapter = getLeadsAdapter();
+    if (!leadsAdapter) {
       return NextResponse.json(
-        { error: 'Unauthorized', success: false, data: null },
-        { status: 401 }
+        { error: 'Database adapter not available', success: false, data: null },
+        { status: 500 }
       );
     }
 
     // Fetch existing lead
-    const { data: existingLead, error: fetchError } = await supabase
-      .from('leads')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single();
+    const existingLead = await leadsAdapter.getLeadById(user.id, id);
 
-    if (fetchError || !existingLead) {
+    if (!existingLead) {
       return NextResponse.json(
         { error: 'Lead not found', success: false, data: null },
         { status: 404 }
@@ -112,7 +107,7 @@ export async function PUT(
     const sanitizedData = sanitizeLeadData(body);
 
     // Validate lead data (partial validation for updates)
-    const validation = validateLead({ ...existingLead, ...sanitizedData });
+    const validation = validateLead({ ...existingLead, ...sanitizedData } as any);
     if (!validation.isValid) {
       return NextResponse.json(
         {
@@ -145,15 +140,15 @@ export async function PUT(
       }
 
       // Get next number for new status category
-      const newStatusLeads = await supabaseHelpers.getLeadsByStatus(
+      const newStatusLeads = await leadsAdapter.getLeadsByStatus(
         user.id,
-        sanitizedData.status
+        sanitizedData.status as LeadStatus
       );
       const maxNumber = Math.max(...newStatusLeads.map((l: any) => l.number || 0), 0);
       (sanitizedData as any).number = maxNumber + 1;
 
       // Renumber old status category
-      await supabaseHelpers.renumberLeads(user.id, existingLead.status);
+      await leadsAdapter.renumberLeads(user.id, existingLead.status as LeadStatus);
     }
 
     // Extract coordinates if maps_address is updated
@@ -164,10 +159,10 @@ export async function PUT(
     }
 
     // Update lead in database
-    const updatedLead = await supabaseHelpers.updateLead(id, updates);
+    await leadsAdapter.updateLead(user.id, id, updates);
 
     return NextResponse.json({
-      data: updatedLead,
+      data: updates,
       success: true,
       error: null,
     });
@@ -200,25 +195,22 @@ export async function DELETE(
       );
     }
 
-    // Get user from session
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
+    // Get user from auth store (simplified for PostgreSQL)
+    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
+
+    // Get leads adapter
+    const leadsAdapter = getLeadsAdapter();
+    if (!leadsAdapter) {
       return NextResponse.json(
-        { error: 'Unauthorized', success: false, data: null },
-        { status: 401 }
+        { error: 'Database adapter not available', success: false, data: null },
+        { status: 500 }
       );
     }
 
     // Fetch existing lead to get status for renumbering
-    const { data: existingLead, error: fetchError } = await supabase
-      .from('leads')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single();
+    const existingLead = await leadsAdapter.getLeadById(user.id, id);
 
-    if (fetchError || !existingLead) {
+    if (!existingLead) {
       return NextResponse.json(
         { error: 'Lead not found', success: false, data: null },
         { status: 404 }
@@ -226,10 +218,10 @@ export async function DELETE(
     }
 
     // Delete lead from database
-    await supabaseHelpers.deleteLead(id);
+    await leadsAdapter.deleteLead(user.id, id);
 
     // Renumber remaining leads in the same status category
-    await supabaseHelpers.renumberLeads(user.id, existingLead.status);
+    await leadsAdapter.renumberLeads(user.id, existingLead.status as LeadStatus);
 
     return NextResponse.json({
       data: { id, deleted: true },

@@ -19,8 +19,8 @@ interface ConfigState {
   // Load from API (read-only)
   loadFromAPI: () => Promise<void>;
   
-  // Force refresh from Supabase
-  refreshFromSupabase: () => Promise<void>;
+  // Force refresh from database
+  refreshFromDatabase: () => Promise<void>;
   
   // Global sync functions (for backward compatibility)
   syncToGlobalStorage: () => void;
@@ -195,19 +195,19 @@ export const useConfigStore = create<ConfigState>()(
 
       updateHardware: async (items: Item[]) => {
         try {
-          // Update local state immediately
-          set({ hardware: items });
-          
-          // Save to Supabase via API
+          // Update database
           const response = await fetch('/api/config/hardware', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(items)
+            body: JSON.stringify(items),
           });
           
           if (!response.ok) {
-            throw new Error('Failed to save hardware config to Supabase');
+            throw new Error('Failed to save hardware config to database');
           }
+          
+          // Update local state
+          set({ hardware: items });
           
           // Sync to global storage for backward compatibility
           get().syncToGlobalStorage();
@@ -216,22 +216,22 @@ export const useConfigStore = create<ConfigState>()(
           throw error;
         }
       },
-
+      
       updateConnectivity: async (items: Item[]) => {
         try {
-          // Update local state immediately
-          set({ connectivity: items });
-          
-          // Save to Supabase via API
+          // Update database
           const response = await fetch('/api/config/connectivity', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(items)
+            body: JSON.stringify(items),
           });
           
           if (!response.ok) {
-            throw new Error('Failed to save connectivity config to Supabase');
+            throw new Error('Failed to save connectivity config to database');
           }
+          
+          // Update local state
+          set({ connectivity: items });
           
           // Sync to global storage for backward compatibility
           get().syncToGlobalStorage();
@@ -240,22 +240,22 @@ export const useConfigStore = create<ConfigState>()(
           throw error;
         }
       },
-
+      
       updateLicensing: async (items: Item[]) => {
         try {
-          // Update local state immediately
-          set({ licensing: items });
-          
-          // Save to Supabase via API
+          // Update database
           const response = await fetch('/api/config/licensing', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(items)
+            body: JSON.stringify(items),
           });
           
           if (!response.ok) {
-            throw new Error('Failed to save licensing config to Supabase');
+            throw new Error('Failed to save licensing config to database');
           }
+          
+          // Update local state
+          set({ licensing: items });
           
           // Sync to global storage for backward compatibility
           get().syncToGlobalStorage();
@@ -264,22 +264,22 @@ export const useConfigStore = create<ConfigState>()(
           throw error;
         }
       },
-
+      
       updateFactors: async (factors: FactorData | EnhancedFactorData) => {
         try {
-          // Update local state immediately
-          set({ factors });
-          
-          // Save to Supabase via API
+          // Update database
           const response = await fetch('/api/config/factors', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(factors)
+            body: JSON.stringify(factors),
           });
           
           if (!response.ok) {
-            throw new Error('Failed to save factors config to Supabase');
+            throw new Error('Failed to save factors config to database');
           }
+          
+          // Update local state
+          set({ factors });
           
           // Sync to global storage for backward compatibility
           get().syncToGlobalStorage();
@@ -288,31 +288,181 @@ export const useConfigStore = create<ConfigState>()(
           throw error;
         }
       },
-
+      
       updateScales: async (scales: Scales | EnhancedScales) => {
         try {
-          // Update local state immediately
-          set({ scales });
-          
-          // Save to Supabase via API
+          // Update database
           const response = await fetch('/api/config/scales', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(scales)
+            body: JSON.stringify(scales),
           });
           
           if (!response.ok) {
-            throw new Error('Failed to save scales config to Supabase');
+            throw new Error('Failed to save scales config to database');
           }
           
           // Sync to global storage for backward compatibility
           get().syncToGlobalStorage();
+          
+          // Update local state
+          set({ scales });
         } catch (error) {
           console.error('Error updating scales config:', error);
           throw error;
         }
       },
+      
+      loadFromAPI: async () => {
+        try {
+          
+          // Always load from database API first for real-time data
+          // Only fall back to global storage if database fails
+          
+          // Load from database API
+          const [hardwareRes, connectivityRes, licensingRes, factorsRes, scalesRes] = await Promise.allSettled([
+            fetch('/api/config/hardware'),
+            fetch('/api/config/connectivity'),
+            fetch('/api/config/licensing'),
+            fetch('/api/config/factors'),
+            fetch('/api/config/scales')
+          ]);
 
+          // Log any API failures
+          if (connectivityRes.status === 'rejected') {
+            console.error('Connectivity API failed:', connectivityRes.reason);
+          }
+          if (hardwareRes.status === 'rejected') {
+            console.error('Hardware API failed:', hardwareRes.reason);
+          }
+          if (licensingRes.status === 'rejected') {
+            console.error('Licensing API failed:', licensingRes.reason);
+          }
+
+          let hardware = DEFAULT_HARDWARE;
+          let connectivity = DEFAULT_CONNECTIVITY;
+          let licensing = DEFAULT_LICENSING;
+          let factors = DEFAULT_FACTORS;
+          let scales = DEFAULT_SCALES;
+
+          // Process API responses
+          if (hardwareRes.status === 'fulfilled' && hardwareRes.value.ok) {
+            try {
+              const apiHardware = await hardwareRes.value.json();
+              if (Array.isArray(apiHardware) && apiHardware.length > 0) {
+                // Sort by displayOrder, then by name
+                hardware = apiHardware.sort((a, b) => {
+                  const orderA = a.displayOrder ?? 0;
+                  const orderB = b.displayOrder ?? 0;
+                  if (orderA !== orderB) return orderA - orderB;
+                  return a.name.localeCompare(b.name);
+                });
+              }
+            } catch (e) {
+              console.warn('Invalid hardware data from database API, using defaults');
+            }
+          }
+          
+          if (connectivityRes.status === 'fulfilled' && connectivityRes.value.ok) {
+            try {
+              const apiConnectivity = await connectivityRes.value.json();
+              
+              if (Array.isArray(apiConnectivity) && apiConnectivity.length > 0) {
+                // Sort by displayOrder, then by name
+                connectivity = apiConnectivity.sort((a, b) => {
+                  const orderA = a.displayOrder ?? 0;
+                  const orderB = b.displayOrder ?? 0;
+                  if (orderA !== orderB) return orderA - orderB;
+                  return a.name.localeCompare(b.name);
+                });
+              }
+            } catch (e) {
+              console.warn('Invalid connectivity data from database API, using defaults');
+            }
+          }
+          
+          if (licensingRes.status === 'fulfilled' && licensingRes.value.ok) {
+            try {
+              const apiLicensing = await licensingRes.value.json();
+              if (Array.isArray(apiLicensing) && apiLicensing.length > 0) {
+                // Sort by displayOrder, then by name
+                licensing = apiLicensing.sort((a, b) => {
+                  const orderA = a.displayOrder ?? 0;
+                  const orderB = b.displayOrder ?? 0;
+                  if (orderA !== orderB) return orderA - orderB;
+                  return a.name.localeCompare(b.name);
+                });
+              }
+            } catch (e) {
+              console.warn('Invalid licensing data from database API, using defaults');
+            }
+          }
+          
+          if (factorsRes.status === 'fulfilled' && factorsRes.value.ok) {
+            try {
+              const apiFactors = await factorsRes.value.json();
+              if (apiFactors && typeof apiFactors === 'object') {
+                factors = apiFactors;
+              }
+            } catch (e) {
+              console.warn('Invalid factors data from database API, using defaults');
+            }
+          }
+          
+          if (scalesRes.status === 'fulfilled' && scalesRes.value.ok) {
+            try {
+              const apiScales = await scalesRes.value.json();
+              if (apiScales && typeof apiScales === 'object') {
+                // Validate that we have the required structure
+                if (apiScales.additional_costs && 
+                    typeof apiScales.additional_costs.cost_per_kilometer === 'number' &&
+                    typeof apiScales.additional_costs.cost_per_point === 'number') {
+                  scales = apiScales;
+                } else {
+                  console.warn('Scales data missing required additional_costs, using defaults');
+                }
+              }
+            } catch (e) {
+              console.warn('Invalid scales data from database API, using defaults');
+            }
+          }
+
+          set({
+            hardware,
+            connectivity,
+            licensing,
+            factors,
+            scales
+          });
+          
+          // Sync the loaded data to global storage for backward compatibility
+          get().syncToGlobalStorage();
+        } catch (error) {
+          console.error('Error loading config from database API:', error);
+          
+          // Try to load from global storage as fallback
+          const globalLoaded = get().loadFromGlobalStorage();
+          if (!globalLoaded) {
+            // Set defaults if both database and global storage fail
+            set({
+              hardware: DEFAULT_HARDWARE,
+              connectivity: DEFAULT_CONNECTIVITY,
+              licensing: DEFAULT_LICENSING,
+              factors: DEFAULT_FACTORS,
+              scales: DEFAULT_SCALES
+            });
+          }
+        }
+      },
+
+      refreshFromDatabase: async () => {
+        // Clear localStorage to force fresh load from database
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('config-storage');
+        }
+        await get().loadFromAPI();
+      },
+      
       syncToGlobalStorage: () => {
         if (typeof window !== 'undefined') {
           try {
@@ -367,157 +517,6 @@ export const useConfigStore = create<ConfigState>()(
         }
         return false;
       },
-
-      loadFromAPI: async () => {
-        try {
-          
-          // Always load from Supabase API first for real-time data
-          // Only fall back to global storage if Supabase fails
-          
-          // Load from Supabase API
-          const [hardwareRes, connectivityRes, licensingRes, factorsRes, scalesRes] = await Promise.allSettled([
-            fetch('/api/config/hardware'),
-            fetch('/api/config/connectivity'),
-            fetch('/api/config/licensing'),
-            fetch('/api/config/factors'),
-            fetch('/api/config/scales')
-          ]);
-
-          // Log any API failures
-          if (connectivityRes.status === 'rejected') {
-            console.error('Connectivity API failed:', connectivityRes.reason);
-          }
-          if (hardwareRes.status === 'rejected') {
-            console.error('Hardware API failed:', hardwareRes.reason);
-          }
-          if (licensingRes.status === 'rejected') {
-            console.error('Licensing API failed:', licensingRes.reason);
-          }
-
-          let hardware = DEFAULT_HARDWARE;
-          let connectivity = DEFAULT_CONNECTIVITY;
-          let licensing = DEFAULT_LICENSING;
-          let factors = DEFAULT_FACTORS;
-          let scales = DEFAULT_SCALES;
-
-          // Process API responses
-          if (hardwareRes.status === 'fulfilled' && hardwareRes.value.ok) {
-            try {
-              const apiHardware = await hardwareRes.value.json();
-              if (Array.isArray(apiHardware) && apiHardware.length > 0) {
-                // Sort by displayOrder, then by name
-                hardware = apiHardware.sort((a, b) => {
-                  const orderA = a.displayOrder ?? 0;
-                  const orderB = b.displayOrder ?? 0;
-                  if (orderA !== orderB) return orderA - orderB;
-                  return a.name.localeCompare(b.name);
-                });
-              }
-            } catch (e) {
-              console.warn('Invalid hardware data from Supabase API, using defaults');
-            }
-          }
-          
-          if (connectivityRes.status === 'fulfilled' && connectivityRes.value.ok) {
-            try {
-              const apiConnectivity = await connectivityRes.value.json();
-              
-              if (Array.isArray(apiConnectivity) && apiConnectivity.length > 0) {
-                // Sort by displayOrder, then by name
-                connectivity = apiConnectivity.sort((a, b) => {
-                  const orderA = a.displayOrder ?? 0;
-                  const orderB = b.displayOrder ?? 0;
-                  if (orderA !== orderB) return orderA - orderB;
-                  return a.name.localeCompare(b.name);
-                });
-              }
-            } catch (e) {
-              console.warn('Invalid connectivity data from Supabase API, using defaults');
-            }
-          }
-          
-          if (licensingRes.status === 'fulfilled' && licensingRes.value.ok) {
-            try {
-              const apiLicensing = await licensingRes.value.json();
-              if (Array.isArray(apiLicensing) && apiLicensing.length > 0) {
-                // Sort by displayOrder, then by name
-                licensing = apiLicensing.sort((a, b) => {
-                  const orderA = a.displayOrder ?? 0;
-                  const orderB = b.displayOrder ?? 0;
-                  if (orderA !== orderB) return orderA - orderB;
-                  return a.name.localeCompare(b.name);
-                });
-              }
-            } catch (e) {
-              console.warn('Invalid licensing data from Supabase API, using defaults');
-            }
-          }
-          
-          if (factorsRes.status === 'fulfilled' && factorsRes.value.ok) {
-            try {
-              const apiFactors = await factorsRes.value.json();
-              if (apiFactors && typeof apiFactors === 'object') {
-                factors = apiFactors;
-              }
-            } catch (e) {
-              console.warn('Invalid factors data from Supabase API, using defaults');
-            }
-          }
-          
-          if (scalesRes.status === 'fulfilled' && scalesRes.value.ok) {
-            try {
-              const apiScales = await scalesRes.value.json();
-              if (apiScales && typeof apiScales === 'object') {
-                // Validate that we have the required structure
-                if (apiScales.additional_costs && 
-                    typeof apiScales.additional_costs.cost_per_kilometer === 'number' &&
-                    typeof apiScales.additional_costs.cost_per_point === 'number') {
-                  scales = apiScales;
-                } else {
-                  console.warn('Scales data missing required additional_costs, using defaults');
-                }
-              }
-            } catch (e) {
-              console.warn('Invalid scales data from Supabase API, using defaults');
-            }
-          }
-
-          set({
-            hardware,
-            connectivity,
-            licensing,
-            factors,
-            scales
-          });
-          
-          // Sync the loaded data to global storage for backward compatibility
-          get().syncToGlobalStorage();
-        } catch (error) {
-          console.error('Error loading config from Supabase API:', error);
-          
-          // Try to load from global storage as fallback
-          const globalLoaded = get().loadFromGlobalStorage();
-          if (!globalLoaded) {
-            // Set defaults if both Supabase and global storage fail
-            set({
-              hardware: DEFAULT_HARDWARE,
-              connectivity: DEFAULT_CONNECTIVITY,
-              licensing: DEFAULT_LICENSING,
-              factors: DEFAULT_FACTORS,
-              scales: DEFAULT_SCALES
-            });
-          }
-        }
-      },
-
-      refreshFromSupabase: async () => {
-        // Clear localStorage to force fresh load from Supabase
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('config-storage');
-        }
-        // Reload from API
-        await get().loadFromAPI();
-      },
     }),
     {
       name: 'config-storage',
@@ -540,4 +539,4 @@ export const useConfigUpdateLicensing = () => useConfigStore((state) => state.up
 export const useConfigUpdateFactors = () => useConfigStore((state) => state.updateFactors);
 export const useConfigUpdateScales = () => useConfigStore((state) => state.updateScales);
 export const useConfigLoadFromAPI = () => useConfigStore((state) => state.loadFromAPI);
-export const useConfigRefreshFromSupabase = () => useConfigStore((state) => state.refreshFromSupabase); 
+export const useConfigRefreshFromDatabase = () => useConfigStore((state) => state.refreshFromDatabase); 

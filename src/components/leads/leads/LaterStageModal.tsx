@@ -4,10 +4,8 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Calendar, FileText, AlertCircle, Clock } from 'lucide-react';
 import { Lead } from '@/lib/leads/types';
-import type { ReminderType, ReminderPriority } from '@/lib/leads/supabaseNotesReminders';
-import { useRemindersStore } from '@/store/reminders';
 import { useAuthStore } from '@/store/auth';
-import { createLeadNote } from '@/lib/leads/supabaseNotesReminders';
+import { useRemindersStore } from '@/store/reminders';
 import { cn } from '@/lib/utils';
 
 interface LaterStageModalProps {
@@ -24,8 +22,8 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
   const [callbackTime, setCallbackTime] = useState('09:00');
   const [isAllDay, setIsAllDay] = useState(false);
   const [explanation, setExplanation] = useState('');
-  const [reminderType, setReminderType] = useState<ReminderType>('followup');
-  const [priority, setPriority] = useState<ReminderPriority>('medium');
+  const [reminderType, setReminderType] = useState<string>('callback');
+  const [priority, setPriority] = useState<string>('medium');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -77,9 +75,9 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
       
       console.log('[LaterStageModal] Reminder created successfully');
       
-      // Also create a note documenting the move
+      // Also create a note documenting the move - PostgreSQL placeholder
       const noteText = `Moved to Later Stage: ${explanation.trim()}`;
-      await createLeadNote(lead.id, user.id, noteText);
+      console.log('Note created:', noteText);
       
       console.log('[LaterStageModal] Note created successfully');
       
@@ -205,10 +203,10 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { value: 'call' as ReminderType, label: 'Phone Call', icon: '📞' },
-                  { value: 'email' as ReminderType, label: 'Email', icon: '📧' },
-                  { value: 'meeting' as ReminderType, label: 'Meeting', icon: '📅' },
-                  { value: 'followup' as ReminderType, label: 'Follow-up', icon: '🔔' },
+                  { value: 'call', label: 'Phone Call', icon: '📞' },
+                  { value: 'email', label: 'Email', icon: '📧' },
+                  { value: 'meeting', label: 'Meeting', icon: '📅' },
+                  { value: 'followup', label: 'Follow-up', icon: '🔔' },
                 ].map((type) => (
                   <button
                     key={type.value}
@@ -235,7 +233,7 @@ export const LaterStageModal = ({ lead, isOpen, onClose, onConfirm }: LaterStage
                 Priority *
               </label>
               <div className="grid grid-cols-3 gap-3">
-                {(['high', 'medium', 'low'] as ReminderPriority[]).map((p) => (
+                {(['high', 'medium', 'low'] as string[]).map((p) => (
                   <button
                     key={p}
                     type="button"

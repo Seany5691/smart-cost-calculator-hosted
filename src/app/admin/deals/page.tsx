@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import { supabaseHelpers } from '@/lib/supabase';
+import { databaseHelpers } from '@/lib/databaseAdapter';
 import { getFactorForDeal } from '@/lib/utils';
 import { Calendar, User, DollarSign, Plus, FileText, Users, Shield, TrendingUp, Download, Eye, Trash2 } from 'lucide-react';
 import Link from 'next/link';
@@ -44,10 +44,10 @@ export default function AdminDealsPage() {
       setIsLoading(true);
       
       // Admin can see all deals
-      const supabaseDeals = await supabaseHelpers.getDeals(undefined, true);
+      const databaseDeals = await databaseHelpers.getDeals(undefined, true);
       
-      // Transform Supabase data to match Deal interface
-      const allDeals: Deal[] = supabaseDeals.map((deal: any) => ({
+      // Transform database data to match Deal interface
+      const allDeals: Deal[] = databaseDeals.map((deal: any) => ({
         id: deal.id || '',
         userId: deal.userId || '',
         username: deal.username || 'Unknown User',
@@ -68,7 +68,7 @@ export default function AdminDealsPage() {
       setDeals(allDeals);
       setFilteredDeals(allDeals);
     } catch (error) {
-      console.error('Error loading deals from Supabase:', error);
+      console.error('Error loading deals from database:', error);
       
       // Fallback to localStorage on error
       try {
@@ -109,15 +109,15 @@ export default function AdminDealsPage() {
   const deleteDeal = useCallback(async (dealId: string) => {
     setIsDeleting(dealId);
     try {
-      // Delete from Supabase
-      await supabaseHelpers.deleteDeal(dealId);
+      // Delete from database
+      await databaseHelpers.deleteDeal(dealId);
 
       // Reload deals to update the UI
       await loadDeals();
 
       return true;
     } catch (error) {
-      console.error('Error deleting deal from Supabase:', error);
+      console.error('Error deleting deal from database:', error);
       
       // Fallback to localStorage on error
       try {

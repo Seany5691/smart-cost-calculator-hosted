@@ -10,7 +10,6 @@ import {
   AlertTriangle,
   Repeat
 } from 'lucide-react';
-import type { ReminderType, ReminderPriority, RecurrencePattern } from '@/lib/leads/supabaseNotesReminders';
 import { useAuthStore } from '@/store/auth';
 import { useRemindersStore } from '@/store/reminders';
 import { cn } from '@/lib/utils';
@@ -35,10 +34,11 @@ export const AddReminderModal = ({ isOpen, onClose, leadId, leadName, onReminder
   const [reminderDate, setReminderDate] = useState('');
   const [reminderTime, setReminderTime] = useState('09:00');
   const [isAllDay, setIsAllDay] = useState(false);
-  const [reminderType, setReminderType] = useState<ReminderType>('task');
-  const [priority, setPriority] = useState<ReminderPriority>('medium');
+  const [reminderType, setReminderType] = useState<string>('callback');
+  const [priority, setPriority] = useState<string>('medium');
   const [note, setNote] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrencePattern, setRecurrencePattern] = useState<any | null>(null);
   const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
@@ -124,7 +124,7 @@ export const AddReminderModal = ({ isOpen, onClose, leadId, leadName, onReminder
 
   if (!isOpen || !mounted) return null;
 
-  const reminderTypes: { value: ReminderType; label: string; icon: string }[] = [
+  const reminderTypes: { value: string; label: string; icon: string }[] = [
     { value: 'call', label: 'Phone Call', icon: '📞' },
     { value: 'email', label: 'Email', icon: '📧' },
     { value: 'meeting', label: 'Meeting', icon: '📅' },
@@ -202,7 +202,7 @@ export const AddReminderModal = ({ isOpen, onClose, leadId, leadName, onReminder
                 Priority *
               </label>
               <div className="grid grid-cols-3 gap-3">
-                {(['high', 'medium', 'low'] as ReminderPriority[]).map((p) => (
+                {(['high', 'medium', 'low'] as string[]).map((p) => (
                   <button
                     key={p}
                     type="button"

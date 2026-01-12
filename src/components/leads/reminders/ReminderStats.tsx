@@ -2,11 +2,10 @@
 
 import { useMemo } from 'react';
 import { Bell, AlertCircle, CheckCircle, Clock, TrendingUp, Calendar } from 'lucide-react';
-import type { LeadReminder } from '@/lib/leads/supabaseNotesReminders';
 import { cn } from '@/lib/utils';
 
 interface ReminderStatsProps {
-  reminders: LeadReminder[];
+  reminders: any[];
 }
 
 export const ReminderStats = ({ reminders }: ReminderStatsProps) => {

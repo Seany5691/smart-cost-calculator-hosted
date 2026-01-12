@@ -6,10 +6,14 @@ import { Lead } from '@/lib/leads/types';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import { useRemindersStore, useAllReminders, useRemindersLoading } from '@/store/reminders';
-import type { LeadReminder } from '@/lib/leads/supabaseNotesReminders';
 
-interface ReminderWithLead extends LeadReminder {
+interface ReminderWithLead {
   lead?: Lead;
+  id: string;
+  completed: boolean;
+  reminderDate: string;
+  note: string;
+  [key: string]: any;
 }
 
 interface UpcomingRemindersProps {
@@ -30,7 +34,7 @@ export const UpcomingReminders = ({ leads, onLeadClick, daysAhead = 30 }: Upcomi
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Load reminders from Supabase
+  // Load reminders from PostgreSQL
   useEffect(() => {
     if (user) {
       fetchAllReminders(user.id);

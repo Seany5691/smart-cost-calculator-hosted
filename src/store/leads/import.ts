@@ -6,7 +6,7 @@ import {
 } from '@/lib/leads/types';
 import { useAuthStore } from '@/store/auth';
 import { useLeadsStore } from './leads';
-import { supabaseLeads } from '@/lib/leads/supabaseLeads';
+import { getLeadsAdapter } from '@/lib/leads/leadsAdapter';
 import { storage, STORAGE_KEYS, generateId } from '@/lib/leads/localStorage';
 import { extractCoordinatesFromUrl } from '@/lib/leads/validation';
 
@@ -336,7 +336,7 @@ export const useImportStore = create<ImportState>((set, get) => ({
     const listName = session?.list_name || null;
 
     // Get current max number for 'new' status to start numbering from
-    const existingLeads = await supabaseLeads.getLeadsByStatus(user.id, 'new');
+    const existingLeads = await getLeadsAdapter().getLeads(user.id, { status: 'new' });
     let nextNumber = existingLeads.length + 1;
 
     for (let i = 0; i < data.length; i += batchSize) {
@@ -371,8 +371,8 @@ export const useImportStore = create<ImportState>((set, get) => ({
           };
         });
 
-        // Bulk insert using Supabase directly
-        const { data: insertedLeads, error } = await supabaseLeads.bulkCreateLeads(user.id, leadsToInsert);
+        // Bulk insert using PostgreSQL directly
+        const { data: insertedLeads, error } = await getLeadsAdapter().bulkCreateLeads(user.id, leadsToInsert);
         
         if (error) {
           console.error('Batch import error:', error);

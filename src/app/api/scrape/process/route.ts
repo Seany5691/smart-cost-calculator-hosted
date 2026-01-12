@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireScraperAuth } from '@/lib/auth-middleware';
-import { getSession, updateSessionStatus, updateSessionProgress, addBusinesses, addLog } from '@/lib/scraper/supabaseSessionStore';
+import { getSession, updateSessionStatus, updateSessionProgress, addBusinesses, addLog } from '@/lib/scraper/postgresqlSessionStore';
 import { getPuppeteer, getChromiumPath, getBrowserLaunchOptions } from '@/lib/scraper/browserConfig';
 import { IndustryScraper } from '@/lib/scraper/IndustryScraper';
 import { ProviderLookupService } from '@/lib/scraper/ProviderLookupService';
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
     }
 
-    // Get session from Supabase
+    // Get session from PostgreSQL
     const session = await getSession(sessionId);
     if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
@@ -43,16 +43,13 @@ export async function POST(request: NextRequest) {
 
     // Calculate what to process next
     const { towns, industries, progress } = session;
-    const currentTownIndex = progress.completedTowns || 0;
+    const sessionProgress: { completedTowns: number; totalBusinesses: number } = typeof progress === 'object' ? progress : { completedTowns: 0, totalBusinesses: 0 };
+    const currentTownIndex = sessionProgress.completedTowns || 0;
     
-    if (currentTownIndex >= towns.length) {
+    if (!towns || currentTownIndex >= towns.length) {
       // All done!
       await updateSessionStatus(sessionId, 'completed');
-      await addLog(sessionId, {
-        timestamp: new Date().toISOString(),
-        message: `✅ Scraping completed! Total businesses: ${progress.totalBusinesses}`,
-        level: 'success'
-      });
+      await addLog(sessionId, `✅ Scraping completed! Total businesses: ${sessionProgress.totalBusinesses}`, 'info');
       
       return NextResponse.json({
         status: 'completed',
@@ -63,11 +60,15 @@ export async function POST(request: NextRequest) {
 
     const currentTown = towns[currentTownIndex];
     
-    await addLog(sessionId, {
-      timestamp: new Date().toISOString(),
-      message: `Processing town: ${currentTown} (${currentTownIndex + 1}/${towns.length})`,
-      level: 'info'
-    });
+    if (!currentTown) {
+      return NextResponse.json({
+        status: 'error',
+        message: 'Current town not found',
+        hasMore: false
+      });
+    }
+    
+    await addLog(sessionId, `Processing town: ${currentTown} (${currentTownIndex + 1}/${towns.length})`, 'info');
 
     // Update status to running
     if (session.status === 'pending') {
@@ -77,13 +78,18 @@ export async function POST(request: NextRequest) {
     // Process all industries for this town
     const townBusinesses: any[] = [];
     
+    if (!industries || industries.length === 0) {
+      await addLog(sessionId, `No industries to process for ${currentTown}`, 'warning');
+      return NextResponse.json({
+        status: 'completed',
+        message: 'No industries to process',
+        hasMore: false
+      });
+    }
+    
     for (const industry of industries) {
       try {
-        await addLog(sessionId, {
-          timestamp: new Date().toISOString(),
-          message: `Scraping ${industry} in ${currentTown}...`,
-          level: 'info'
-        });
+        await addLog(sessionId, `Starting scrape for ${industry} in ${currentTown}`, 'info');
 
         // Launch browser and scrape
         const puppeteer = await getPuppeteer();
@@ -109,11 +115,7 @@ export async function POST(request: NextRequest) {
 
         if (phoneNumbers.length > 0) {
           try {
-            await addLog(sessionId, {
-              timestamp: new Date().toISOString(),
-              message: `Looking up providers for ${phoneNumbers.length} phone numbers...`,
-              level: 'info'
-            });
+            await addLog(sessionId, `Looking up providers for ${phoneNumbers.length} phone numbers...`, 'info');
 
             const providerService = new ProviderLookupService({
               maxConcurrentBatches: 1,
@@ -131,11 +133,7 @@ export async function POST(request: NextRequest) {
             const providerValues = Array.from(providerResults.entries());
             console.log('[Process] Provider map entries:', providerValues);
             
-            await addLog(sessionId, {
-              timestamp: new Date().toISOString(),
-              message: `Debug - Map has ${providerResults.size} entries. Sample: ${providerValues.slice(0, 2).map(([k, v]) => `${k}=${v}`).join(', ')}`,
-              level: 'info'
-            });
+            await addLog(sessionId, `Debug - Map has ${providerResults.size} entries. Sample: ${providerValues.slice(0, 2).map(([k, v]) => `${k}=${v}`).join(', ')}`, 'info');
 
             businesses.forEach(business => {
               if (business.phone && business.phone !== 'No phone') {
@@ -147,17 +145,9 @@ export async function POST(request: NextRequest) {
               }
             });
 
-            await addLog(sessionId, {
-              timestamp: new Date().toISOString(),
-              message: `Provider lookup completed: ${providerResults.size} providers found`,
-              level: 'success'
-            });
+            await addLog(sessionId, `Provider lookup completed: ${providerResults.size} providers found`, 'info');
           } catch (providerError) {
-            await addLog(sessionId, {
-              timestamp: new Date().toISOString(),
-              message: `Provider lookup failed: ${providerError instanceof Error ? providerError.message : 'Unknown error'}. Setting all to Unknown.`,
-              level: 'warning'
-            });
+            await addLog(sessionId, `Provider lookup failed: ${providerError instanceof Error ? providerError.message : 'Unknown error'}. Setting all to Unknown.`, 'warning');
             
             // Set all providers to Unknown if lookup fails
             businesses.forEach(business => {
@@ -173,37 +163,22 @@ export async function POST(request: NextRequest) {
 
         townBusinesses.push(...businesses);
 
-        await addLog(sessionId, {
-          timestamp: new Date().toISOString(),
-          message: `Found ${businesses.length} businesses for ${industry} in ${currentTown}`,
-          level: 'success'
-        });
+        await addLog(sessionId, `Found ${businesses.length} businesses for ${industry} in ${currentTown}`, 'info');
 
       } catch (error) {
-        await addLog(sessionId, {
-          timestamp: new Date().toISOString(),
-          message: `Error scraping ${industry} in ${currentTown}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          level: 'error'
-        });
+        await addLog(sessionId, `Error scraping ${industry} in ${currentTown}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
       }
     }
 
-    // Save businesses to Supabase
+    // Save businesses to PostgreSQL
     if (townBusinesses.length > 0) {
       await addBusinesses(sessionId, townBusinesses);
     }
 
     // Update progress
-    await updateSessionProgress(sessionId, {
-      completedTowns: currentTownIndex + 1,
-      totalBusinesses: (progress.totalBusinesses || 0) + townBusinesses.length
-    });
+    await updateSessionProgress(sessionId, sessionProgress.completedTowns + 1);
 
-    await addLog(sessionId, {
-      timestamp: new Date().toISOString(),
-      message: `Completed ${currentTown}: ${townBusinesses.length} businesses found`,
-      level: 'success'
-    });
+    await addLog(sessionId, `Completed ${currentTown}: ${townBusinesses.length} businesses found`, 'info');
 
     // Check if this was the last town
     const hasMore = currentTownIndex + 1 < towns.length;
@@ -212,11 +187,7 @@ export async function POST(request: NextRequest) {
     // If completed, update status in database
     if (!hasMore) {
       await updateSessionStatus(sessionId, 'completed');
-      await addLog(sessionId, {
-        timestamp: new Date().toISOString(),
-        message: `✅ Scraping completed! Total businesses: ${(progress.totalBusinesses || 0) + townBusinesses.length}`,
-        level: 'success'
-      });
+      await addLog(sessionId, `✅ Scraping completed! Total businesses: ${sessionProgress.totalBusinesses}`, 'info');
     }
     
     // Return status
@@ -225,7 +196,7 @@ export async function POST(request: NextRequest) {
       progress: {
         completedTowns: currentTownIndex + 1,
         totalTowns: towns.length,
-        totalBusinesses: (progress.totalBusinesses || 0) + townBusinesses.length
+        totalBusinesses: (sessionProgress.totalBusinesses || 0) + townBusinesses.length
       },
       hasMore
     });

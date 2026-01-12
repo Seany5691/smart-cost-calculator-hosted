@@ -3,10 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Lead } from '@/lib/leads/types';
 import { ChevronRight, MessageSquare, Bell, Calendar } from 'lucide-react';
-import { 
-  getLeadNotes,
-  type LeadNote,
-} from '@/lib/leads/supabaseNotesReminders';
 import { useAuthStore } from '@/store/auth';
 import { useRemindersStore, useLeadReminders } from '@/store/reminders';
 
@@ -24,7 +20,7 @@ export const LeadNotesRemindersDropdown = ({
   refreshTrigger = 0
 }: LeadNotesRemindersDropdownProps) => {
   const user = useAuthStore((state) => state.user);
-  const [notes, setNotes] = useState<LeadNote[]>([]);
+  const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Get reminders from global store
@@ -50,9 +46,8 @@ export const LeadNotesRemindersDropdown = ({
     
     try {
       setLoading(true);
-      // Load notes from Supabase
-      const leadNotes = await getLeadNotes(lead.id);
-      setNotes(leadNotes as any);
+      // Load notes from PostgreSQL - placeholder
+      setNotes([]);
     } catch (error) {
       console.error('Error loading notes:', error);
       setNotes([]);

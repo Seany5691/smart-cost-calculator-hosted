@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import { supabaseHelpers } from '@/lib/supabase';
+import { databaseHelpers } from '@/lib/databaseAdapter';
 import { Calculator, Calendar, User, DollarSign, ArrowRight, FileText, Trash2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Button, Card, CardContent, Input, Label } from '@/components/ui';
@@ -49,11 +49,11 @@ export default function MyDealsPage() {
         return;
       }
 
-      // Fetch deals from Supabase
-      const supabaseDeals = await supabaseHelpers.getDeals(user.id, false);
+      // Fetch deals from database
+      const databaseDeals = await databaseHelpers.getDeals(user.id, false);
       
-      // Transform Supabase data to match Deal interface
-      const allDeals: Deal[] = supabaseDeals.map((deal: any) => ({
+      // Transform database data to match Deal interface
+      const allDeals: Deal[] = databaseDeals.map((deal: any) => ({
         id: deal.id || '',
         userId: deal.userId || '',
         username: deal.username || 'Unknown User',
@@ -78,7 +78,7 @@ export default function MyDealsPage() {
       setDeals(allDeals);
       setFilteredDeals(allDeals);
     } catch (error) {
-      console.error('Error loading deals from Supabase:', error);
+      console.error('Error loading deals from database:', error);
       
       // Fallback to localStorage on error
       try {
@@ -123,15 +123,15 @@ export default function MyDealsPage() {
   const deleteMyDeal = useCallback(async (dealId: string) => {
     setIsDeleting(dealId);
     try {
-      // Delete from Supabase
-      await supabaseHelpers.deleteDeal(dealId);
+      // Delete from database
+      await databaseHelpers.deleteDeal(dealId);
       
       // Reload deals to update the UI
       await loadMyDeals();
       
       return true;
     } catch (error) {
-      console.error('Error deleting deal from Supabase:', error);
+      console.error('Error deleting deal from database:', error);
       
       // Fallback to localStorage on error
       try {

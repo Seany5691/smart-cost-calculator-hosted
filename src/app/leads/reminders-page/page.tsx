@@ -23,7 +23,6 @@ import { CreateReminderModal } from '@/components/leads/reminders/CreateReminder
 import { RemindersList } from '@/components/leads/reminders/RemindersList';
 import { ReminderFilters } from '@/components/leads/reminders/ReminderFilters';
 import { ReminderStats } from '@/components/leads/reminders/ReminderStats';
-import type { ReminderType, ReminderPriority } from '@/lib/leads/supabaseNotesReminders';
 
 export default function RemindersPage() {
   const user = useAuthStore((state) => state.user);
@@ -34,8 +33,8 @@ export default function RemindersPage() {
   
   const [view, setView] = useState<'calendar' | 'list'>('list');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [filterType, setFilterType] = useState<ReminderType | 'all'>('all');
-  const [filterPriority, setFilterPriority] = useState<ReminderPriority | 'all'>('all');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<'active' | 'completed' | 'all'>('active');
   const [filterDateRange, setFilterDateRange] = useState<'today' | 'week' | 'month' | 'all'>('all');
   const [loading, setLoading] = useState(false);

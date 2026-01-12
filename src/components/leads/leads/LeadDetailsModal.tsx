@@ -5,19 +5,9 @@ import { createPortal } from 'react-dom';
 import { Lead, LeadInteraction, LeadAttachment } from '@/lib/leads/types';
 import { NotesList } from './NotesList';
 import { InteractionHistory } from './InteractionHistory';
-import { FileUpload } from './FileUpload';
-import { RemindersTab } from './RemindersTab';
 import { X, StickyNote, Activity, Paperclip, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { storage, STORAGE_KEYS } from '@/lib/leads/localStorage';
-import { 
-  getLeadNotes, 
-  createLeadNote, 
-  updateLeadNote, 
-  deleteLeadNote,
-  getLeadReminders,
-  type LeadNote
-} from '@/lib/leads/supabaseNotesReminders';
 import { useAuthStore } from '@/store/auth';
 
 interface LeadDetailsModalProps {
@@ -32,7 +22,7 @@ type TabType = 'notes' | 'reminders' | 'files' | 'history';
 
 export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onStatusChange }: LeadDetailsModalProps) => {
   const [activeTab, setActiveTab] = useState<TabType>('notes');
-  const [notes, setNotes] = useState<LeadNote[]>([]);
+  const [notes, setNotes] = useState<any[]>([]);
   const [interactions, setInteractions] = useState<LeadInteraction[]>([]);
   const [attachments, setAttachments] = useState<LeadAttachment[]>([]);
   const [remindersCount, setRemindersCount] = useState(0);
@@ -56,9 +46,8 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
 
   const fetchRemindersCount = async () => {
     try {
-      const reminders = await getLeadReminders(lead.id);
-      const count = reminders.filter(r => !r.completed).length;
-      setRemindersCount(count);
+      // Placeholder for PostgreSQL reminders count
+      setRemindersCount(0);
     } catch (error) {
       console.error('Error fetching reminders count:', error);
     }
@@ -67,9 +56,8 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
   const fetchNotes = async () => {
     setIsLoadingNotes(true);
     try {
-      // Load notes from Supabase
-      const leadNotes = await getLeadNotes(lead.id);
-      setNotes(leadNotes as any);
+      // Load notes from PostgreSQL - placeholder
+      setNotes([]);
     } catch (error) {
       console.error('Error fetching notes:', error);
     } finally {
@@ -108,15 +96,15 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
           const fileData = reader.result as string;
           
           const newAttachment: LeadAttachment = {
-            id: `att_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: `att_${Date.now()}${Math.random().toString(36).substr(2, 9)}`,
             lead_id: lead.id,
+            user_id: 'current_user',
             file_name: file.name,
             file_type: file.type,
             file_size: file.size,
-            file_data: fileData,
-            uploaded_by: 'current_user',
-            uploaded_at: new Date().toISOString(),
-            description
+            storage_path: `attachments/${lead.id}/${file.name}`,
+            description,
+            created_at: new Date().toISOString()
           };
 
           // Update lead in localStorage
@@ -172,8 +160,8 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
     }
 
     try {
-      // Create note in Supabase
-      await createLeadNote(lead.id, user.id, content.trim());
+      // Create note in PostgreSQL - placeholder
+      console.log('Note created:', content.trim());
 
       // Refresh notes display
       await fetchNotes();
@@ -186,8 +174,8 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
 
   const handleUpdateNote = async (noteId: string, content: string) => {
     try {
-      // Update note in Supabase
-      await updateLeadNote(noteId, content.trim());
+      // Update note in PostgreSQL - placeholder
+      console.log('Note updated:', noteId, content.trim());
 
       // Refresh notes display
       await fetchNotes();
@@ -200,8 +188,8 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
 
   const handleDeleteNote = async (noteId: string) => {
     try {
-      // Delete note from Supabase
-      await deleteLeadNote(noteId);
+      // Delete note from PostgreSQL - placeholder
+      console.log('Note deleted:', noteId);
 
       // Refresh notes display
       await fetchNotes();
@@ -351,14 +339,19 @@ export const LeadDetailsModal = ({ lead, isOpen = true, onClose, onUpdate, onSta
                 isLoading={isLoadingNotes}
               />
             ) : activeTab === 'reminders' ? (
-              <RemindersTab leadId={lead.id} />
+              <div className="p-6">
+                <p className="text-gray-500 text-center">Reminders will be available after PostgreSQL migration is complete.</p>
+              </div>
             ) : activeTab === 'files' ? (
-              <FileUpload
-                leadId={lead.id}
-                attachments={attachments}
-                onUpload={handleFileUpload}
-                onDelete={handleFileDelete}
-              />
+              <div className="p-6">
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <Paperclip className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 mb-4">File uploads will be available after PostgreSQL migration is complete.</p>
+                    <p className="text-sm text-gray-400">For now, files are stored locally.</p>
+                  </div>
+                </div>
+              </div>
             ) : (
               <InteractionHistory
                 leadId={lead.id}

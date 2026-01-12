@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Upload, X, File, Image, FileText, Loader2, Download, Trash2 } from 'lucide-react';
-import { supabaseLeads } from '@/lib/leads/supabaseLeads';
+import { getLeadsAdapter } from '@/lib/leads/leadsAdapter';
 import { useAuthStore } from '@/store/auth';
 import { LeadAttachment } from '@/lib/leads/types';
 
@@ -29,7 +29,7 @@ export default function AttachmentUploader({ leadId, onUploadComplete }: Attachm
     
     setIsLoading(true);
     try {
-      const data = await supabaseLeads.getAttachments(user.id, leadId);
+      const data = await getLeadsAdapter().getAttachments(user.id, leadId);
       setAttachments(data);
     } catch (err: any) {
       console.error('Error loading attachments:', err);
@@ -54,7 +54,7 @@ export default function AttachmentUploader({ leadId, onUploadComplete }: Attachm
       }
 
       // Upload file
-      const attachment = await supabaseLeads.uploadAttachment(
+      const attachment = await getLeadsAdapter().uploadAttachment(
         user.id,
         leadId,
         file,
@@ -80,7 +80,7 @@ export default function AttachmentUploader({ leadId, onUploadComplete }: Attachm
 
   const handleDownload = async (attachment: LeadAttachment) => {
     try {
-      const blob = await supabaseLeads.downloadAttachment(attachment.storage_path);
+      const blob = await getLeadsAdapter().downloadAttachment(attachment.storage_path);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -102,7 +102,7 @@ export default function AttachmentUploader({ leadId, onUploadComplete }: Attachm
     }
 
     try {
-      await supabaseLeads.deleteAttachment(user.id, attachmentId);
+      await getLeadsAdapter().deleteAttachment(user.id, attachmentId);
       setAttachments(attachments.filter(a => a.id !== attachmentId));
     } catch (err: any) {
       setError(err.message || 'Failed to delete attachment');

@@ -67,6 +67,12 @@ const validateUserData = (data: any): boolean => {
     
     // Validate email format (basic check)
     if (typeof user.email !== 'string' || !user.email.includes('@')) return false;
+    
+    // IMPORTANT: Validate that user ID is a proper UUID, not a string like "admin-1"
+    if (typeof user.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(user.id)) {
+      console.error('❌ Invalid user ID detected:', user.id, 'Expected UUID format');
+      return false;
+    }
   }
   
   return true;
@@ -83,19 +89,32 @@ export const useAuthStore = create<AuthState>()(
         let { users } = get();
         let user = users.find(u => u.username === username && u.password === password && u.isActive);
         
-        // If user not found locally, try to load from Supabase
+        // If user not found locally, try to load from database
         if (!user) {
           try {
             await get().initializeUsers();
             users = get().users;
             user = users.find(u => u.username === username && u.password === password && u.isActive);
           } catch (error) {
-            console.error('Error loading users from Supabase during login:', error);
+            console.error('Error loading users from database during login:', error);
           }
         }
         
         if (user) {
+          // CRITICAL: Validate that user ID is a proper UUID before allowing login
+          if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(user.id)) {
+            console.error('❌ SECURITY ERROR: User ID is not a valid UUID:', user.id);
+            console.error('🔧 Clearing corrupted authentication data...');
+            
+            // Clear corrupted data
+            get().syncUsersToGlobalStorage();
+            localStorage.removeItem('auth-storage');
+            
+            throw new Error('Authentication data corrupted. Please try again.');
+          }
+          
           set({ isAuthenticated: true, user });
+          console.log('✅ User authenticated successfully with UUID:', user.id);
           return true;
         }
         return false;
@@ -112,7 +131,7 @@ export const useAuthStore = create<AuthState>()(
 
       addUser: async (user: User) => {
         try {
-          // Save to Supabase
+          // Save to database
           const response = await fetch('/api/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -120,7 +139,7 @@ export const useAuthStore = create<AuthState>()(
           });
           
           if (!response.ok) {
-            throw new Error('Failed to save user to Supabase');
+            throw new Error('Failed to save user to database');
           }
           
           const result = await response.json();
@@ -140,7 +159,7 @@ export const useAuthStore = create<AuthState>()(
 
       updateUser: async (id: string, updates: Partial<User>) => {
         try {
-          // Save to Supabase
+          // Save to database
           const response = await fetch('/api/users', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -148,7 +167,7 @@ export const useAuthStore = create<AuthState>()(
           });
           
           if (!response.ok) {
-            throw new Error('Failed to update user in Supabase');
+            throw new Error('Failed to update user in database');
           }
           
           const result = await response.json();
@@ -170,7 +189,7 @@ export const useAuthStore = create<AuthState>()(
 
       deleteUser: async (id: string) => {
         try {
-          // Save to Supabase
+          // Save to database
           const response = await fetch('/api/users', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
@@ -178,7 +197,7 @@ export const useAuthStore = create<AuthState>()(
           });
           
           if (!response.ok) {
-            throw new Error('Failed to delete user from Supabase');
+            throw new Error('Failed to delete user from database');
           }
           
           // Update local state
@@ -196,7 +215,7 @@ export const useAuthStore = create<AuthState>()(
 
       changePassword: async (userId: string, newPassword: string) => {
         try {
-          // Update in Supabase
+          // Update in database
           await fetch('/api/users', {
             method: 'PUT',
             headers: {
@@ -234,7 +253,7 @@ export const useAuthStore = create<AuthState>()(
 
       resetPassword: async (userId: string, newPassword: string) => {
         try {
-          // Update in Supabase
+          // Update in database
           await fetch('/api/users', {
             method: 'PUT',
             headers: {
@@ -314,7 +333,7 @@ export const useAuthStore = create<AuthState>()(
 
       initializeUsers: async () => {
         try {
-          // Try to load from Supabase first
+          // Try to load from database first
           const response = await fetch('/api/users');
           if (response.ok) {
             const users = await response.json();
@@ -322,7 +341,7 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
         } catch (error) {
-          console.error('Error loading users from Supabase:', error);
+          console.error('Error loading users from database:', error);
         }
         
         // Fallback to global storage

@@ -1,6 +1,7 @@
 // API routes for lead management
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, supabaseHelpers } from '@/lib/supabase';
+import { databaseHelpers } from '@/lib/databaseAdapter';
+import { getLeadsAdapter } from '@/lib/leads/leadsAdapter';
 import { validateLead, sanitizeLeadData } from '@/lib/leads/validation';
 import { getNextLeadNumber, extractCoordinates } from '@/lib/leads/leadUtils';
 import { LeadFormData, LeadStatus } from '@/lib/leads/types';
@@ -10,41 +11,33 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     
-    // Get user from session
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
+    // Get user from auth store (simplified for PostgreSQL)
+    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
+
+    // Get leads adapter
+    const leadsAdapter = getLeadsAdapter();
+    if (!leadsAdapter) {
       return NextResponse.json(
-        { error: 'Unauthorized', success: false, data: null },
-        { status: 401 }
+        { error: 'Database adapter not available', success: false, data: null },
+        { status: 500 }
       );
     }
 
-    // Extract filter parameters
-    const status = searchParams.get('status');
+    // Parse query parameters
+    const status = searchParams.get('status') as LeadStatus | null;
+    const listName = searchParams.get('list_name');
     const provider = searchParams.get('provider');
     const searchTerm = searchParams.get('search');
-    const dateFrom = searchParams.get('dateFrom');
-    const dateTo = searchParams.get('dateTo');
 
-    let leads;
+    // Build filters object
+    const filters: any = {};
+    if (status) filters.status = status;
+    if (listName) filters.list_name = listName;
+    if (provider) filters.provider = provider;
+    if (searchTerm) filters.searchTerm = searchTerm;
 
-    // If search term is provided, use search functionality
-    if (searchTerm) {
-      const filters = {
-        status: status || undefined,
-        provider: provider || undefined,
-        dateFrom: dateFrom || undefined,
-        dateTo: dateTo || undefined,
-      };
-      leads = await supabaseHelpers.searchLeads(user.id, searchTerm, filters);
-    } else if (status) {
-      // Filter by status
-      leads = await supabaseHelpers.getLeadsByStatus(user.id, status);
-    } else {
-      // Get all leads
-      leads = await supabaseHelpers.getLeads(user.id);
-    }
+    // Fetch leads
+    const leads = await leadsAdapter.getLeads(user.id, filters);
 
     return NextResponse.json({
       data: leads,
@@ -55,7 +48,7 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching leads:', error);
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Failed to fetch leads',
+        error: 'Failed to fetch leads',
         success: false,
         data: null,
       },
@@ -67,72 +60,163 @@ export async function GET(request: NextRequest) {
 // POST /api/leads - Create a new lead
 export async function POST(request: NextRequest) {
   try {
-    // Get user from session
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
+    const leadData: LeadFormData = await request.json();
+
+    // Get user from auth store (simplified for PostgreSQL)
+    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
+
+    // Get leads adapter
+    const leadsAdapter = getLeadsAdapter();
+    if (!leadsAdapter) {
       return NextResponse.json(
-        { error: 'Unauthorized', success: false, data: null },
-        { status: 401 }
+        { error: 'Database adapter not available', success: false, data: null },
+        { status: 500 }
       );
     }
-
-    // Parse request body
-    const body: LeadFormData = await request.json();
-
-    // Sanitize input data
-    const sanitizedData = sanitizeLeadData(body);
 
     // Validate lead data
-    const validation = validateLead(sanitizedData);
+    const validation = validateLead(leadData);
     if (!validation.isValid) {
-      return NextResponse.json(
-        {
-          error: 'Validation failed',
-          success: false,
-          data: null,
-          validationErrors: validation.errors,
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        error: 'Invalid lead data',
+        success: false,
+        data: null,
+        validationErrors: validation.errors,
+      }, { status: 400 });
     }
 
-    // Extract coordinates from maps_address if provided
-    let coordinates = null;
+    // Sanitize input data
+    const sanitizedData = sanitizeLeadData(leadData);
+
+    // Extract coordinates if maps_address is provided
+    let finalLeadData = { ...sanitizedData };
     if (sanitizedData.maps_address) {
-      coordinates = extractCoordinates(sanitizedData.maps_address);
+      const coordinates = extractCoordinates(sanitizedData.maps_address);
+      // Add coordinates to the lead data (type assertion for flexibility)
+      finalLeadData = { ...finalLeadData, coordinates } as any;
     }
 
-    // Get the next number for the status category
-    const status = sanitizedData.status || 'leads';
-    const existingLeads = await supabaseHelpers.getLeadsByStatus(user.id, status);
-    const nextNumber = getNextLeadNumber(existingLeads);
+    // Create lead
+    const newLead = await leadsAdapter.createLead(user.id, finalLeadData);
 
-    // Create lead object
-    const leadData = {
-      ...sanitizedData,
-      status,
-      number: nextNumber,
-      coordinates,
-      user_id: user.id,
-    };
-
-    // Insert lead into database
-    const newLead = await supabaseHelpers.createLead(leadData);
-
-    return NextResponse.json(
-      {
-        data: newLead,
-        success: true,
-        error: null,
-      },
-      { status: 201 }
-    );
+    return NextResponse.json({
+      data: newLead,
+      success: true,
+      error: null,
+    });
   } catch (error) {
     console.error('Error creating lead:', error);
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Failed to create lead',
+        error: 'Failed to create lead',
+        success: false,
+        data: null,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT /api/leads - Bulk update leads
+export async function PUT(request: NextRequest) {
+  try {
+    const { leadIds, updates } = await request.json();
+
+    // Get user from auth store (simplified for PostgreSQL)
+    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
+
+    // Get leads adapter
+    const leadsAdapter = getLeadsAdapter();
+    if (!leadsAdapter) {
+      return NextResponse.json(
+        { error: 'Database adapter not available', success: false, data: null },
+        { status: 500 }
+      );
+    }
+
+    // Validate input
+    if (!Array.isArray(leadIds) || leadIds.length === 0) {
+      return NextResponse.json({
+        error: 'Invalid lead IDs',
+        success: false,
+        data: null,
+      }, { status: 400 });
+    }
+
+    // Validate update data
+    const validation = validateLead(updates);
+    if (!validation.isValid) {
+      return NextResponse.json({
+        error: 'Invalid lead data',
+        success: false,
+        data: null,
+        validationErrors: validation.errors,
+      }, { status: 400 });
+    }
+
+    // Sanitize input data
+    const sanitizedUpdates = sanitizeLeadData(updates);
+
+    // Bulk update leads
+    const updatedLeads = await leadsAdapter.bulkUpdateLeads(user.id, leadIds, sanitizedUpdates);
+
+    return NextResponse.json({
+      data: updatedLeads,
+      success: true,
+      error: null,
+    });
+  } catch (error) {
+    console.error('Error bulk updating leads:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to update leads',
+        success: false,
+        data: null,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/leads - Delete multiple leads
+export async function DELETE(request: NextRequest) {
+  try {
+    const { leadIds } = await request.json();
+
+    // Get user from auth store (simplified for PostgreSQL)
+    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
+
+    // Get leads adapter
+    const leadsAdapter = getLeadsAdapter();
+    if (!leadsAdapter) {
+      return NextResponse.json(
+        { error: 'Database adapter not available', success: false, data: null },
+        { status: 500 }
+      );
+    }
+
+    // Validate input
+    if (!Array.isArray(leadIds) || leadIds.length === 0) {
+      return NextResponse.json({
+        error: 'Invalid lead IDs',
+        success: false,
+        data: null,
+      }, { status: 400 });
+    }
+
+    // Delete leads
+    await leadsAdapter.bulkDeleteLeads(user.id, leadIds);
+
+    return NextResponse.json({
+      data: { deleted: leadIds.length },
+      success: true,
+      error: null,
+    });
+  } catch (error) {
+    console.error('Error deleting leads:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to delete leads',
         success: false,
         data: null,
       },

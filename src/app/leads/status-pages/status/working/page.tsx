@@ -24,7 +24,6 @@ import { SignedModal } from '@/components/leads/leads/SignedModal';
 import { AddLeadButton } from '@/components/leads/leads/AddLeadButton';
 import { useAuthStore } from '@/store/auth';
 import { useRemindersStore, useLeadReminders } from '@/store/reminders';
-import { getLeadNotes, type LeadNote } from '@/lib/leads/supabaseNotesReminders';
 
 export default function WorkingOnStatusPage() {
   const user = useAuthStore((state) => state.user);

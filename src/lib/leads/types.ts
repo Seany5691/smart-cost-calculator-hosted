@@ -77,7 +77,7 @@ export interface LeadAttachment {
   file_name: string;
   file_type: string;
   file_size: number;
-  storage_path: string; // Path in Supabase Storage
+  storage_path: string; // Path in PostgreSQL Storage
   description?: string;
   created_at: string;
 }

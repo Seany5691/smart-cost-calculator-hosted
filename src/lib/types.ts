@@ -159,7 +159,7 @@ export interface CalculatorState {
   resetDeal: () => void;
   clearTemporaryItems: () => void;
   calculateTotalCosts: () => TotalCosts;
-  migrateDealsToSupabase: () => Promise<boolean>;
+  migrateDealsToDatabase: () => Promise<boolean>;
 }
 
 export interface OfflineState {

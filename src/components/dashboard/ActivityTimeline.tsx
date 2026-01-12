@@ -13,7 +13,6 @@ import {
   Loader2
 } from 'lucide-react';
 import { getActivityLogs, getUniqueUsers, ActivityLog, ActivityType } from '@/lib/activityLogger';
-import { supabaseHelpers } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
 import { ActivityCardSkeleton } from '@/components/ui/skeletons';
 import { debounce } from '@/lib/utils/debounce';
@@ -116,19 +115,25 @@ export default function ActivityTimeline({ userRole, currentUserId, isMobile = f
         ? currentUserId 
         : undefined;
 
-      const result = await supabaseHelpers.getActivityLogsPaginated(
-        filterUserId,
-        targetPage,
-        pageSize
+      const response = await fetch(
+        `/api/activity-logs?page=${targetPage}&pageSize=${pageSize}${filterUserId ? `&userId=${filterUserId}` : ''}`
       );
       
+      if (!response.ok) {
+        throw new Error('Failed to fetch activity logs');
+      }
+      
+      const result = await response.json();
+      
       // Filter out "deal_loaded" activities
-      const filteredData = result.data.filter(activity => activity.activityType !== 'deal_loaded');
+      const filteredLogs = result.data?.filter((activity: any) => 
+        activity.activity_type !== 'deal_loaded'
+      ) || [];
       
       if (resetPage) {
-        setActivities(filteredData);
+        setActivities(filteredLogs);
       } else {
-        setActivities(prev => [...prev, ...filteredData]);
+        setActivities(prev => [...prev, ...filteredLogs]);
       }
       
       setHasMore(result.hasMore);
@@ -137,7 +142,7 @@ export default function ActivityTimeline({ userRole, currentUserId, isMobile = f
         setCurrentPage(prev => prev + 1);
       }
     } catch (err) {
-      console.error('Failed to load activities from Supabase, falling back to localStorage:', err);
+      console.error('Failed to load activities from database, falling back to localStorage:', err);
       setError('Unable to load activities from server. Showing local data.');
       
       // Fall back to localStorage

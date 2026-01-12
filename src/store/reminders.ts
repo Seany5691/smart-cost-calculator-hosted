@@ -1,33 +1,24 @@
 // Reminders Store - Global state management for reminders
 import { create } from 'zustand';
 import { useMemo } from 'react';
-import {
-  getAllUserReminders,
-  getLeadReminders,
-  createLeadReminder,
-  updateLeadReminder,
-  toggleReminderCompletion,
-  deleteLeadReminder,
-  type LeadReminder,
-} from '@/lib/leads/supabaseNotesReminders';
 
 interface RemindersState {
-  reminders: LeadReminder[];
+  reminders: any[];
   loading: boolean;
   lastFetch: number | null;
   
   // Actions
   fetchAllReminders: (userId: string, force?: boolean) => Promise<void>;
-  fetchLeadReminders: (leadId: string) => Promise<LeadReminder[]>;
+  fetchLeadReminders: (leadId: string) => Promise<any[]>;
   addReminder: (
     leadId: string | null, 
     userId: string, 
     reminderDate: string, 
     note: string,
     options?: any
-  ) => Promise<LeadReminder>;
+  ) => Promise<any>;
   toggleComplete: (reminderId: string) => Promise<void>;
-  updateReminder: (reminderId: string, updates: Partial<Omit<LeadReminder, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
+  updateReminder: (reminderId: string, updates: Partial<any>) => Promise<void>;
   deleteReminder: (reminderId: string) => Promise<void>;
   clearReminders: () => void;
 }
@@ -39,17 +30,18 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
 
   // Fetch all reminders for a user
   fetchAllReminders: async (userId: string, force = false) => {
-    const { lastFetch } = get();
     const now = Date.now();
+    const lastFetch = get().lastFetch;
     
-    // Cache for 10 seconds unless forced
-    if (!force && lastFetch && now - lastFetch < 10000) {
+    // Skip if fetched recently (within 5 minutes) unless forced
+    if (!force && lastFetch && (now - lastFetch) < 5 * 60 * 1000) {
       return;
     }
 
     set({ loading: true });
     try {
-      const reminders = await getAllUserReminders(userId);
+      // PostgreSQL placeholder - return empty for now
+      const reminders: any[] = [];
       set({ reminders, lastFetch: now, loading: false });
     } catch (error) {
       console.error('Error fetching reminders:', error);
@@ -60,7 +52,8 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
   // Fetch reminders for a specific lead
   fetchLeadReminders: async (leadId: string) => {
     try {
-      const reminders = await getLeadReminders(leadId);
+      // PostgreSQL placeholder - return empty for now
+      const reminders = [];
       return reminders;
     } catch (error) {
       console.error('Error fetching lead reminders:', error);
@@ -88,7 +81,18 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
   ) => {
     try {
       console.log('[RemindersStore] Adding reminder:', { leadId, userId, reminderDate, note, options });
-      const newReminder = await createLeadReminder(leadId, userId, reminderDate, note, options);
+      // PostgreSQL placeholder - create reminder
+      const newReminder = {
+        id: `reminder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        leadId,
+        userId,
+        reminderDate,
+        note,
+        ...options,
+        completed: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
       console.log('[RemindersStore] Reminder created:', newReminder);
       
       // Add to local state

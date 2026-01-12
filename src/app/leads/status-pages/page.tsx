@@ -333,7 +333,7 @@ export default function MainLeadsPage() {
         return;
       }
 
-      // Delete each lead from Supabase
+      // Delete each lead from PostgreSQL
       for (const leadId of selectedAvailableLeads) {
         try {
           await deleteLead(leadId);

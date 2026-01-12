@@ -1,15 +1,14 @@
 'use client';
 
 import { Filter, X } from 'lucide-react';
-import type { ReminderType, ReminderPriority } from '@/lib/leads/supabaseNotesReminders';
 
 interface ReminderFiltersProps {
-  filterType: ReminderType | 'all';
-  filterPriority: ReminderPriority | 'all';
+  filterType: string | 'all';
+  filterPriority: string | 'all';
   filterStatus: 'active' | 'completed' | 'all';
   filterDateRange: 'today' | 'week' | 'month' | 'all';
-  onTypeChange: (type: ReminderType | 'all') => void;
-  onPriorityChange: (priority: ReminderPriority | 'all') => void;
+  onTypeChange: (type: string | 'all') => void;
+  onPriorityChange: (priority: string | 'all') => void;
   onStatusChange: (status: 'active' | 'completed' | 'all') => void;
   onDateRangeChange: (range: 'today' | 'week' | 'month' | 'all') => void;
 }
@@ -47,7 +46,7 @@ export const ReminderFilters = ({
       {/* Type Filter */}
       <select
         value={filterType}
-        onChange={(e) => onTypeChange(e.target.value as ReminderType | 'all')}
+        onChange={(e) => onTypeChange(e.target.value)}
         className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
       >
         <option value="all">All Types</option>
@@ -63,7 +62,7 @@ export const ReminderFilters = ({
       {/* Priority Filter */}
       <select
         value={filterPriority}
-        onChange={(e) => onPriorityChange(e.target.value as ReminderPriority | 'all')}
+        onChange={(e) => onPriorityChange(e.target.value)}
         className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
       >
         <option value="all">All Priorities</option>

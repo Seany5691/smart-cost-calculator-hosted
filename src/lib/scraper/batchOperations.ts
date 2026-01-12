@@ -8,11 +8,11 @@
 import type { Business } from './types';
 
 /**
- * Batch insert businesses into Supabase
+ * Batch insert businesses into PostgreSQL
  * Splits large arrays into chunks of 100 to avoid hitting database limits
  */
 export async function batchInsertBusinesses(
-  supabaseClient: any,
+  postgresClient: any,
   sessionId: string,
   businesses: Business[]
 ): Promise<void> {
@@ -38,7 +38,7 @@ export async function batchInsertBusinesses(
       notes: business.notes,
     }));
 
-    const { error } = await supabaseClient
+    const { error } = await postgresClient
       .from('scraped_businesses')
       .insert(businessRecords);
 
@@ -49,11 +49,11 @@ export async function batchInsertBusinesses(
 }
 
 /**
- * Batch update businesses in Supabase
+ * Batch update businesses in PostgreSQL
  * Useful for updating provider information after lookup
  */
 export async function batchUpdateBusinesses(
-  supabaseClient: any,
+  postgresClient: any,
   updates: Array<{ id: string; provider: string }>
 ): Promise<void> {
   const BATCH_SIZE = 100;
@@ -69,7 +69,7 @@ export async function batchUpdateBusinesses(
     // Use Promise.all for parallel updates within a batch
     await Promise.all(
       batch.map((update) =>
-        supabaseClient
+        postgresClient
           .from('scraped_businesses')
           .update({ provider: update.provider })
           .eq('id', update.id)
@@ -83,12 +83,12 @@ export async function batchUpdateBusinesses(
  * Used when deleting a session
  */
 export async function batchDeleteBusinesses(
-  supabaseClient: any,
+  postgresClient: any,
   sessionId: string
 ): Promise<void> {
-  // Supabase handles this automatically with CASCADE delete
+  // PostgreSQL handles this automatically with CASCADE delete
   // But we can also do it explicitly if needed
-  const { error } = await supabaseClient
+  const { error } = await postgresClient
     .from('scraped_businesses')
     .delete()
     .eq('session_id', sessionId);

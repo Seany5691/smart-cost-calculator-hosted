@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Route, RouteFormData, Lead, Coordinates } from '@/lib/leads/types';
 import { useAuthStore } from '@/store/auth';
-import { supabaseLeads } from '@/lib/leads/supabaseLeads';
+import { getLeadsAdapter } from '@/lib/leads/leadsAdapter';
 import { extractCoordinatesFromUrl } from '@/lib/leads/validation';
 
 interface RoutesState {
@@ -38,7 +38,7 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
         throw new Error('User not authenticated');
       }
 
-      const routes = await supabaseLeads.getRoutes(user.id);
+      const routes = await getLeadsAdapter().getRoutes(user.id);
       
       set({ 
         routes, 
@@ -74,8 +74,8 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
         lead_ids: routeData.lead_ids,
       };
 
-      // Create in Supabase
-      const createdRoute = await supabaseLeads.createRoute(user.id, newRoute);
+      // Create in PostgreSQL
+      const createdRoute = await getLeadsAdapter().createRoute(user.id, newRoute);
 
       // Add to local state
       set({ 
@@ -102,8 +102,8 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
         throw new Error('User not authenticated');
       }
 
-      // Delete from Supabase
-      await supabaseLeads.deleteRoute(user.id, routeId);
+      // Delete from PostgreSQL
+      await getLeadsAdapter().deleteRoute(user.id, routeId);
 
       // Remove from local state
       const currentRoutes = get().routes;
@@ -210,7 +210,7 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
       const listName = leads[0]?.list_name;
       
       // Fetch existing routes to count
-      const existingRoutes = await supabaseLeads.getRoutes(user.id);
+      const existingRoutes = await getLeadsAdapter().getRoutes(user.id);
       
       // Create route name with list name and timestamp
       let routeName: string;
@@ -236,8 +236,8 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
         starting_point: startingPoint,
       };
 
-      // Create in Supabase
-      const createdRoute = await supabaseLeads.createRoute(user.id, newRoute);
+      // Create in PostgreSQL
+      const createdRoute = await getLeadsAdapter().createRoute(user.id, newRoute);
 
       // Add to local state
       set({ 

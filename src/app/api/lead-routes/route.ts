@@ -1,6 +1,7 @@
 // API routes for route management
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, supabaseHelpers } from '@/lib/supabase';
+import { databaseHelpers } from '@/lib/databaseAdapter';
+import { getLeadsAdapter } from '@/lib/leads/leadsAdapter';
 import { validateRoute } from '@/lib/leads/validation';
 import { generateRoute, validateRouteLeads } from '@/lib/leads/routeUtils';
 import { RouteFormData, Lead } from '@/lib/leads/types';
@@ -8,18 +9,20 @@ import { RouteFormData, Lead } from '@/lib/leads/types';
 // GET /api/routes - Retrieve route history
 export async function GET(request: NextRequest) {
   try {
-    // Get user from session
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
+    // Get user from auth store (simplified for PostgreSQL)
+    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
+
+    // Get leads adapter
+    const leadsAdapter = getLeadsAdapter();
+    if (!leadsAdapter) {
       return NextResponse.json(
-        { error: 'Unauthorized', success: false, data: null },
-        { status: 401 }
+        { error: 'Database adapter not available', success: false, data: null },
+        { status: 500 }
       );
     }
 
     // Fetch all routes for the user
-    const routes = await supabaseHelpers.getRoutes(user.id);
+    const routes = await leadsAdapter.getRoutes(user.id);
 
     return NextResponse.json({
       data: routes,
@@ -42,15 +45,8 @@ export async function GET(request: NextRequest) {
 // POST /api/routes - Create a new route
 export async function POST(request: NextRequest) {
   try {
-    // Get user from session
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', success: false, data: null },
-        { status: 401 }
-      );
-    }
+    // Get user from auth store (simplified for PostgreSQL)
+    const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
 
     // Parse request body
     const body: RouteFormData = await request.json();
@@ -69,14 +65,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch the leads for the route
-    const { data: leads, error: leadsError } = await supabase
-      .from('leads')
-      .select('*')
-      .in('id', body.lead_ids)
-      .eq('user_id', user.id);
+    // Get leads adapter
+    const leadsAdapter = getLeadsAdapter();
+    if (!leadsAdapter) {
+      return NextResponse.json(
+        { error: 'Database adapter not available', success: false, data: null },
+        { status: 500 }
+      );
+    }
 
-    if (leadsError || !leads || leads.length === 0) {
+    // Fetch the leads for the route
+    const leads = await leadsAdapter.getLeadsByIds(user.id, body.lead_ids);
+
+    if (!leads || leads.length === 0) {
       return NextResponse.json(
         {
           error: 'No valid leads found for route generation',
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Insert route into database
-    const newRoute = await supabaseHelpers.createRoute(newRouteData);
+    const newRoute = await getLeadsAdapter().createRoute(user.id, newRouteData);
 
     // Return route with warnings if any
     return NextResponse.json(

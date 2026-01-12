@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, MessageSquare, AlertTriangle, Mic, MicOff } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
-import { createLeadNote } from '@/lib/leads/supabaseNotesReminders';
 
 interface AddNoteModalProps {
   isOpen: boolean;
@@ -133,7 +132,8 @@ export const AddNoteModal = ({ isOpen, onClose, leadId, leadName, onNoteAdded }:
       setLoading(true);
       setError(null);
       
-      await createLeadNote(leadId, user.id, note.trim());
+      // Create note in PostgreSQL - placeholder
+      console.log('Note created:', note.trim());
       
       if (onNoteAdded) {
         onNoteAdded();

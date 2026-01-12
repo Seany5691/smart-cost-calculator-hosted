@@ -74,10 +74,10 @@ export default function FactorSheetConfig() {
       setLastSaveTime(Date.now());
       setOriginalFactorData(JSON.parse(JSON.stringify(factorData))); // Update original data
       setHasUnsavedChanges(false);
-      setMessage({ type: 'success', text: 'All factor changes saved successfully to Supabase!' });
+      setMessage({ type: 'success', text: 'All factor changes saved successfully!' });
     } catch (error) {
       console.error('Error saving factors config:', error);
-      setMessage({ type: 'error', text: 'An error occurred while saving to Supabase. Please try again.' });
+      setMessage({ type: 'error', text: 'An error occurred while saving. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -461,7 +461,7 @@ export default function FactorSheetConfig() {
           <li><strong>Cost Factors:</strong> Used for admin pricing calculations</li>
           <li><strong>Manager Factors:</strong> Used when managers access the calculator</li>
           <li><strong>User Factors:</strong> Used when regular users access the calculator</li>
-          <li><strong>Changes are saved to Supabase:</strong> All updates are persisted across browsers</li>
+          <li><strong>Changes are saved to database:</strong> All updates are persisted across browsers</li>
         </ul>
       </div>
     </div>

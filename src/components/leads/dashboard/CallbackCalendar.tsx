@@ -6,7 +6,6 @@ import { Lead } from '@/lib/leads/types';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import { useRemindersStore, useAllReminders } from '@/store/reminders';
-import type { LeadReminder } from '@/lib/leads/supabaseNotesReminders';
 
 interface CallbackCalendarProps {
   leads: Lead[];
@@ -24,7 +23,7 @@ export const CallbackCalendar = ({ leads, onLeadClick }: CallbackCalendarProps) 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Load reminders from Supabase
+  // Load reminders from PostgreSQL
   useEffect(() => {
     if (user) {
       fetchAllReminders(user.id);
@@ -44,7 +43,7 @@ export const CallbackCalendar = ({ leads, onLeadClick }: CallbackCalendarProps) 
 
   // Get reminders grouped by date
   const remindersByDate = useMemo(() => {
-    const grouped: Record<string, Array<LeadReminder & { lead?: Lead }>> = {};
+    const grouped: Record<string, Array<any & { lead?: Lead }>> = {};
     
     reminders.forEach(reminder => {
       const lead = leads.find(l => l.id === reminder.leadId);

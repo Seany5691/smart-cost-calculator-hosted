@@ -319,7 +319,7 @@ export interface ScraperEventData {
   duration?: number;
 }
 
-// Database Schema Types (matching Supabase tables)
+// Database Schema Types (matching PostgreSQL tables)
 export interface ScrapingSessionDB {
   id: string;
   user_id: string;

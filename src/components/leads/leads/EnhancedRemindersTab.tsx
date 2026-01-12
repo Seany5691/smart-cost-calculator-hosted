@@ -5,16 +5,39 @@ import { Bell, Calendar, Plus, Trash2, CheckCircle, Circle, Clock, AlertTriangle
 import { ConfirmModal } from '@/components/leads/ui/ConfirmModal';
 import { useAuthStore } from '@/store/auth';
 import { useRemindersStore, useLeadReminders } from '@/store/reminders';
-import {
-  ReminderType,
-  ReminderPriority,
-  RecurrencePattern,
-  getReminderTypeIcon,
-  getReminderTypeLabel,
-  getReminderPriorityColor,
-  formatReminderTime,
-} from '@/lib/leads/supabaseNotesReminders';
 import { cn } from '@/lib/utils';
+
+// Helper functions for PostgreSQL reminders
+const getReminderTypeIcon = (type: string) => {
+  const icons: Record<string, string> = {
+    call: '📞',
+    email: '📧',
+    meeting: '📅',
+    task: '📝',
+    followup: '🔔',
+    quote: '💰',
+    document: '📄',
+  };
+  return icons[type] || '📝';
+};
+
+const getReminderTypeLabel = (type: string) => {
+  const labels: Record<string, string> = {
+    call: 'Phone Call',
+    email: 'Email',
+    meeting: 'Meeting',
+    task: 'Task',
+    followup: 'Follow-up',
+    quote: 'Quote',
+    document: 'Document',
+  };
+  return labels[type] || 'Task';
+};
+
+const formatReminderTime = (time: string, isAllDay: boolean) => {
+  if (isAllDay) return 'All day';
+  return time;
+};
 
 interface EnhancedRemindersTabProps {
   leadId: string;
@@ -37,10 +60,11 @@ export const EnhancedRemindersTab = ({ leadId }: EnhancedRemindersTabProps) => {
   const [reminderDate, setReminderDate] = useState('');
   const [reminderTime, setReminderTime] = useState('09:00');
   const [isAllDay, setIsAllDay] = useState(false);
-  const [reminderType, setReminderType] = useState<ReminderType>('task');
-  const [priority, setPriority] = useState<ReminderPriority>('medium');
+  const [reminderType, setReminderType] = useState<string>('callback');
+  const [priority, setPriority] = useState<string>('medium');
   const [note, setNote] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrencePattern, setRecurrencePattern] = useState<any | null>(null);
   const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
@@ -109,7 +133,7 @@ export const EnhancedRemindersTab = ({ leadId }: EnhancedRemindersTabProps) => {
     try {
       setLoading(true);
       
-      const recurrencePattern: RecurrencePattern | null = isRecurring ? {
+      const recurrencePattern: any | null = isRecurring ? {
         type: recurrenceType,
         interval: recurrenceInterval,
         endDate: recurrenceEndDate || undefined,
@@ -202,7 +226,7 @@ export const EnhancedRemindersTab = ({ leadId }: EnhancedRemindersTabProps) => {
     });
   };
 
-  const getReminderStyle = (dateString: string, completed: boolean, priorityLevel: ReminderPriority) => {
+  const getReminderStyle = (dateString: string, completed: boolean, priorityLevel: string) => {
     if (completed) return 'bg-gray-50 border-gray-200';
 
     const date = new Date(dateString);
@@ -224,7 +248,7 @@ export const EnhancedRemindersTab = ({ leadId }: EnhancedRemindersTabProps) => {
     return 'bg-purple-50 border-purple-200';
   };
 
-  const getPriorityBadge = (priorityLevel: ReminderPriority) => {
+  const getPriorityBadge = (priorityLevel: string) => {
     const styles = {
       high: 'bg-red-100 text-red-700 border-red-300',
       medium: 'bg-yellow-100 text-yellow-700 border-yellow-300',
@@ -238,13 +262,13 @@ export const EnhancedRemindersTab = ({ leadId }: EnhancedRemindersTabProps) => {
     };
 
     return (
-      <span className={cn('px-2 py-0.5 text-xs font-semibold rounded-full border', styles[priorityLevel])}>
-        {labels[priorityLevel]}
+      <span className={cn('px-2 py-0.5 text-xs font-semibold rounded-full border', styles[priorityLevel as keyof typeof styles])}>
+        {labels[priorityLevel as keyof typeof labels]}
       </span>
     );
   };
 
-  const reminderTypes: { value: ReminderType; label: string; icon: string }[] = [
+  const reminderTypes: { value: string; label: string; icon: string }[] = [
     { value: 'call', label: 'Phone Call', icon: '📞' },
     { value: 'email', label: 'Email', icon: '📧' },
     { value: 'meeting', label: 'Meeting', icon: '📅' },
@@ -315,7 +339,7 @@ export const EnhancedRemindersTab = ({ leadId }: EnhancedRemindersTabProps) => {
                 Priority *
               </label>
               <div className="grid grid-cols-3 gap-3">
-                {(['high', 'medium', 'low'] as ReminderPriority[]).map((p) => (
+                {(['high', 'medium', 'low'] as string[]).map((p) => (
                   <button
                     key={p}
                     type="button"

@@ -5,7 +5,7 @@
  */
 
 import { getActivityLogs } from './activityLogger';
-import { supabase, supabaseHelpers } from './supabase';
+import { databaseHelpers } from './databaseAdapter';
 
 // Cache for statistics with 5-minute TTL
 interface CacheEntry<T> {
@@ -115,7 +115,7 @@ export const invalidateStatsCache = (cacheKey?: string) => {
 };
 
 /**
- * Calculate total deals for a user (async version with Supabase)
+ * Calculate total deals for a user (async version with PostgreSQL)
  * For admin, counts all deals. For other users, counts only their deals.
  * 
  * @param userId - Current user ID
@@ -127,10 +127,10 @@ export const getTotalDealsAsync = async (userId: string, isAdmin: boolean): Prom
   
   return getCachedOrFetch(cacheKey, async () => {
     try {
-      const deals = await supabaseHelpers.getDeals(userId, isAdmin);
+      const deals = await databaseHelpers.getDeals(userId, isAdmin);
       return deals.length;
     } catch (error) {
-      console.warn('Failed to fetch deals from Supabase, falling back to localStorage:', error);
+      console.warn('Failed to fetch deals from database, falling back to localStorage:', error);
       // Fall back to localStorage
       const dealsData = localStorage.getItem('deals-storage');
       if (!dealsData) return 0;
@@ -147,7 +147,7 @@ export const getTotalDealsAsync = async (userId: string, isAdmin: boolean): Prom
 };
 
 /**
- * Calculate active projects (deals modified in last 30 days) (async version with Supabase)
+ * Calculate active projects (deals modified in last 30 days) (async version with PostgreSQL)
  * For admin, counts all active deals. For other users, counts only their active deals.
  * 
  * @param userId - Current user ID
@@ -159,7 +159,7 @@ export const getActiveProjectsAsync = async (userId: string, isAdmin: boolean): 
   
   return getCachedOrFetch(cacheKey, async () => {
     try {
-      const deals = await supabaseHelpers.getDeals(userId, isAdmin);
+      const deals = await databaseHelpers.getDeals(userId, isAdmin);
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -168,7 +168,7 @@ export const getActiveProjectsAsync = async (userId: string, isAdmin: boolean): 
         return updatedAt >= thirtyDaysAgo;
       }).length;
     } catch (error) {
-      console.warn('Failed to fetch deals from Supabase, falling back to localStorage:', error);
+      console.warn('Failed to fetch deals from database, falling back to localStorage:', error);
       // Fall back to localStorage
       const dealsData = localStorage.getItem('deals-storage');
       if (!dealsData) return 0;
@@ -192,7 +192,7 @@ export const getActiveProjectsAsync = async (userId: string, isAdmin: boolean): 
 };
 
 /**
- * Calculate total calculations (deal saves + loads) from activity log (async version with Supabase)
+ * Calculate total calculations (deal saves + loads) from activity log (async version with PostgreSQL)
  * For admin, counts all users' calculations. For other users, counts only their calculations.
  * 
  * @param userId - Current user ID
@@ -204,20 +204,20 @@ export const getTotalCalculationsAsync = async (userId: string, isAdmin: boolean
   
   return getCachedOrFetch(cacheKey, async () => {
     try {
-      const logs = await supabaseHelpers.getActivityLogs(isAdmin ? undefined : userId);
+      const logs = await databaseHelpers.getActivityLogs(isAdmin ? undefined : userId);
       
       // Count deal_created, deal_saved, and deal_loaded activities
-      return logs.filter(log => 
+      return logs.filter((log: any) => 
         log.activityType === 'deal_created' || 
         log.activityType === 'deal_saved' || 
         log.activityType === 'deal_loaded'
       ).length;
     } catch (error) {
-      console.warn('Failed to fetch activity logs from Supabase, falling back to localStorage:', error);
+      console.warn('Failed to fetch activity logs from database, falling back to localStorage:', error);
       // Fall back to localStorage
       const logs = isAdmin ? getActivityLogs() : getActivityLogs(userId);
       
-      return logs.filter(log => 
+      return logs.filter((log: any) => 
         log.activityType === 'deal_created' || 
         log.activityType === 'deal_saved' || 
         log.activityType === 'deal_loaded'
@@ -260,18 +260,17 @@ export const getDashboardStatsOptimized = async (
     let stats: DashboardStats;
 
     if (isMobile) {
-      // Mobile: Use single optimized RPC call
-      const { data, error } = await supabase.rpc('get_dashboard_stats', {
-        p_user_id: userId,
-        p_is_admin: isAdmin
-      });
-
-      if (error) throw error;
+      // Mobile: Use individual calls (no RPC in PostgreSQL)
+      const [totalDeals, activeProjects, calculations] = await Promise.all([
+        getTotalDealsAsync(userId, isAdmin),
+        getActiveProjectsAsync(userId, isAdmin),
+        getTotalCalculationsAsync(userId, isAdmin)
+      ]);
 
       stats = {
-        totalDeals: data.totalDeals || 0,
-        activeProjects: data.activeProjects || 0,
-        calculations: data.calculations || 0
+        totalDeals: totalDeals || 0,
+        activeProjects: activeProjects || 0,
+        calculations: calculations || 0
       };
     } else {
       // Desktop: Use existing multi-query approach
@@ -298,7 +297,7 @@ export const getDashboardStatsOptimized = async (
 
     return stats;
   } catch (error) {
-    console.warn('Failed to fetch dashboard stats from Supabase:', error);
+    console.warn('Failed to fetch dashboard stats from database:', error);
 
     // Try to fall back to localStorage cache even if expired
     const expiredCache = getLocalStorageCache();

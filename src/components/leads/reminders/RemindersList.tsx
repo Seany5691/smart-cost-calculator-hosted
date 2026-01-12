@@ -14,18 +14,44 @@ import {
   AlertCircle,
   Bell
 } from 'lucide-react';
-import type { LeadReminder } from '@/lib/leads/supabaseNotesReminders';
 import type { Lead, Route } from '@/lib/leads/types';
-import { 
-  getReminderTypeIcon, 
-  getReminderTypeLabel,
-  formatReminderTime 
-} from '@/lib/leads/supabaseNotesReminders';
 import { useRemindersStore } from '@/store/reminders';
 import { cn } from '@/lib/utils';
 
+// Helper functions for PostgreSQL reminders
+const getReminderTypeIcon = (type: string) => {
+  const icons: Record<string, string> = {
+    call: '📞',
+    email: '📧',
+    meeting: '📅',
+    task: '📝',
+    followup: '🔔',
+    quote: '💰',
+    document: '📄',
+  };
+  return icons[type] || '📝';
+};
+
+const getReminderTypeLabel = (type: string) => {
+  const labels: Record<string, string> = {
+    call: 'Phone Call',
+    email: 'Email',
+    meeting: 'Meeting',
+    task: 'Task',
+    followup: 'Follow-up',
+    quote: 'Quote',
+    document: 'Document',
+  };
+  return labels[type] || 'Task';
+};
+
+const formatReminderTime = (time: string, isAllDay: boolean) => {
+  if (isAllDay) return 'All day';
+  return time;
+};
+
 interface RemindersListProps {
-  reminders: LeadReminder[];
+  reminders: any[];
   leads: Lead[];
   routes: Route[];
 }

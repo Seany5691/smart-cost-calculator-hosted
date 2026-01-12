@@ -8,7 +8,7 @@ import {
   PROVIDER_PRIORITY
 } from '@/lib/leads/types';
 import { useAuthStore } from '@/store/auth';
-import { supabaseLeads } from '@/lib/leads/supabaseLeads';
+import { getLeadsAdapter, initializeLeadsAdapter } from '@/lib/leads/leadsAdapter';
 
 interface LeadsState {
   leads: Lead[]; // Filtered leads for current view
@@ -58,8 +58,15 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
         throw new Error('User not authenticated');
       }
 
-      // Get leads from Supabase
-      const leads = await supabaseLeads.getLeads(user.id, filters);
+      // Initialize adapter if needed
+      await initializeLeadsAdapter();
+      const adapter = getLeadsAdapter();
+      if (!adapter) {
+        throw new Error('Database adapter not available');
+      }
+
+      // Get leads from database
+      const leads = await adapter.getLeads(user.id, filters);
 
       // Sort leads by provider priority and number
       const sortedLeads = get().sortLeads(leads);
@@ -89,8 +96,15 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
         throw new Error('User not authenticated');
       }
 
+      // Initialize adapter if needed
+      await initializeLeadsAdapter();
+      const adapter = getLeadsAdapter();
+      if (!adapter) {
+        throw new Error('Database adapter not available');
+      }
+
       // Get ALL leads without any filters
-      const allLeads = await supabaseLeads.getLeads(user.id, {});
+      const allLeads = await adapter.getLeads(user.id, {});
       const sortedAllLeads = get().sortLeads(allLeads);
       
       console.log('[Leads Store] fetchAllLeadsForStats: Updated allLeads with', sortedAllLeads.length, 'leads');
@@ -111,7 +125,9 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
         throw new Error('User not authenticated');
       }
 
-      const leads = await supabaseLeads.getLeadsByStatus(user.id, status);
+      // Initialize adapter if needed
+      await initializeLeadsAdapter();
+      const leads = await getLeadsAdapter().getLeadsByStatus(user.id, status);
       const sortedLeads = get().sortLeads(leads);
       
       set({ 
@@ -142,6 +158,9 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
         throw new Error('User not authenticated');
       }
 
+      // Initialize adapter if needed
+      await initializeLeadsAdapter();
+
       const newLead: Partial<Lead> = {
         maps_address: leadData.maps_address,
         name: leadData.name,
@@ -157,8 +176,8 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
         import_session_id: null,
       };
 
-      // Create in Supabase
-      const createdLead = await supabaseLeads.createLead(user.id, newLead);
+      // Create in database
+      const createdLead = await getLeadsAdapter().createLead(user.id, newLead);
 
       // Add to local state
       const currentLeads = get().leads;
@@ -193,8 +212,11 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
         throw new Error('User not authenticated');
       }
 
-      // Update in Supabase
-      const updatedLead = await supabaseLeads.updateLead(user.id, leadId, updates);
+      // Initialize adapter if needed
+      await initializeLeadsAdapter();
+
+      // Update in database
+      const updatedLead = await getLeadsAdapter().updateLead(user.id, leadId, updates);
 
       // Update local state
       const currentLeads = get().leads;
@@ -235,8 +257,11 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
         throw new Error('User not authenticated');
       }
 
-      // Delete from Supabase
-      await supabaseLeads.deleteLead(user.id, leadId);
+      // Initialize adapter if needed
+      await initializeLeadsAdapter();
+
+      // Delete from database
+      await getLeadsAdapter().deleteLead(user.id, leadId);
 
       // Remove from local state
       const currentLeads = get().leads;
@@ -270,8 +295,11 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
         throw new Error('User not authenticated');
       }
 
-      // Bulk update in Supabase
-      const results = await supabaseLeads.bulkUpdateLeads(user.id, leadIds, updates);
+      // Initialize adapter if needed
+      await initializeLeadsAdapter();
+
+      // Bulk update in database
+      const results = await getLeadsAdapter().bulkUpdateLeads(user.id, leadIds, updates);
 
       // Refresh leads after bulk update
       await get().fetchLeads();
@@ -301,8 +329,11 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
         throw new Error('Date to call back is required for Later Stage status');
       }
 
-      // Change status in Supabase (handles renumbering automatically)
-      await supabaseLeads.changeLeadStatus(user.id, leadId, status, additionalData);
+      // Initialize adapter if needed
+      await initializeLeadsAdapter();
+
+      // Change status in database (handles renumbering automatically)
+      await getLeadsAdapter().changeLeadStatus(user.id, leadId, status, additionalData);
 
       // Refresh leads
       await get().fetchLeads();
@@ -351,8 +382,11 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
         throw new Error('User not authenticated');
       }
 
-      // Renumber in Supabase
-      await supabaseLeads.renumberLeads(user.id, status);
+      // Initialize adapter if needed
+      await initializeLeadsAdapter();
+
+      // Renumber in database
+      await getLeadsAdapter().renumberLeads(user.id, status);
       
       // Refresh leads after renumbering
       await get().fetchLeads();
@@ -392,7 +426,9 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
       return [];
     }
     
-    return await supabaseLeads.getUniqueListNames(user.id);
+    // Initialize adapter if needed
+    await initializeLeadsAdapter();
+    return await getLeadsAdapter().getUniqueListNames(user.id);
   },
 
   // Delete an entire list
@@ -404,8 +440,11 @@ export const useLeadsStore = create<LeadsState>((set, get) => ({
         throw new Error('User not authenticated');
       }
 
-      // Delete the list from Supabase
-      const result = await supabaseLeads.deleteList(user.id, listName);
+      // Initialize adapter if needed
+      await initializeLeadsAdapter();
+
+      // Delete the list from database
+      const result = await getLeadsAdapter().deleteList(user.id, listName);
 
       // Refresh leads after deletion
       await get().fetchLeads();

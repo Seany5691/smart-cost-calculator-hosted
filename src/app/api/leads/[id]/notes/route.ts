@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateId } from '@/lib/leads/localStorage';
-import { LeadNote } from '@/lib/leads/types';
 
 // NOTE: This is a mock API that returns data structure for client-side localStorage
 // The actual storage happens on the client side since localStorage is browser-only
@@ -56,7 +55,7 @@ export async function POST(
     }
     
     // Create new note structure - client will save to localStorage
-    const newNote: LeadNote = {
+    const newNote: any = {
       id: generateId(),
       lead_id: leadId,
       user_id: 'local-user',

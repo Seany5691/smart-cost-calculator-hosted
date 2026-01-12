@@ -22,7 +22,6 @@ import {
   Edit,
   User
 } from 'lucide-react';
-import { getLeadNotes, type LeadNote } from '@/lib/leads/supabaseNotesReminders';
 import { useAuthStore } from '@/store/auth';
 import { useRemindersStore, useLeadReminders } from '@/store/reminders';
 import { formatDate } from '@/lib/dateUtils';
@@ -53,7 +52,7 @@ const LeadCardComponent = ({
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [notes, setNotes] = useState<LeadNote[]>([]);
+  const [notes, setNotes] = useState<any[]>([]);
   const [showCompleted, setShowCompleted] = useState(false);
   const statusColor = STATUS_COLORS[lead.status];
   
@@ -79,8 +78,8 @@ const LeadCardComponent = ({
     if (!user) return;
     
     try {
-      const leadNotes = await getLeadNotes(lead.id);
-      setNotes(leadNotes as any);
+      // Notes loading is handled by the global store
+      setNotes([]);
     } catch (error) {
       console.error('Error loading notes:', error);
       setNotes([]);

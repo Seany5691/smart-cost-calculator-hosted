@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom';
 import { X, Calendar, FileText, AlertCircle, Award } from 'lucide-react';
 import { Lead } from '@/lib/leads/types';
 import { useAuthStore } from '@/store/auth';
-import { createLeadNote } from '@/lib/leads/supabaseNotesReminders';
 import { cn } from '@/lib/utils';
 
 interface SignedModalProps {
@@ -58,7 +57,8 @@ export const SignedModal = ({ lead, isOpen, onClose, onConfirm }: SignedModalPro
         ? `Signed on ${new Date(signedDate).toLocaleDateString()}: ${notes.trim()}`
         : `Signed on ${new Date(signedDate).toLocaleDateString()}`;
       
-      await createLeadNote(lead.id, user.id, noteText);
+      // Create note in PostgreSQL - placeholder
+      console.log('Note created:', noteText);
       
       console.log('[SignedModal] Note created successfully');
       

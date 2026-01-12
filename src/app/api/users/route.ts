@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseHelpers } from '@/lib/supabase';
+import { databaseHelpers } from '@/lib/databaseAdapter';
 import { User } from '@/lib/types';
 
 export async function GET() {
   try {
-    const users = await supabaseHelpers.getAllUsers();
+    const users = await databaseHelpers.getAllUsers();
     return NextResponse.json(users);
   } catch (error) {
-    console.error('Error reading users from Supabase:', error);
+    console.error('Error reading users from database:', error);
     return NextResponse.json({ error: 'Failed to read users' }, { status: 500 });
   }
 }
@@ -29,16 +29,16 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Save to Supabase
-    const savedUser = await supabaseHelpers.createUser(user);
+    // Save to database
+    const createdUser = await databaseHelpers.createUser(user);
     
     return NextResponse.json({ 
       success: true, 
       message: 'User created successfully',
-      data: savedUser
+      data: createdUser
     });
   } catch (error) {
-    console.error('Error creating user in Supabase:', error);
+    console.error('Error creating user in database:', error);
     return NextResponse.json({ 
       error: 'Failed to create user',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -54,8 +54,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Update in Supabase
-    const updatedUser = await supabaseHelpers.updateUser(id, updates);
+    // Update in database
+    const updatedUser = await databaseHelpers.updateUser(id, updates);
     
     return NextResponse.json({ 
       success: true, 
@@ -63,7 +63,7 @@ export async function PUT(request: NextRequest) {
       data: updatedUser
     });
   } catch (error) {
-    console.error('Error updating user in Supabase:', error);
+    console.error('Error updating user in database:', error);
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
@@ -76,15 +76,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Delete from Supabase (soft delete)
-    await supabaseHelpers.deleteUser(id);
+    // Delete from database (soft delete)
+    await databaseHelpers.deleteUser(id);
     
     return NextResponse.json({ 
       success: true, 
       message: 'User deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting user from Supabase:', error);
+    console.error('Error deleting user from database:', error);
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
   }
 } 

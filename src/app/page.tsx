@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { Calculator, Settings, FileText, Users, ArrowRight, Clock, FolderOpen, Sparkles, TrendingUp, Search } from 'lucide-react';
 import { AnimatedBackground, GlassCard, GradientText, StatCard } from '@/components/ui/modern';
 import ActivityTimeline from '@/components/dashboard/ActivityTimeline';
-import { getDashboardStatsOptimized } from '@/lib/dashboardStats';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { StatCardSkeleton } from '@/components/ui/skeletons';
 import NumberLookup from '@/components/scraper/NumberLookup';
@@ -36,8 +35,19 @@ export default function DashboardPage() {
         setIsLoadingStats(true);
         try {
           const isAdmin = user.role === 'admin';
-          // Use optimized query for mobile devices
-          const statsData = await getDashboardStatsOptimized(user.id, isAdmin, isMobile);
+          // Fetch stats from API instead of direct database call
+          const response = await fetch('/api/dashboard/stats');
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch dashboard stats');
+          }
+          
+          const result = await response.json();
+          const statsData = result.data || {
+            totalDeals: 0,
+            activeProjects: 0,
+            calculations: 0
+          };
           
           setStats(statsData);
         } catch (error) {

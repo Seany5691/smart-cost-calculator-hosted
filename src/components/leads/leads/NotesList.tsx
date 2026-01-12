@@ -1,15 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { LeadNote } from '@/lib/leads/types';
 import { Card } from '@/components/leads/ui/Card';
 import { ConfirmModal } from '@/components/leads/ui/ConfirmModal';
 import { StickyNote, Edit, Trash2, Save, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface NotesListProps {
   leadId: string;
-  notes: LeadNote[];
+  notes: any[];
   onAddNote: (content: string) => Promise<void>;
   onUpdateNote: (noteId: string, content: string) => Promise<void>;
   onDeleteNote: (noteId: string) => Promise<void>;
@@ -43,7 +41,7 @@ export const NotesList = ({
     }
   };
 
-  const handleStartEdit = (note: LeadNote) => {
+  const handleStartEdit = (note: any) => {
     setEditingNoteId(note.id);
     setEditContent(note.content);
   };

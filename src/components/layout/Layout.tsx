@@ -16,7 +16,7 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const { setOnlineStatus } = useOfflineStore();
   const { user } = useAuthStore();
-  const { loadFromAPI, refreshFromSupabase } = useConfigStore();
+  const { loadFromAPI, refreshFromDatabase } = useConfigStore();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   useEffect(() => {

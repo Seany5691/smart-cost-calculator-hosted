@@ -6,7 +6,7 @@
 
 import { NextRequest } from 'next/server';
 import { ScrapingStatusEvent, LogEntry } from '@/lib/scraper/types';
-import { getSession } from '@/lib/scraper/sessionStore';
+import { getSession } from '@/lib/scraper/postgresqlSessionStore';
 import { requireScraperAuth } from '@/lib/auth-middleware';
 
 // Configure route to allow long-running connections
@@ -67,17 +67,16 @@ export async function GET(
   console.log(`[SSE] Client connecting to session: ${sessionId}`);
   console.log(`[SSE] NOTE: SSE is deprecated. Please use /api/scrape/status-poll for serverless compatibility`);
 
-  // Check Supabase first (new approach)
-  const { getSession: getSupabaseSession } = await import('@/lib/scraper/supabaseSessionStore');
-  const supabaseSession = await getSupabaseSession(sessionId);
+  // Check PostgreSQL first (new approach)
+  const pgSession = await getSession(sessionId);
   
-  if (supabaseSession) {
-    console.log(`[SSE] Session found in Supabase, redirecting to polling approach`);
+  if (pgSession) {
+    console.log(`[SSE] Session found in PostgreSQL, redirecting to polling approach`);
     return new Response(
       JSON.stringify({ 
         error: 'Please use /api/scrape/status-poll for serverless compatibility',
         sessionId,
-        status: supabaseSession.status
+        status: pgSession.status
       }),
       {
         status: 410, // Gone - resource no longer available
@@ -89,7 +88,7 @@ export async function GET(
   // Fallback to old in-memory approach (for backward compatibility)
   const session = getSession(sessionId);
   if (!session) {
-    console.log(`[SSE] Session not found in memory or Supabase: ${sessionId}`);
+    console.log(`[SSE] Session not found in memory or PostgreSQL: ${sessionId}`);
     return new Response(
       JSON.stringify({ error: 'Session not found. Use /api/scrape/status-poll for new sessions.' }),
       {

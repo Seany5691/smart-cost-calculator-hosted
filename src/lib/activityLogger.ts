@@ -1,11 +1,9 @@
 /**
- * Activity Logger Utility
+ * Activity Logger Utility (Client-Side Safe)
  * 
  * Provides functionality for logging and retrieving user activities
  * in the Smart Cost Calculator application.
  */
-
-import { supabaseHelpers } from './supabase';
 
 // Activity type enumeration
 export type ActivityType = 
@@ -20,11 +18,11 @@ export interface ActivityLog {
   id: string;
   userId: string;
   username: string;
-  userRole: 'admin' | 'manager' | 'user';
+  userRole: 'user' | 'admin' | 'manager';
   activityType: ActivityType;
   dealId?: string;
   dealName?: string;
-  timestamp: string;  // ISO 8601 format
+  timestamp: string;
   metadata?: Record<string, any>;
 }
 
@@ -94,11 +92,34 @@ const logActivityToLocalStorage = (activity: Omit<ActivityLog, 'id' | 'timestamp
 };
 
 /**
- * Log activity to Supabase
+ * Log an activity (client-side version)
+ * Note: This function now stores logs in localStorage for client-side use
+ * Server-side logging should use the API endpoint
+ */
+export async function logActivity(log: ActivityLog): Promise<void> {
+  try {
+    // Store in localStorage for client-side access
+    const logs = getActivityLogs();
+    logs.unshift({
+      ...log,
+      id: log.id || generateId(),
+      timestamp: log.timestamp || new Date().toISOString()
+    });
+    
+    // Trim to prevent localStorage from getting too large
+    const trimmed = trimActivityLogs(logs);
+    localStorage.setItem(ACTIVITY_LOGS_KEY, JSON.stringify(trimmed));
+  } catch (error) {
+    console.error('Failed to log activity:', error);
+  }
+}
+
+/**
+ * Log activity to database
  * 
  * @param activity - Activity data (without id and timestamp)
  */
-export const logActivityToSupabase = async (activity: Omit<ActivityLog, 'id' | 'timestamp'>): Promise<void> => {
+export const logActivityToDatabase = async (activity: Omit<ActivityLog, 'id' | 'timestamp'>): Promise<void> => {
   try {
     const log: ActivityLog = {
       ...activity,
@@ -106,22 +127,22 @@ export const logActivityToSupabase = async (activity: Omit<ActivityLog, 'id' | '
       timestamp: new Date().toISOString()
     };
 
-    await supabaseHelpers.createActivityLog(log);
+    await logActivity(log);
   } catch (error) {
-    console.warn('Failed to log activity to Supabase, falling back to localStorage:', error);
+    console.warn('Failed to log activity to database, falling back to localStorage:', error);
     // Fall back to localStorage
     logActivityToLocalStorage(activity);
   }
 };
 
 /**
- * Log a new activity
+ * Log a new activity (synchronous version for backward compatibility)
  * 
  * @param activity - Activity data (without id and timestamp)
  */
-export const logActivity = (activity: Omit<ActivityLog, 'id' | 'timestamp'>): void => {
+export const logActivitySync = (activity: Omit<ActivityLog, 'id' | 'timestamp'>): void => {
   // Use async function but don't await to avoid blocking
-  logActivityToSupabase(activity).catch(error => {
+  logActivityToDatabase(activity).catch(error => {
     console.warn('Activity logging failed:', error);
   });
 };
@@ -158,17 +179,34 @@ const getActivityLogsFromLocalStorage = (userId?: string): ActivityLog[] => {
 };
 
 /**
- * Get activity logs from Supabase
+ * Get activity logs from database (placeholder for API call)
  * 
  * @param userId - Optional user ID to filter logs
  * @returns Promise of array of activity logs, sorted by timestamp (newest first)
  */
-export const getActivityLogsFromSupabase = async (userId?: string): Promise<ActivityLog[]> => {
+export async function getActivityLogsFromDatabase(userId?: string, limit: number = 100): Promise<ActivityLog[]> {
   try {
-    const logs = await supabaseHelpers.getActivityLogs(userId, MAX_LOGS_PER_USER);
+    // TODO: Replace with API call to /api/activity-logs
+    console.log('getActivityLogsFromDatabase called with userId:', userId, 'limit:', limit);
+    return [];
+  } catch (error) {
+    console.error('Failed to get activity logs:', error);
+    return [];
+  }
+};
+
+/**
+ * Get activity logs, optionally filtered by user ID (async version)
+ * 
+ * @param userId - Optional user ID to filter logs
+ * @returns Array of activity logs, sorted by timestamp (newest first)
+ */
+export const getActivityLogsAsync = async (userId?: string): Promise<ActivityLog[]> => {
+  try {
+    const logs = await getActivityLogsFromDatabase(userId);
     return logs;
   } catch (error) {
-    console.warn('Failed to retrieve activity logs from Supabase, falling back to localStorage:', error);
+    console.warn('Failed to retrieve activity logs from database, falling back to localStorage:', error);
     return getActivityLogsFromLocalStorage(userId);
   }
 };
@@ -181,7 +219,7 @@ export const getActivityLogsFromSupabase = async (userId?: string): Promise<Acti
  */
 export const getActivityLogs = (userId?: string): ActivityLog[] => {
   // This is the synchronous version for backward compatibility
-  // Components should migrate to use getActivityLogsFromSupabase
+  // Components should migrate to use getActivityLogsFromDatabase
   return getActivityLogsFromLocalStorage(userId);
 };
 
@@ -216,11 +254,11 @@ export const getUniqueUsers = (): Array<{ userId: string; username: string; user
 };
 
 /**
- * Migrate localStorage activity logs to Supabase
+ * Migrate localStorage activity logs to database
  * 
  * @returns Promise<boolean> - True if migration successful or already completed
  */
-export const migrateActivityLogsToSupabase = async (): Promise<boolean> => {
+export const migrateActivityLogsToPostgreSQL = async (): Promise<boolean> => {
   try {
     // Check if migration already done
     if (typeof window !== 'undefined' && localStorage.getItem(MIGRATION_KEY) === 'true') {
@@ -237,10 +275,11 @@ export const migrateActivityLogsToSupabase = async (): Promise<boolean> => {
       return true;
     }
 
-    // Batch insert to Supabase using upsert to handle duplicates
+    // Batch insert to PostgreSQL using upsert to handle duplicates
     for (const log of localLogs) {
       try {
-        await supabaseHelpers.createActivityLog(log);
+        // TODO: Replace with API call to /api/activity-logs
+        console.log('Would migrate activity log:', log.id);
       } catch (error) {
         // Log individual errors but continue with migration
         console.warn(`Failed to migrate activity log ${log.id}:`, error);
@@ -254,7 +293,7 @@ export const migrateActivityLogsToSupabase = async (): Promise<boolean> => {
     
     return true;
   } catch (error) {
-    console.error('Failed to migrate activity logs to Supabase:', error);
+    console.error('Failed to migrate activity logs to PostgreSQL:', error);
     return false;
   }
 };

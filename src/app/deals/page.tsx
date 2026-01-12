@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import { supabaseHelpers } from '@/lib/supabase';
+import { databaseHelpers } from '@/lib/databaseAdapter';
 import { Calculator, Calendar, User, DollarSign, ArrowRight, Plus, FileText } from 'lucide-react';
 import Link from 'next/link';
 
@@ -48,11 +48,11 @@ export default function DealsPage() {
       // Determine if user is admin
       const isAdmin = user.role === 'admin';
       
-      // Fetch deals from Supabase
-      const supabaseDeals = await supabaseHelpers.getDeals(user.id, isAdmin);
+      // Fetch deals from database
+      const databaseDeals = await databaseHelpers.getDeals(user.id, isAdmin);
       
-      // Transform Supabase data to match Deal interface
-      const userDeals: Deal[] = supabaseDeals.map((deal: any) => ({
+      // Transform database data to match Deal interface
+      const userDeals: Deal[] = databaseDeals.map((deal: any) => ({
         id: deal.id || '',
         userId: deal.userId || '',
         username: deal.username || 'Unknown User',
@@ -77,7 +77,7 @@ export default function DealsPage() {
       
       setDeals(userDeals);
     } catch (error) {
-      console.error('Error loading deals from Supabase:', error);
+      console.error('Error loading deals from database:', error);
       
       // Fallback to localStorage on error
       try {

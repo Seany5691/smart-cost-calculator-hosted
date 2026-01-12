@@ -132,6 +132,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
   users: User[];
+  initializeAuth: () => void;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   checkAuth: () => boolean;

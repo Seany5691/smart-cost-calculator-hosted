@@ -85,6 +85,32 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       users: [DEFAULT_ADMIN, ...SAMPLE_USERS],
 
+      // Initialize and migrate old auth data
+      initializeAuth: () => {
+        if (typeof window !== 'undefined') {
+          try {
+            // Check for old auth data with invalid user IDs
+            const oldAuthData = localStorage.getItem('auth-storage');
+            if (oldAuthData) {
+              const parsed = JSON.parse(oldAuthData);
+              const userId = parsed.state?.user?.id;
+              
+              // If user ID is not a valid UUID (like "admin-1"), clear it
+              if (userId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
+                console.warn('🔧 Migrating old auth data with invalid user ID:', userId);
+                localStorage.removeItem('auth-storage');
+                // Force logout to trigger fresh login
+                set({ isAuthenticated: false, user: null });
+                return;
+              }
+            }
+          } catch (error) {
+            console.error('Error checking auth data migration:', error);
+            localStorage.removeItem('auth-storage');
+          }
+        }
+      },
+
       login: async (username: string, password: string) => {
         let { users } = get();
         let user = users.find(u => u.username === username && u.password === password && u.isActive);

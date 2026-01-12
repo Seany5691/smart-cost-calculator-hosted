@@ -38,6 +38,10 @@ export default function Layout({ children }: LayoutProps) {
   // Initialize config store and users on app load
   useEffect(() => {
     const initializeApp = async () => {
+      // First, migrate any old auth data with invalid user IDs
+      const { initializeAuth } = useAuthStore.getState();
+      initializeAuth();
+      
       await loadFromAPI();
       const { initializeUsers } = useAuthStore.getState();
       await initializeUsers();

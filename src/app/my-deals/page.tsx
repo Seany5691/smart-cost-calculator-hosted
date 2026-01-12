@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import { databaseHelpers } from '@/lib/databaseAdapter';
 import { Calculator, Calendar, User, DollarSign, ArrowRight, FileText, Trash2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Button, Card, CardContent, Input, Label } from '@/components/ui';
@@ -49,8 +48,9 @@ export default function MyDealsPage() {
         return;
       }
 
-      // Fetch deals from database
-      const databaseDeals = await databaseHelpers.getDeals(user.id, false);
+      // Fetch deals from API
+      const response = await fetch('/api/deals');
+      const databaseDeals = await response.json();
       
       // Transform database data to match Deal interface
       const allDeals: Deal[] = databaseDeals.map((deal: any) => ({
@@ -124,7 +124,7 @@ export default function MyDealsPage() {
     setIsDeleting(dealId);
     try {
       // Delete from database
-      await databaseHelpers.deleteDeal(dealId);
+      await fetch(`/api/deals/${dealId}`, { method: 'DELETE' });
       
       // Reload deals to update the UI
       await loadMyDeals();

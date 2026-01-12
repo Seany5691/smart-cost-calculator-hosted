@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import { databaseHelpers } from '@/lib/databaseAdapter';
 import { getFactorForDeal } from '@/lib/utils';
 import { Calendar, User, DollarSign, Plus, FileText, Users, Shield, TrendingUp, Download, Eye, Trash2 } from 'lucide-react';
 import Link from 'next/link';
@@ -44,7 +43,8 @@ export default function AdminDealsPage() {
       setIsLoading(true);
       
       // Admin can see all deals
-      const databaseDeals = await databaseHelpers.getDeals(undefined, true);
+      const response = await fetch('/api/deals');
+      const databaseDeals = await response.json();
       
       // Transform database data to match Deal interface
       const allDeals: Deal[] = databaseDeals.map((deal: any) => ({
@@ -110,7 +110,7 @@ export default function AdminDealsPage() {
     setIsDeleting(dealId);
     try {
       // Delete from database
-      await databaseHelpers.deleteDeal(dealId);
+      await fetch(`/api/deals/${dealId}`, { method: 'DELETE' });
 
       // Reload deals to update the UI
       await loadDeals();

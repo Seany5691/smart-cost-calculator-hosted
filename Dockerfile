@@ -36,8 +36,8 @@ ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key-for-build-only
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-# Clear Next.js cache and build the application
-RUN rm -rf .next && npm run build
+# Force completely fresh build with unique ID
+RUN rm -rf .next node_modules/.cache && npm run build
 
 # Stage 3: Runner (Production)
 FROM node:20-slim AS runner

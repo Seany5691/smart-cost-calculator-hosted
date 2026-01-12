@@ -5,7 +5,6 @@
  */
 
 import { getActivityLogs } from './activityLogger';
-import { databaseHelpers } from './databaseAdapter';
 
 // Cache for statistics with 5-minute TTL
 interface CacheEntry<T> {
@@ -127,8 +126,17 @@ export const getTotalDealsAsync = async (userId: string, isAdmin: boolean): Prom
   
   return getCachedOrFetch(cacheKey, async () => {
     try {
-      const deals = await databaseHelpers.getDeals(userId, isAdmin);
-      return deals.length;
+      // Fall back to localStorage since database is not available
+      const dealsData = localStorage.getItem('deals-storage');
+      if (!dealsData) return 0;
+
+      const deals = JSON.parse(dealsData);
+      
+      if (isAdmin) {
+        return deals.length;
+      } else {
+        return deals.filter((deal: any) => deal.userId === userId).length;
+      }
     } catch (error) {
       console.warn('Failed to fetch deals from database, falling back to localStorage:', error);
       // Fall back to localStorage
@@ -159,11 +167,21 @@ export const getActiveProjectsAsync = async (userId: string, isAdmin: boolean): 
   
   return getCachedOrFetch(cacheKey, async () => {
     try {
-      const deals = await databaseHelpers.getDeals(userId, isAdmin);
+      // Fall back to localStorage since database is not available
+      const dealsData = localStorage.getItem('deals-storage');
+      if (!dealsData) return 0;
+
+      const deals = JSON.parse(dealsData);
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      return deals.filter((deal: any) => {
+      let filteredDeals = deals;
+      
+      if (!isAdmin) {
+        filteredDeals = deals.filter((deal: any) => deal.userId === userId);
+      }
+
+      return filteredDeals.filter((deal: any) => {
         const updatedAt = new Date(deal.updatedAt);
         return updatedAt >= thirtyDaysAgo;
       }).length;
@@ -204,7 +222,8 @@ export const getTotalCalculationsAsync = async (userId: string, isAdmin: boolean
   
   return getCachedOrFetch(cacheKey, async () => {
     try {
-      const logs = await databaseHelpers.getActivityLogs(isAdmin ? undefined : userId);
+      // Fall back to localStorage since database is not available
+      const logs = isAdmin ? getActivityLogs() : getActivityLogs(userId);
       
       // Count deal_created, deal_saved, and deal_loaded activities
       return logs.filter((log: any) => 

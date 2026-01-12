@@ -1,0 +1,15 @@
+# PostgreSQL Configuration for VPS
+POSTGRES_HOST=smart-cost-calculator-postgres-rnfhko
+POSTGRES_PORT=5432
+POSTGRES_DATABASE=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=tbbbrb8rmrzaqab0
+
+# Application Settings
+NODE_ENV=production
+PORT=3000
+NEXT_TELEMETRY_DISABLED=1
+
+# Optional: Keep Supabase as backup (commented out)
+# NEXT_PUBLIC_SUPABASE_URL=https://gcggzmzlegxldvupufmu.supabase.co
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjZ2d6bXpsZWd4bGR2dXB1Zm11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzOTg3ODUsImV4cCI6MjA2OTk3NDc4NX0.zyno00F93Nds-JboCye4ZOZUhWjHX3SU6IeqZzB_HgU

@@ -1,7 +1,7 @@
 // API route for importing data from Smart Cost Calculator scraper
 import { NextRequest, NextResponse } from 'next/server';
 import { databaseHelpers } from '@/lib/databaseAdapter';
-import { getLeadsAdapter } from '@/lib/leads/leadsAdapter';
+import { postgresqlLeads } from '@/lib/leads/postgresqlLeads';
 import {
   transformScraperData,
   validateImportData,
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     const { validRecords, invalidRecords } = validateImportData(normalizedData);
 
     // Get existing leads for duplicate detection
-    const existingLeads = await getLeadsAdapter().getLeads(user.id);
+    const existingLeads = await postgresqlLeads.getLeads(user.id, {} as any);
 
     // Detect duplicates
     const { duplicates, unique } = detectDuplicates(validRecords, existingLeads);
@@ -102,8 +102,8 @@ export async function POST(request: NextRequest) {
 
     for (const batch of batches) {
       try {
-        // Get next number for 'new' status (Main Sheet)
-        const currentLeads = await getLeadsAdapter().getLeadsByStatus(user.id, 'new');
+        // Get next number for 'leads' status (Main Sheet)
+        const currentLeads = await postgresqlLeads.getLeadsByStatus(user.id, 'leads');
         let nextNumber = getNextLeadNumber(currentLeads);
 
         // Prepare leads for insertion
@@ -121,11 +121,12 @@ export async function POST(request: NextRequest) {
           };
         });
 
-        // Insert batch using leads adapter
-        for (const leadToInsert of leadsToInsert) {
-          await getLeadsAdapter().createLead(user.id, leadToInsert);
+        // Insert batch using PostgreSQL bulk insert for speed
+        const { data, error } = await postgresqlLeads.bulkCreateLeads(user.id, leadsToInsert as any);
+        if (error) {
+          throw error;
         }
-        importedCount += batch.length;
+        importedCount += data?.length || 0;
       } catch (error) {
         console.error('Error importing batch:', error);
         errors.push({

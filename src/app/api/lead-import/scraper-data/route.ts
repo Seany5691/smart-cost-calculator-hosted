@@ -1,6 +1,5 @@
 // API route for fetching scraper data from Smart Cost Calculator
 import { NextRequest, NextResponse } from 'next/server';
-import { databaseHelpers } from '@/lib/databaseAdapter';
 
 // GET /api/import/scraper-data - Get available scraper sessions
 export async function GET(request: NextRequest) {

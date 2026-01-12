@@ -1,4 +1,5 @@
 // PostgreSQL helper functions for leads management
+import { randomUUID } from 'crypto';
 import { postgresql } from '@/lib/postgresql';
 import { Lead, Route, LeadNote, LeadInteraction, LeadStatus, LeadSearchFilters } from './types';
 
@@ -96,7 +97,7 @@ export const postgresqlLeads = {
   async createLead(userId: string, leadData: Partial<Lead>): Promise<Lead> {
     try {
       // Get the next number for the status
-      const existingLeads = await this.getLeadsByStatus(userId, leadData.status || 'new');
+      const existingLeads = await this.getLeadsByStatus(userId, leadData.status || 'leads');
       const nextNumber = existingLeads.length + 1;
 
       const dbLead = transformLeadToDb({
@@ -545,6 +546,22 @@ export const postgresqlLeads = {
     }
   },
 
+  async getRouteById(userId: string, routeId: string): Promise<Route | null> {
+    try {
+      const { rows } = await postgresql.query(`
+        SELECT * FROM routes 
+        WHERE user_id = $1 AND id = $2
+        LIMIT 1
+      `, [userId, routeId]);
+
+      if (!rows || rows.length === 0) return null;
+      return transformRouteFromDb(rows[0]);
+    } catch (error: any) {
+      console.error('Error fetching route by id:', error);
+      throw new Error(error.message || 'Failed to fetch route');
+    }
+  },
+
   /**
    * Create a new route
    */
@@ -552,25 +569,27 @@ export const postgresqlLeads = {
     try {
       const query = `
         INSERT INTO routes (
-          id, name, route_url, stop_count, lead_ids, 
+          id, name, route_url, stop_count, lead_ids,
           starting_point, notes, user_id, created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
         RETURNING *
       `;
-      
+
+      const id = routeData.id || randomUUID();
+      const leadIds = routeData.lead_ids ?? routeData.leadIds ?? [];
+      const startingPoint = routeData.starting_point ?? routeData.startingPoint ?? null;
+
       const { rows } = await postgresql.query(query, [
-        routeData.id || `route_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id,
         routeData.name,
-        routeData.routeUrl,
-        routeData.stopCount || 0,
-        JSON.stringify(routeData.leadIds || []),
-        routeData.startingPoint || '',
-        routeData.notes || '',
+        routeData.route_url ?? routeData.routeUrl,
+        routeData.stop_count ?? routeData.stopCount ?? 0,
+        JSON.stringify(leadIds),
+        startingPoint ? JSON.stringify(startingPoint) : null,
+        routeData.notes ?? null,
         userId,
-        new Date().toISOString(),
-        new Date().toISOString()
       ]);
-      
+
       return transformRouteFromDb(rows[0]);
     } catch (error: any) {
       console.error('Error creating route:', error);
@@ -810,13 +829,23 @@ function transformLeadToDb(lead: Partial<Lead>): any {
  * Transform database route (snake_case) to app route (camelCase)
  */
 function transformRouteFromDb(dbRoute: any): Route {
+  const leadIds = Array.isArray(dbRoute.lead_ids)
+    ? dbRoute.lead_ids
+    : typeof dbRoute.lead_ids === 'string'
+      ? (JSON.parse(dbRoute.lead_ids) as any[])
+      : [];
+
+  const startingPoint = typeof dbRoute.starting_point === 'string'
+    ? JSON.parse(dbRoute.starting_point)
+    : dbRoute.starting_point;
+
   return {
     id: dbRoute.id,
     name: dbRoute.name,
     route_url: dbRoute.route_url,
     stop_count: dbRoute.stop_count,
-    lead_ids: dbRoute.lead_ids || [],
-    starting_point: dbRoute.starting_point,
+    lead_ids: leadIds || [],
+    starting_point: startingPoint,
     notes: dbRoute.notes,
     user_id: dbRoute.user_id,
     created_at: dbRoute.created_at,

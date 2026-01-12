@@ -1,7 +1,6 @@
 // API routes for individual lead operations
 import { NextRequest, NextResponse } from 'next/server';
-import { databaseHelpers } from '@/lib/databaseAdapter';
-import { getLeadsAdapter } from '@/lib/leads/leadsAdapter';
+import { postgresqlLeads } from '@/lib/leads/postgresqlLeads';
 import { validateLead, sanitizeLeadData, validateUUID } from '@/lib/leads/validation';
 import { validateStatusTransition, extractCoordinates } from '@/lib/leads/leadUtils';
 import { LeadFormData, LeadStatus } from '@/lib/leads/types';
@@ -25,17 +24,8 @@ export async function GET(
     // Get user from auth store (simplified for PostgreSQL)
     const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
 
-    // Get leads adapter
-    const leadsAdapter = getLeadsAdapter();
-    if (!leadsAdapter) {
-      return NextResponse.json(
-        { error: 'Database adapter not available', success: false, data: null },
-        { status: 500 }
-      );
-    }
-
     // Fetch the lead
-    const lead = await leadsAdapter.getLeadById(user.id, id);
+    const lead = await postgresqlLeads.getLeadById(user.id, id);
 
     if (!lead) {
       return NextResponse.json(
@@ -81,17 +71,8 @@ export async function PUT(
     // Get user from auth store (simplified for PostgreSQL)
     const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
 
-    // Get leads adapter
-    const leadsAdapter = getLeadsAdapter();
-    if (!leadsAdapter) {
-      return NextResponse.json(
-        { error: 'Database adapter not available', success: false, data: null },
-        { status: 500 }
-      );
-    }
-
     // Fetch existing lead
-    const existingLead = await leadsAdapter.getLeadById(user.id, id);
+    const existingLead = await postgresqlLeads.getLeadById(user.id, id);
 
     if (!existingLead) {
       return NextResponse.json(
@@ -101,7 +82,7 @@ export async function PUT(
     }
 
     // Parse request body
-    const body: Partial<LeadFormData> = await request.json();
+    const body: Partial<LeadFormData> & { dateSigned?: string | null; date_signed?: string | null } = await request.json();
 
     // Sanitize input data
     const sanitizedData = sanitizeLeadData(body);
@@ -139,30 +120,28 @@ export async function PUT(
         );
       }
 
-      // Get next number for new status category
-      const newStatusLeads = await leadsAdapter.getLeadsByStatus(
-        user.id,
-        sanitizedData.status as LeadStatus
-      );
-      const maxNumber = Math.max(...newStatusLeads.map((l: any) => l.number || 0), 0);
-      (sanitizedData as any).number = maxNumber + 1;
-
-      // Renumber old status category
-      await leadsAdapter.renumberLeads(user.id, existingLead.status as LeadStatus);
+      await postgresqlLeads.changeLeadStatus(user.id, id, sanitizedData.status as LeadStatus, {
+        notes: sanitizedData.notes || undefined,
+        date_to_call_back: sanitizedData.date_to_call_back || undefined,
+        dateSigned: body.dateSigned ?? body.date_signed ?? undefined,
+      });
     }
 
     // Extract coordinates if maps_address is updated
-    let updates: any = { ...sanitizedData };
+    const { status: _ignoredStatus, ...sanitizedWithoutStatus } = sanitizedData as any;
+    let updates: any = { ...sanitizedWithoutStatus };
     if (sanitizedData.maps_address && sanitizedData.maps_address !== existingLead.maps_address) {
       const coordinates = extractCoordinates(sanitizedData.maps_address);
       updates.coordinates = coordinates;
     }
 
     // Update lead in database
-    await leadsAdapter.updateLead(user.id, id, updates);
+    const updatedLead = Object.keys(updates).length > 0
+      ? await postgresqlLeads.updateLead(user.id, id, updates)
+      : await postgresqlLeads.getLeadById(user.id, id);
 
     return NextResponse.json({
-      data: updates,
+      data: updatedLead,
       success: true,
       error: null,
     });
@@ -198,17 +177,8 @@ export async function DELETE(
     // Get user from auth store (simplified for PostgreSQL)
     const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
 
-    // Get leads adapter
-    const leadsAdapter = getLeadsAdapter();
-    if (!leadsAdapter) {
-      return NextResponse.json(
-        { error: 'Database adapter not available', success: false, data: null },
-        { status: 500 }
-      );
-    }
-
     // Fetch existing lead to get status for renumbering
-    const existingLead = await leadsAdapter.getLeadById(user.id, id);
+    const existingLead = await postgresqlLeads.getLeadById(user.id, id);
 
     if (!existingLead) {
       return NextResponse.json(
@@ -218,10 +188,10 @@ export async function DELETE(
     }
 
     // Delete lead from database
-    await leadsAdapter.deleteLead(user.id, id);
+    await postgresqlLeads.deleteLead(user.id, id);
 
     // Renumber remaining leads in the same status category
-    await leadsAdapter.renumberLeads(user.id, existingLead.status as LeadStatus);
+    await postgresqlLeads.renumberLeads(user.id, existingLead.status as LeadStatus);
 
     return NextResponse.json({
       data: { id, deleted: true },

@@ -1,7 +1,7 @@
 // API route for Excel file import
 import { NextRequest, NextResponse } from 'next/server';
 import { databaseHelpers } from '@/lib/databaseAdapter';
-import { getLeadsAdapter } from '@/lib/leads/leadsAdapter';
+import { postgresqlLeads } from '@/lib/leads/postgresqlLeads';
 import {
   validateImportFile,
   detectFieldMapping,
@@ -89,15 +89,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get leads adapter
-    const leadsAdapter = getLeadsAdapter();
-    if (!leadsAdapter) {
-      return NextResponse.json(
-        { error: 'Database adapter not available', success: false, data: null },
-        { status: 500 }
-      );
-    }
-
     // Create import session (simplified - using databaseHelpers for session management)
     const importSession = await databaseHelpers.createImportSession({
       source_type: 'excel',
@@ -123,7 +114,7 @@ export async function POST(request: NextRequest) {
     const { validRecords, invalidRecords } = validateImportData(normalizedData);
 
     // Get existing leads for duplicate detection
-    const existingLeads = await leadsAdapter.getLeads(user.id);
+    const existingLeads = await postgresqlLeads.getLeads(user.id, {} as any);
 
     // Detect duplicates
     const { duplicates, unique } = detectDuplicates(validRecords, existingLeads);
@@ -140,8 +131,8 @@ export async function POST(request: NextRequest) {
 
     for (const batch of batches) {
       try {
-        // Get next number for 'new' status (Main Sheet)
-        const currentLeads = await leadsAdapter.getLeadsByStatus(user.id, 'new');
+        // Get next number for 'leads' status (Main Sheet)
+        const currentLeads = await postgresqlLeads.getLeadsByStatus(user.id, 'leads');
         let nextNumber = getNextLeadNumber(currentLeads);
 
         // Prepare leads for insertion
@@ -159,11 +150,12 @@ export async function POST(request: NextRequest) {
           };
         });
 
-        // Insert batch using leads adapter
-        for (const leadToInsert of leadsToInsert) {
-          await leadsAdapter.createLead(user.id, leadToInsert);
+        // Insert batch using PostgreSQL bulk insert for speed
+        const { data, error } = await postgresqlLeads.bulkCreateLeads(user.id, leadsToInsert as any);
+        if (error) {
+          throw error;
         }
-        importedCount += batch.length;
+        importedCount += data?.length || 0;
       } catch (error) {
         console.error('Error importing batch:', error);
         errors.push({

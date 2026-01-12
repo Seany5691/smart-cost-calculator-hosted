@@ -1,6 +1,6 @@
 // API routes for individual route operations
 import { NextRequest, NextResponse } from 'next/server';
-import { getLeadsAdapter } from '@/lib/leads/leadsAdapter';
+import { postgresqlLeads } from '@/lib/leads/postgresqlLeads';
 import { validateUUID } from '@/lib/leads/validation';
 
 // GET /api/routes/[id] - Get a single route
@@ -19,26 +19,17 @@ export async function GET(
       );
     }
 
-    // Get leads adapter
-    const leadsAdapter = getLeadsAdapter();
-    if (!leadsAdapter) {
-      return NextResponse.json(
-        { error: 'Database adapter not available', success: false, data: null },
-        { status: 500 }
-      );
-    }
-
     // Get user from auth store (simplified for PostgreSQL)
     const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
 
-    // Fetch the route (simplified for PostgreSQL)
-    // In a real implementation, you would query the routes table
-    const routeData = {
-      id,
-      name: 'Sample Route',
-      status: 'active',
-      created_at: new Date().toISOString()
-    };
+    const routeData = await postgresqlLeads.getRouteById(user.id, id);
+
+    if (!routeData) {
+      return NextResponse.json(
+        { error: 'Route not found', success: false, data: null },
+        { status: 404 }
+      );
+    }
 
     // Return route data
     return NextResponse.json({
@@ -78,8 +69,7 @@ export async function DELETE(
     // Get user from auth store (simplified for PostgreSQL)
     const user = { id: '550e8400-e29b-41d4-a716-446655440000' }; // Default admin for now
 
-    // Delete the route (simplified for PostgreSQL)
-    // In a real implementation, you would delete from the routes table
+    await postgresqlLeads.deleteRoute(user.id, id);
     
     return NextResponse.json({
       data: { id, deleted: true },

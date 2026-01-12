@@ -1,5 +1,7 @@
 'use client';
 
+// Admin deals page - fixed for deployment v2
+
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';

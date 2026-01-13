@@ -1,17 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { User } from '@/lib/types';
 
 export async function GET() {
   try {
-    // Fall back to localStorage since database is not available
-    const usersData = localStorage.getItem('users-storage');
-    if (!usersData) {
-      return NextResponse.json([]);
-    }
-    const users = JSON.parse(usersData);
+    const { databaseHelpers } = await import('@/lib/databaseAdapter');
+    const rows = await databaseHelpers.getAllUsers();
+
+    const users: any[] = (rows || []).map((row: any) => ({
+      id: row.id,
+      username: row.username,
+      password: row.password,
+      role: row.role,
+      name: row.name,
+      email: row.email,
+      isActive: row.is_active,
+      requiresPasswordChange: row.requires_password_change,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+
     return NextResponse.json(users);
   } catch (error) {
-    console.error('Error reading users from localStorage:', error);
+    console.error('Error reading users from database:', error);
     return NextResponse.json({ error: 'Failed to read users' }, { status: 500 });
   }
 }
@@ -33,18 +44,30 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Save to localStorage
-    const users = JSON.parse(localStorage.getItem('users-storage') || '[]');
-    const updatedUsers = [...users, { ...user, id: user.id || Date.now().toString() }];
-    localStorage.setItem('users-storage', JSON.stringify(updatedUsers));
-    
+    const { databaseHelpers } = await import('@/lib/databaseAdapter');
+    const created = await databaseHelpers.createUser({
+      ...user,
+      id: user.id || randomUUID(),
+    });
+
     return NextResponse.json({ 
       success: true, 
       message: 'User created successfully',
-      data: { ...user, id: user.id || Date.now().toString() }
+      data: {
+        id: created.id,
+        username: created.username,
+        password: created.password,
+        role: created.role,
+        name: created.name,
+        email: created.email,
+        isActive: created.is_active,
+        requiresPasswordChange: created.requires_password_change,
+        createdAt: created.created_at,
+        updatedAt: created.updated_at,
+      }
     });
   } catch (error) {
-    console.error('Error creating user in localStorage:', error);
+    console.error('Error creating user in database:', error);
     return NextResponse.json({ 
       error: 'Failed to create user',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -60,23 +83,27 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Update in localStorage
-    const users = JSON.parse(localStorage.getItem('users-storage') || '[]');
-    const userIndex = users.findIndex(u => u.id === id);
-    if (userIndex === -1) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-    
-    users[userIndex] = { ...users[userIndex], ...updates };
-    localStorage.setItem('users-storage', JSON.stringify(users));
+    const { databaseHelpers } = await import('@/lib/databaseAdapter');
+    const updated = await databaseHelpers.updateUser(id, updates);
     
     return NextResponse.json({ 
       success: true, 
       message: 'User updated successfully',
-      data: users[userIndex]
+      data: {
+        id: updated.id,
+        username: updated.username,
+        password: updated.password,
+        role: updated.role,
+        name: updated.name,
+        email: updated.email,
+        isActive: updated.is_active,
+        requiresPasswordChange: updated.requires_password_change,
+        createdAt: updated.created_at,
+        updatedAt: updated.updated_at,
+      }
     });
   } catch (error) {
-    console.error('Error updating user in localStorage:', error);
+    console.error('Error updating user in database:', error);
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
@@ -89,17 +116,19 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Delete from localStorage (soft delete)
-    const users = JSON.parse(localStorage.getItem('users-storage') || '[]');
-    const filteredUsers = users.filter(u => u.id !== id);
-    localStorage.setItem('users-storage', JSON.stringify(filteredUsers));
+    const { databaseHelpers } = await import('@/lib/databaseAdapter');
+    const deleted = await databaseHelpers.deleteUser(id);
+
+    if (!deleted) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
     
     return NextResponse.json({ 
       success: true, 
       message: 'User deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting user from localStorage:', error);
+    console.error('Error deleting user from database:', error);
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
   }
-} 
+}

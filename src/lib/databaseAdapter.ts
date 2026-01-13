@@ -119,6 +119,11 @@ export const databaseHelpers = {
     return adapter.helpers.getActivityLogs(userId, limit);
   },
 
+  async getActivityLogsPaginated(userId?: string, page?: number, pageSize?: number) {
+    const adapter = getDatabaseAdapter();
+    return adapter.helpers.getActivityLogsPaginated(userId, page, pageSize);
+  },
+
   async createActivityLog(log: any) {
     const adapter = getDatabaseAdapter();
     return adapter.helpers.createActivityLog(log);

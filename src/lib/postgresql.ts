@@ -98,17 +98,24 @@ export const dbHelpers = {
   async getHardwareItems() {
     const { rows } = await postgresql.query(`
       SELECT * FROM hardware_items 
-      WHERE isActive = true 
+      WHERE is_active = true 
       ORDER BY name
     `);
     
     // Ensure proper type conversion for numeric fields
     return rows.map((item: any) => ({
-      ...item,
+      id: item.id,
+      name: item.name,
       cost: parseFloat(item.cost),
-      managerCost: item.managerCost ? parseFloat(item.managerCost) : null,
-      userCost: item.userCost ? parseFloat(item.userCost) : null,
+      managerCost: item.manager_cost ? parseFloat(item.manager_cost) : null,
+      userCost: item.user_cost ? parseFloat(item.user_cost) : null,
       quantity: parseInt(item.quantity),
+      locked: item.locked,
+      isExtension: item.is_extension,
+      isActive: item.is_active,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+      displayOrder: item.display_order,
     }));
   },
 
@@ -116,32 +123,39 @@ export const dbHelpers = {
     await postgresql.transaction(async (client) => {
       // First, deactivate all items
       await client.query(
-        'UPDATE hardware_items SET isActive = false WHERE isActive = true'
+        'UPDATE hardware_items SET is_active = false WHERE is_active = true'
       );
 
       // Then insert/update the new items
       for (const item of items) {
         await client.query(`
           INSERT INTO hardware_items (
-            id, name, cost, managerCost, userCost, quantity, 
-            locked, isExtension, isActive, createdAt, updatedAt, displayOrder
+            id, name, cost, manager_cost, user_cost, quantity, 
+            locked, is_extension, is_active, created_at, updated_at, display_order
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), $10
           )
           ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
             cost = EXCLUDED.cost,
-            managerCost = EXCLUDED.managerCost,
-            userCost = EXCLUDED.userCost,
+            manager_cost = EXCLUDED.manager_cost,
+            user_cost = EXCLUDED.user_cost,
             locked = EXCLUDED.locked,
-            isExtension = EXCLUDED.isExtension,
-            isActive = EXCLUDED.isActive,
-            updatedAt = NOW(),
-            displayOrder = EXCLUDED.displayOrder
+            is_extension = EXCLUDED.is_extension,
+            is_active = EXCLUDED.is_active,
+            updated_at = NOW(),
+            display_order = EXCLUDED.display_order
         `, [
-          item.id, item.name, item.cost, item.managerCost, item.userCost,
-          item.quantity || 0, item.locked || false, item.isExtension || false,
-          true, item.displayOrder || 0
+          item.id,
+          item.name,
+          item.cost,
+          item.managerCost,
+          item.userCost,
+          item.quantity || 0,
+          item.locked || false,
+          item.isExtension || false,
+          true,
+          item.displayOrder || 0
         ]);
       }
     });
@@ -151,16 +165,22 @@ export const dbHelpers = {
   async getConnectivityItems() {
     const { rows } = await postgresql.query(`
       SELECT * FROM connectivity_items 
-      WHERE isActive = true 
+      WHERE is_active = true 
       ORDER BY name
     `);
     
     return rows.map((item: any) => ({
-      ...item,
+      id: item.id,
+      name: item.name,
       cost: parseFloat(item.cost),
-      managerCost: item.managerCost ? parseFloat(item.managerCost) : null,
-      userCost: item.userCost ? parseFloat(item.userCost) : null,
+      managerCost: item.manager_cost ? parseFloat(item.manager_cost) : null,
+      userCost: item.user_cost ? parseFloat(item.user_cost) : null,
       quantity: parseInt(item.quantity),
+      locked: item.locked,
+      isActive: item.is_active,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+      displayOrder: item.display_order,
     }));
   },
 
@@ -168,30 +188,37 @@ export const dbHelpers = {
     await postgresql.transaction(async (client) => {
       // First, deactivate all items
       await client.query(
-        'UPDATE connectivity_items SET isActive = false WHERE isActive = true'
+        'UPDATE connectivity_items SET is_active = false WHERE is_active = true'
       );
 
       // Then insert/update the new items
       for (const item of items) {
         await client.query(`
           INSERT INTO connectivity_items (
-            id, name, cost, managerCost, userCost, quantity, 
-            locked, isActive, createdAt, updatedAt, displayOrder
+            id, name, cost, manager_cost, user_cost, quantity, 
+            locked, is_active, created_at, updated_at, display_order
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW(), $9
           )
           ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
             cost = EXCLUDED.cost,
-            managerCost = EXCLUDED.managerCost,
-            userCost = EXCLUDED.userCost,
+            manager_cost = EXCLUDED.manager_cost,
+            user_cost = EXCLUDED.user_cost,
             locked = EXCLUDED.locked,
-            isActive = EXCLUDED.isActive,
-            updatedAt = NOW(),
-            displayOrder = EXCLUDED.displayOrder
+            is_active = EXCLUDED.is_active,
+            updated_at = NOW(),
+            display_order = EXCLUDED.display_order
         `, [
-          item.id, item.name, item.cost, item.managerCost, item.userCost,
-          item.quantity || 0, item.locked || false, true, item.displayOrder || 0
+          item.id,
+          item.name,
+          item.cost,
+          item.managerCost,
+          item.userCost,
+          item.quantity || 0,
+          item.locked || false,
+          true,
+          item.displayOrder || 0
         ]);
       }
     });
@@ -201,16 +228,22 @@ export const dbHelpers = {
   async getLicensingItems() {
     const { rows } = await postgresql.query(`
       SELECT * FROM licensing_items 
-      WHERE isActive = true 
+      WHERE is_active = true 
       ORDER BY name
     `);
     
     return rows.map((item: any) => ({
-      ...item,
+      id: item.id,
+      name: item.name,
       cost: parseFloat(item.cost),
-      managerCost: item.managerCost ? parseFloat(item.managerCost) : null,
-      userCost: item.userCost ? parseFloat(item.userCost) : null,
+      managerCost: item.manager_cost ? parseFloat(item.manager_cost) : null,
+      userCost: item.user_cost ? parseFloat(item.user_cost) : null,
       quantity: parseInt(item.quantity),
+      locked: item.locked,
+      isActive: item.is_active,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+      displayOrder: item.display_order,
     }));
   },
 
@@ -218,30 +251,37 @@ export const dbHelpers = {
     await postgresql.transaction(async (client) => {
       // First, deactivate all items
       await client.query(
-        'UPDATE licensing_items SET isActive = false WHERE isActive = true'
+        'UPDATE licensing_items SET is_active = false WHERE is_active = true'
       );
 
       // Then insert/update the new items
       for (const item of items) {
         await client.query(`
           INSERT INTO licensing_items (
-            id, name, cost, managerCost, userCost, quantity, 
-            locked, isActive, createdAt, updatedAt, displayOrder
+            id, name, cost, manager_cost, user_cost, quantity, 
+            locked, is_active, created_at, updated_at, display_order
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW(), $9
           )
           ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
             cost = EXCLUDED.cost,
-            managerCost = EXCLUDED.managerCost,
-            userCost = EXCLUDED.userCost,
+            manager_cost = EXCLUDED.manager_cost,
+            user_cost = EXCLUDED.user_cost,
             locked = EXCLUDED.locked,
-            isActive = EXCLUDED.isActive,
-            updatedAt = NOW(),
-            displayOrder = EXCLUDED.displayOrder
+            is_active = EXCLUDED.is_active,
+            updated_at = NOW(),
+            display_order = EXCLUDED.display_order
         `, [
-          item.id, item.name, item.cost, item.managerCost, item.userCost,
-          item.quantity || 0, item.locked || false, true, item.displayOrder || 0
+          item.id,
+          item.name,
+          item.cost,
+          item.managerCost,
+          item.userCost,
+          item.quantity || 0,
+          item.locked || false,
+          true,
+          item.displayOrder || 0
         ]);
       }
     });

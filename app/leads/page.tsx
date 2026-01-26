@@ -60,7 +60,19 @@ export default function LeadsPage() {
   const router = useRouter();
   const { user, token, isAuthenticated } = useAuthStore();
   const { fetchAllLeadsForStats, allLeads } = useLeadsStore();
-  const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  
+  // Initialize activeTab from URL parameter or default to 'dashboard'
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab') as TabId;
+      if (tab && TABS.some(t => t.id === tab)) {
+        return tab;
+      }
+    }
+    return 'dashboard';
+  });
+  
   const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState({
     totalLeads: 0,
@@ -79,17 +91,6 @@ export default function LeadsPage() {
     setMounted(true);
   }, []);
 
-  // Requirement: 1.4, 1.5 - Sync tab with URL query parameter
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get('tab') as TabId;
-      if (tab && TABS.some(t => t.id === tab)) {
-        setActiveTab(tab);
-      }
-    }
-  }, []);
-
   // Listen for custom tab change events from dashboard
   useEffect(() => {
     const handleTabChangeEvent = (event: CustomEvent) => {
@@ -102,6 +103,24 @@ export default function LeadsPage() {
     window.addEventListener('tabchange', handleTabChangeEvent as EventListener);
     return () => {
       window.removeEventListener('tabchange', handleTabChangeEvent as EventListener);
+    };
+  }, []);
+
+  // Listen for browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab') as TabId;
+      if (tab && TABS.some(t => t.id === tab)) {
+        setActiveTab(tab);
+      } else {
+        setActiveTab('dashboard');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
     };
   }, []);
 

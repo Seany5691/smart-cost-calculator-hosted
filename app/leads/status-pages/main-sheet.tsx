@@ -156,7 +156,9 @@ export default function MainSheetPage() {
       setLoading(true);
       const token = getAuthToken();
       
-      let url = '/api/leads?status=new';
+      // Fetch ALL leads by setting a very high limit to bypass API pagination
+      // The frontend will handle pagination client-side
+      let url = '/api/leads?status=new&limit=100000';
       if (filterListName !== 'all') {
         url += `&listName=${encodeURIComponent(filterListName)}`;
         storage.set('last_used_list', filterListName);
@@ -174,6 +176,7 @@ export default function MainSheetPage() {
       }
       
       const data = await response.json();
+      console.log('[MAIN_SHEET] Fetched leads from API:', data.leads?.length || 0);
       setLeads(data.leads || []);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch leads');

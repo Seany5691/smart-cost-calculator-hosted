@@ -44,7 +44,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const stored = localStorage.getItem('auth-storage');
       
       if (cookieToken) {
-        // We have a token in cookie, verify it's still valid
+        // IMMEDIATELY restore state from localStorage if available
+        // This prevents redirect flashing while we validate the token
+        if (stored) {
+          try {
+            const data = JSON.parse(stored);
+            if (data.user && data.token === cookieToken) {
+              // Immediately set the state to prevent redirects
+              set({
+                user: data.user,
+                token: cookieToken,
+                isAuthenticated: true,
+              });
+            }
+          } catch (e) {
+            console.error('Failed to parse stored auth data:', e);
+          }
+        }
+        
+        // Then verify the token is still valid in the background
         fetch('/api/auth/me', {
           headers: {
             'Authorization': `Bearer ${cookieToken}`
@@ -92,11 +110,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
         });
       } else if (stored) {
-        // No cookie but have localStorage - restore from localStorage
+        // No cookie but have localStorage - restore from localStorage IMMEDIATELY
         const data = JSON.parse(stored);
         
         if (data.token && data.user) {
-          // Verify the token is still valid
+          // Immediately set the state to prevent redirects
+          set({
+            user: data.user,
+            token: data.token,
+            isAuthenticated: true,
+          });
+          
+          // Then verify the token is still valid in the background
           fetch('/api/auth/me', {
             headers: {
               'Authorization': `Bearer ${data.token}`
@@ -118,6 +143,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               
               // Re-set cookie from localStorage
               const expires = new Date();
+              expires.setHours(expires.getHours() + 24);
+              const isProduction = window.location.protocol === 'https:';
+              const secureFlag = isProduction ? '; Secure' : '';
+              document.cookie = `auth-token=${data.token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax${secureFlag}`;
+            } else {
+              // Invalid response, clear auth
+              set({
+                user: null,
+                token: null,
+                isAuthenticated: false,
+              });
+              localStorage.removeItem('auth-storage');
+            }
+          })
+          .catch(err => {
+            console.error('Token validation failed:', err);
+            // Token is invalid, clear everything
+            set({
+              user: null,
+              token: null,
+              isAuthenticated: false,
+            });
+            localStorage.removeItem('auth-storage');
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to hydrate auth state:', error);
+      // On error, clear auth state to be safe
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+      });
+    }
+  },
               expires.setHours(expires.getHours() + 24);
               const isProduction = window.location.protocol === 'https:';
               const secureFlag = isProduction ? '; Secure' : '';

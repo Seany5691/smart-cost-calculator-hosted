@@ -15,13 +15,45 @@ type TabType = 'hardware' | 'connectivity' | 'licensing' | 'factors' | 'scales' 
 export default function AdminPage() {
   const { user, isAuthenticated } = useAuthStore();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabType>('hardware');
+  
+  // Initialize activeTab from URL parameter or default to 'hardware'
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab') as TabType;
+      const validTabs: TabType[] = ['hardware', 'connectivity', 'licensing', 'factors', 'scales', 'users'];
+      if (tab && validTabs.includes(tab)) {
+        return tab;
+      }
+    }
+    return 'hardware';
+  });
+  
   const [mounted, setMounted] = useState(false);
 
   // Hydrate auth store from localStorage
   useEffect(() => {
     useAuthStore.getState().hydrate();
     setMounted(true);
+  }, []);
+
+  // Listen for browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab') as TabType;
+      const validTabs: TabType[] = ['hardware', 'connectivity', 'licensing', 'factors', 'scales', 'users'];
+      if (tab && validTabs.includes(tab)) {
+        setActiveTab(tab);
+      } else {
+        setActiveTab('hardware');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
 
   useEffect(() => {
@@ -43,6 +75,17 @@ export default function AdminPage() {
     { id: 'users', label: 'Users' },
   ];
 
+  // Handle tab change with URL update
+  const handleTabChange = (tabId: TabType) => {
+    setActiveTab(tabId);
+    // Update URL without page reload
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tabId);
+      window.history.pushState({}, '', url.toString());
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -58,7 +101,7 @@ export default function AdminPage() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`
                   px-6 py-4 font-medium transition-all whitespace-nowrap
                   ${

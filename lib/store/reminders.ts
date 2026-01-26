@@ -49,8 +49,8 @@ interface RemindersState {
   // Async Actions
   fetchAllReminders: (status?: ReminderStatus, dateFrom?: string, dateTo?: string, type?: string, priority?: string) => Promise<void>;
   createReminder: (leadId: string, data: CreateReminderRequest) => Promise<LeadReminder>;
-  updateReminder: (leadId: string, reminderId: string, data: UpdateReminderRequest) => Promise<void>;
-  deleteReminder: (leadId: string, reminderId: string) => Promise<void>;
+  updateReminder: (leadId: string | null, reminderId: string, data: UpdateReminderRequest) => Promise<void>;
+  deleteReminder: (leadId: string | null, reminderId: string) => Promise<void>;
   refreshReminders: () => Promise<void>;
   
   // Utility Actions
@@ -208,7 +208,7 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
   /**
    * Update a reminder
    */
-  updateReminder: async (leadId: string, reminderId: string, data: UpdateReminderRequest) => {
+  updateReminder: async (leadId: string | null, reminderId: string, data: UpdateReminderRequest) => {
     set({ loading: true, error: null });
     try {
       const token = getAuthToken();
@@ -217,7 +217,13 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`/api/leads/${leadId}/reminders/${reminderId}`, {
+      // Use different endpoint based on whether it's a lead reminder or standalone
+      // Check for both null and empty string
+      const endpoint = leadId && leadId !== '' && leadId !== 'null'
+        ? `/api/leads/${leadId}/reminders/${reminderId}`
+        : `/api/reminders/${reminderId}`;
+
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers,
         body: JSON.stringify(data)
@@ -228,7 +234,8 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
         throw new Error(errorData.error || 'Failed to update reminder');
       }
 
-      const updatedReminder = await response.json();
+      const result = await response.json();
+      const updatedReminder = result.reminder || result;
       
       // Update in state
       set((state) => ({
@@ -248,7 +255,7 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
   /**
    * Delete a reminder
    */
-  deleteReminder: async (leadId: string, reminderId: string) => {
+  deleteReminder: async (leadId: string | null, reminderId: string) => {
     set({ loading: true, error: null });
     try {
       const token = getAuthToken();
@@ -257,7 +264,13 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`/api/leads/${leadId}/reminders/${reminderId}`, {
+      // Use different endpoint based on whether it's a lead reminder or standalone
+      // Check for both null and empty string
+      const endpoint = leadId && leadId !== '' && leadId !== 'null'
+        ? `/api/leads/${leadId}/reminders/${reminderId}`
+        : `/api/reminders/${reminderId}`;
+
+      const response = await fetch(endpoint, {
         method: 'DELETE',
         headers
       });

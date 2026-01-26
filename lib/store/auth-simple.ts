@@ -179,42 +179,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     }
   },
-              expires.setHours(expires.getHours() + 24);
-              const isProduction = window.location.protocol === 'https:';
-              const secureFlag = isProduction ? '; Secure' : '';
-              document.cookie = `auth-token=${data.token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax${secureFlag}`;
-            } else {
-              // Invalid response, clear auth
-              set({
-                user: null,
-                token: null,
-                isAuthenticated: false,
-              });
-              localStorage.removeItem('auth-storage');
-            }
-          })
-          .catch(err => {
-            console.error('Token validation failed:', err);
-            // Token is invalid, clear everything
-            set({
-              user: null,
-              token: null,
-              isAuthenticated: false,
-            });
-            localStorage.removeItem('auth-storage');
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Failed to hydrate auth state:', error);
-      // On error, clear auth state to be safe
-      set({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-      });
-    }
-  },
 
   login: async (username: string, password: string) => {
     // CRITICAL: Clear any existing auth data BEFORE attempting login

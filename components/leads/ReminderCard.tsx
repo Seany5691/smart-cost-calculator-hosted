@@ -161,7 +161,7 @@ export default function ReminderCard({ reminder, leadName, leadStatus, leadData,
     setIsUpdating(true);
     try {
       toggleComplete(reminder.id);
-      await updateReminder(reminder.lead_id || '', reminder.id, {
+      await updateReminder(reminder.lead_id || null, reminder.id, {
         completed: !reminder.completed,
         status: !reminder.completed ? 'completed' : 'pending'
       });
@@ -178,7 +178,7 @@ export default function ReminderCard({ reminder, leadName, leadStatus, leadData,
   const handleDelete = async () => {
     setIsUpdating(true);
     try {
-      await deleteReminder(reminder.lead_id || '', reminder.id);
+      await deleteReminder(reminder.lead_id || null, reminder.id);
       setShowDeleteConfirm(false);
     } catch (error) {
       console.error('Error deleting reminder:', error);

@@ -9,7 +9,7 @@
  */
 
 import { useState, useMemo } from 'react';
-import { Clock, CheckCircle, AlertCircle, ChevronRight, User, MapPin, Phone } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, ChevronRight, User, MapPin, Phone, Square, CheckSquare } from 'lucide-react';
 import type { LeadReminder, Lead, ReminderPriority } from '@/lib/leads/types';
 import { getReminderTypeIcon, getReminderTypeLabel, getReminderPriorityColor, getReminderPriorityLabel, formatReminderTime } from '@/lib/leads/types';
 
@@ -17,12 +17,14 @@ interface UpcomingRemindersProps {
   reminders: LeadReminder[];
   leads: Lead[];
   onLeadClick: (leadId: string) => void;
+  onReminderUpdate?: () => void;
 }
 
 type TimeRange = 'all' | 'today' | 'tomorrow' | 'week' | 'next7';
 
-export default function UpcomingReminders({ reminders, leads, onLeadClick }: UpcomingRemindersProps) {
+export default function UpcomingReminders({ reminders, leads, onLeadClick, onReminderUpdate }: UpcomingRemindersProps) {
   const [selectedRange, setSelectedRange] = useState<TimeRange>('all');
+  const [updatingReminders, setUpdatingReminders] = useState<Set<string>>(new Set());
 
   // Extended type for reminders with joined lead data
   type ReminderWithLeadData = LeadReminder & {
@@ -163,6 +165,68 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick }: Upc
     return classes[color as keyof typeof classes] || classes.gray;
   };
 
+  // Toggle reminder completion
+  const handleToggleComplete = async (reminder: LeadReminder, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the lead click
+    
+    const reminderId = reminder.id;
+    if (updatingReminders.has(reminderId)) return; // Prevent double-clicks
+    
+    setUpdatingReminders(prev => new Set(prev).add(reminderId));
+    
+    try {
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) {
+        throw new Error('Not authenticated');
+      }
+
+      const newCompletedStatus = !reminder.completed;
+      const newStatus = newCompletedStatus ? 'completed' : 'pending';
+
+      // Determine the correct endpoint
+      const endpoint = reminder.lead_id 
+        ? `/api/leads/${reminder.lead_id}/reminders/${reminderId}`
+        : `/api/reminders/${reminderId}`;
+
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          completed: newCompletedStatus,
+          status: newStatus
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update reminder');
+      }
+
+      // Trigger refresh
+      if (onReminderUpdate) {
+        onReminderUpdate();
+      }
+    } catch (error) {
+      console.error('Error toggling reminder completion:', error);
+      alert('Failed to update reminder. Please try again.');
+    } finally {
+      setUpdatingReminders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(reminderId);
+        return newSet;
+      });
+    }
+  };
+
   // Format relative time
   const formatRelativeTime = (dateStr: string, timeStr: string) => {
     if (!dateStr) return '';
@@ -281,26 +345,43 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick }: Upc
             const isCompleted = reminder.status === 'completed' || reminder.completed;
             const leadData = getLeadData(reminder);
             const priorityClasses = getPriorityClasses(reminder.priority);
+            const isUpdating = updatingReminders.has(reminder.id);
             
             return (
-              <button
+              <div
                 key={reminder.id}
-                onClick={() => onLeadClick(reminder.lead_id || '')}
                 className={`
-                  w-full text-left p-4 rounded-xl border-2 transition-all
-                  hover:scale-102 hover:shadow-md min-h-[44px]
+                  w-full p-4 rounded-xl border-2 transition-all
+                  min-h-[44px]
                   ${colors.border} ${colors.bg}
                   ${isCompleted ? 'opacity-60' : ''}
                 `}
               >
                 <div className="flex items-start gap-3">
+                  {/* Checkbox */}
+                  <button
+                    onClick={(e) => handleToggleComplete(reminder, e)}
+                    disabled={isUpdating}
+                    className="flex-shrink-0 mt-1 p-1 hover:bg-white/10 rounded transition-colors disabled:opacity-50"
+                    title={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
+                  >
+                    {isCompleted ? (
+                      <CheckSquare className="w-6 h-6 text-green-400" />
+                    ) : (
+                      <Square className="w-6 h-6 text-white/70" />
+                    )}
+                  </button>
+
                   {/* Type Icon */}
                   <div className="flex-shrink-0 mt-1 text-2xl" title={getReminderTypeLabel(reminder.reminder_type)}>
                     {getReminderTypeIcon(reminder.reminder_type)}
                   </div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
+                  {/* Content - Clickable */}
+                  <button
+                    onClick={() => onLeadClick(reminder.lead_id || '')}
+                    className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+                  >
                     {/* Header with Priority */}
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${priorityClasses}`}>
@@ -366,12 +447,17 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick }: Upc
                         {formatRelativeTime(reminder.reminder_date || '', reminder.reminder_time || '')}
                       </span>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Arrow */}
-                  <ChevronRight className={`w-5 h-5 flex-shrink-0 ${colors.text}`} />
+                  <button
+                    onClick={() => onLeadClick(reminder.lead_id || '')}
+                    className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                  >
+                    <ChevronRight className={`w-5 h-5 ${colors.text}`} />
+                  </button>
                 </div>
-              </button>
+              </div>
             );
           })}
 

@@ -147,57 +147,106 @@ export async function POST(
       due_date = `${reminder_date} ${reminder_time}`;
     }
 
-    // Insert the reminder with all fields
-    const result = await query(
-      `INSERT INTO reminders (
-        lead_id, user_id, title, description, message, note,
-        reminder_date, reminder_time, is_all_day,
-        reminder_type, priority, status, completed,
-        is_recurring, recurrence_pattern, route_id,
-        due_date, created_at, updated_at
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      RETURNING *`,
-      [
-        leadId,
-        authResult.user.userId,
-        title || message || 'Reminder', // Use message as title if title not provided
-        description || null,
-        message || title || '',
-        note || null,
-        reminder_date,
-        reminder_time || null,
-        is_all_day,
-        reminder_type,
-        priority,
-        status,
-        completed,
-        is_recurring,
-        recurrence_pattern ? JSON.stringify(recurrence_pattern) : null,
-        route_id,
-        due_date,
-      ]
-    );
+    // Check if the creator is in the shared_with_user_ids array
+    // If they are NOT in the array, they don't want the reminder for themselves
+    const creatorWantsReminder = Array.isArray(shared_with_user_ids) && 
+                                  shared_with_user_ids.includes(authResult.user.userId);
 
-    const reminder = result.rows[0];
+    let reminder;
+
+    // Only create the reminder for the creator if they selected themselves
+    if (creatorWantsReminder) {
+      // Insert the reminder with the creator as the owner
+      const result = await query(
+        `INSERT INTO reminders (
+          lead_id, user_id, title, description, message, note,
+          reminder_date, reminder_time, is_all_day,
+          reminder_type, priority, status, completed,
+          is_recurring, recurrence_pattern, route_id,
+          due_date, created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        RETURNING *`,
+        [
+          leadId,
+          authResult.user.userId,
+          title || message || 'Reminder',
+          description || null,
+          message || title || '',
+          note || null,
+          reminder_date,
+          reminder_time || null,
+          is_all_day,
+          reminder_type,
+          priority,
+          status,
+          completed,
+          is_recurring,
+          recurrence_pattern ? JSON.stringify(recurrence_pattern) : null,
+          route_id,
+          due_date,
+        ]
+      );
+      reminder = result.rows[0];
+    }
 
     // Share reminder with specified users (excluding the creator)
     // Only users in shared_with_user_ids will receive the reminder
     if (Array.isArray(shared_with_user_ids) && shared_with_user_ids.length > 0) {
       for (const userId of shared_with_user_ids) {
-        // Don't share with self - creator already has access as the owner
+        // Skip the creator - they already have their own copy if they wanted it
         if (userId === authResult.user.userId) continue;
 
         try {
-          await query(
-            'INSERT INTO reminder_shares (reminder_id, shared_with_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-            [reminder.id, userId]
+          // Create a separate reminder for each shared user
+          const sharedResult = await query(
+            `INSERT INTO reminders (
+              lead_id, user_id, title, description, message, note,
+              reminder_date, reminder_time, is_all_day,
+              reminder_type, priority, status, completed,
+              is_recurring, recurrence_pattern, route_id,
+              due_date, created_at, updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            RETURNING *`,
+            [
+              leadId,
+              userId, // Create reminder owned by the shared user
+              title || message || 'Reminder',
+              description || null,
+              message || title || '',
+              note || null,
+              reminder_date,
+              reminder_time || null,
+              is_all_day,
+              reminder_type,
+              priority,
+              status,
+              completed,
+              is_recurring,
+              recurrence_pattern ? JSON.stringify(recurrence_pattern) : null,
+              route_id,
+              due_date,
+            ]
           );
+
+          // If this is the first reminder created (creator didn't want one), use it as the return value
+          if (!reminder) {
+            reminder = sharedResult.rows[0];
+          }
         } catch (shareError) {
-          console.error('Error sharing reminder with user:', userId, shareError);
+          console.error('Error creating reminder for shared user:', userId, shareError);
           // Continue with other users even if one fails
         }
       }
+    }
+
+    // If no reminder was created at all, return an error
+    if (!reminder) {
+      return NextResponse.json(
+        { error: 'No users selected to receive the reminder' },
+        { status: 400 }
+      );
     }
 
     // Log the interaction

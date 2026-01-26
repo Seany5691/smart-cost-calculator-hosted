@@ -208,6 +208,10 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
                 handleStatClick(lead.status);
               }
             }}
+            onReminderUpdate={() => {
+              // Refresh reminders when a reminder is updated
+              fetchAllReminders();
+            }}
           />
         </div>
       </div>

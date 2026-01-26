@@ -100,18 +100,18 @@ export default function DeleteReminderModal({
       aria-describedby="delete-reminder-modal-description"
     >
       <div
-        className="bg-gradient-to-br from-slate-800/95 via-slate-900/95 to-slate-800/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-w-md w-full"
+        className="bg-gradient-to-br from-slate-900 to-emerald-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden border border-emerald-500/30"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
+        {/* Sticky Header */}
+        <div className="sticky top-0 bg-gradient-to-br from-slate-900 to-emerald-900 z-10 flex items-center justify-between p-6 border-b border-emerald-500/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center justify-center">
+            <div className="p-2 bg-red-500/20 rounded-lg border border-red-500/30">
               <AlertTriangle className="w-5 h-5 text-red-400" />
             </div>
             <h2
               id="delete-reminder-modal-title"
-              className="text-xl font-bold bg-gradient-to-r from-red-400 to-emerald-400 bg-clip-text text-transparent"
+              className="text-2xl font-bold text-white"
             >
               Delete Reminder
             </h2>
@@ -119,22 +119,22 @@ export default function DeleteReminderModal({
           <button
             onClick={handleClose}
             disabled={isDeleting}
-            className="text-gray-400 hover:text-white transition-colors duration-200 p-2 hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Close modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-emerald-200" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-4">
+        {/* Content with Custom Scrollbar */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-160px)] custom-scrollbar space-y-4">
           <p
             id="delete-reminder-modal-description"
-            className="text-gray-300 text-base leading-relaxed"
+            className="text-white text-base leading-relaxed"
           >
             Are you sure you want to delete this reminder?
           </p>
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
             <p className="text-red-300 text-sm font-medium">
               ⚠️ This action cannot be undone.
             </p>
@@ -142,18 +142,18 @@ export default function DeleteReminderModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10">
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-emerald-500/20">
           <button
             onClick={handleClose}
             disabled={isDeleting}
-            className="px-6 py-2.5 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-all duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
             disabled={isDeleting}
-            className="px-6 py-2.5 bg-gradient-to-r from-red-500 to-emerald-500 text-white rounded-lg hover:from-red-600 hover:to-emerald-600 transition-all duration-300 font-medium shadow-lg hover:shadow-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-semibold"
           >
             {isDeleting ? (
               <>

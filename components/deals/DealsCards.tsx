@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Deal } from '@/lib/store/deals';
 import { ExternalLink, DollarSign, Calendar, User, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import DeleteDealModal from './DeleteDealModal';
 
 interface DealsCardsProps {
   deals: Deal[];
@@ -30,6 +31,8 @@ export default function DealsCards({ deals, onOpenDeal, onGenerateCostings, onDe
   const [loadingDealId, setLoadingDealId] = useState<string | null>(null);
   const [loadingCostingsId, setLoadingCostingsId] = useState<string | null>(null);
   const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [dealToDelete, setDealToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const handleOpenDeal = async (id: string) => {
     setLoadingDealId(id);
@@ -49,17 +52,27 @@ export default function DealsCards({ deals, onOpenDeal, onGenerateCostings, onDe
     }
   };
 
-  const handleDeleteDeal = async (id: string, dealName: string) => {
-    if (!confirm(`Are you sure you want to delete "${dealName}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteClick = (id: string, dealName: string) => {
+    setDealToDelete({ id, name: dealName });
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!dealToDelete) return;
     
-    setDeletingDealId(id);
+    setDeletingDealId(dealToDelete.id);
     try {
-      await onDeleteDeal(id);
+      await onDeleteDeal(dealToDelete.id);
+      setDeleteModalOpen(false);
+      setDealToDelete(null);
     } finally {
       setDeletingDealId(null);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false);
+    setDealToDelete(null);
   };
 
   const formatCurrency = (value: number): string => {
@@ -93,7 +106,8 @@ export default function DealsCards({ deals, onOpenDeal, onGenerateCostings, onDe
   };
 
   return (
-    <div className="space-y-4">
+    <>
+      <div className="space-y-4">
       {deals.map((deal) => (
         <div key={deal.id} className="glass-card p-6 rounded-2xl space-y-4">
           {/* Header */}
@@ -170,7 +184,7 @@ export default function DealsCards({ deals, onOpenDeal, onGenerateCostings, onDe
             {/* Delete Button (Admin or Own Deal) */}
             {(isAdmin || deal.user_id === currentUserId) && (
               <button
-                onClick={() => handleDeleteDeal(deal.id, deal.deal_name)}
+                onClick={() => handleDeleteClick(deal.id, deal.deal_name)}
                 disabled={deletingDealId === deal.id}
                 className="w-full min-h-[44px] px-4 py-3 bg-red-500/20 border border-red-500/30 text-red-300 rounded-lg hover:bg-red-500/30 transition-all duration-300 flex items-center justify-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -188,5 +202,15 @@ export default function DealsCards({ deals, onOpenDeal, onGenerateCostings, onDe
         </div>
       ))}
     </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteDealModal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        dealName={dealToDelete?.name || ''}
+        isDeleting={deletingDealId === dealToDelete?.id}
+      />
+    </>
   );
 }

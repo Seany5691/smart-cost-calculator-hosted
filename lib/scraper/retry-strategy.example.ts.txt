@@ -1,0 +1,136 @@
+/**
+ * Example usage of RetryStrategy class
+ * 
+ * This file demonstrates how to use the RetryStrategy class
+ * for handling transient failures with exponential backoff.
+ */
+
+import { RetryStrategy } from './retry-strategy';
+
+// Example 1: Basic usage with default settings (3 attempts, 2000ms base delay)
+async function exampleBasicUsage() {
+  const strategy = new RetryStrategy();
+  
+  try {
+    const result = await strategy.execute(async () => {
+      // Simulate an operation that might fail
+      const response = await fetch('https://api.example.com/data');
+      return response.json();
+    });
+    
+    console.log('Success:', result);
+  } catch (error) {
+    console.error('Failed after all retries:', error);
+  }
+}
+
+// Example 2: Custom configuration (5 attempts, 1000ms base delay)
+async function exampleCustomConfiguration() {
+  const strategy = new RetryStrategy(5, 1000);
+  
+  try {
+    const result = await strategy.execute(async () => {
+      // Simulate browser navigation that might timeout
+      return await navigateToPage('https://example.com');
+    });
+    
+    console.log('Navigation successful:', result);
+  } catch (error) {
+    console.error('Navigation failed after all retries:', error);
+  }
+}
+
+// Example 3: Dynamic configuration changes
+async function exampleDynamicConfiguration() {
+  const strategy = new RetryStrategy();
+  
+  // Adjust settings based on environment
+  if (process.env.NODE_ENV === 'production') {
+    strategy.setMaxAttempts(5);
+    strategy.setBaseDelay(3000);
+  } else {
+    strategy.setMaxAttempts(2);
+    strategy.setBaseDelay(500);
+  }
+  
+  console.log(`Configured with ${strategy.getMaxAttempts()} attempts and ${strategy.getBaseDelay()}ms base delay`);
+  
+  try {
+    const result = await strategy.execute(async () => {
+      // Simulate database operation
+      return await queryDatabase('SELECT * FROM users');
+    });
+    
+    console.log('Query successful:', result);
+  } catch (error) {
+    console.error('Query failed after all retries:', error);
+  }
+}
+
+// Example 4: Provider lookup with retry
+async function exampleProviderLookup() {
+  const strategy = new RetryStrategy(3, 2000);
+  
+  const phoneNumber = '0123456789';
+  
+  try {
+    const provider = await strategy.execute(async () => {
+      // Simulate provider lookup that might fail due to network issues
+      const response = await fetch(`https://porting.co.za/lookup?number=${phoneNumber}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.text();
+    });
+    
+    console.log(`Provider for ${phoneNumber}:`, provider);
+  } catch (error) {
+    console.error('Provider lookup failed:', error);
+    return 'Unknown';
+  }
+}
+
+// Example 5: Browser scraping with retry
+async function exampleBrowserScraping() {
+  const strategy = new RetryStrategy(3, 2000);
+  
+  try {
+    const businesses = await strategy.execute(async () => {
+      // Simulate scraping operation that might fail
+      const page = await browser.newPage();
+      await page.goto('https://www.google.com/maps/search/restaurants+in+Cape+Town');
+      
+      // Wait for results to load
+      await page.waitForSelector('[role="feed"]', { timeout: 10000 });
+      
+      // Extract business data
+      const data = await page.evaluate(() => {
+        // Extraction logic here
+        return [];
+      });
+      
+      await page.close();
+      return data;
+    });
+    
+    console.log(`Scraped ${businesses.length} businesses`);
+  } catch (error) {
+    console.error('Scraping failed after all retries:', error);
+  }
+}
+
+// Mock functions for examples
+async function navigateToPage(url: string): Promise<any> {
+  return { url, status: 'loaded' };
+}
+
+async function queryDatabase(query: string): Promise<any[]> {
+  return [];
+}
+
+// Uncomment to run examples:
+// exampleBasicUsage();
+// exampleCustomConfiguration();
+// exampleDynamicConfiguration();
+// exampleProviderLookup();
+// exampleBrowserScraping();

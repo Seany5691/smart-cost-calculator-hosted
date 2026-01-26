@@ -1,0 +1,54 @@
+{
+  "projectId": "CHROMATIC_PROJECT_ID",
+  "buildScriptName": "build",
+  "exitZeroOnChanges": false,
+  "exitOnceUploaded": false,
+  "autoAcceptChanges": false,
+  "ignoreLastBuildOnBranch": "main",
+  "skip": false,
+  "externals": [
+    "public/**"
+  ],
+  "viewportSizes": [
+    {
+      "width": 320,
+      "height": 568,
+      "name": "iPhone SE"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "name": "iPhone 12"
+    },
+    {
+      "width": 428,
+      "height": 926,
+      "name": "iPhone Pro Max"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "name": "iPad"
+    },
+    {
+      "width": 1024,
+      "height": 768,
+      "name": "Desktop Small"
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "name": "Desktop Medium"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "name": "Desktop Large"
+    }
+  ],
+  "delay": 300,
+  "diffThreshold": 0.063,
+  "diffIncludeAntiAliasing": false,
+  "forceBuild": false,
+  "debug": false
+}

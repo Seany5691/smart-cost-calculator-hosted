@@ -1,0 +1,50 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/store/auth-simple';
+import { useCalculatorStore, setupCalculatorKeyboardShortcuts } from '@/lib/store/calculator';
+import { useConfigStore } from '@/lib/store/config';
+import CalculatorWizard from '@/components/calculator/CalculatorWizard';
+
+export default function CalculatorPage() {
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuthStore();
+  const { initializeConfigs } = useConfigStore();
+
+  useEffect(() => {
+    // Redirect if not authenticated
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  useEffect(() => {
+    // Initialize configurations
+    initializeConfigs().catch((error) => {
+      console.error('Failed to initialize configs:', error);
+    });
+  }, [initializeConfigs]);
+
+  useEffect(() => {
+    // Setup keyboard shortcuts
+    const cleanup = setupCalculatorKeyboardShortcuts();
+    return cleanup;
+  }, []);
+
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        <CalculatorWizard />
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # Next.js Application
+  # Note: This connects to an external PostgreSQL database via DATABASE_URL
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smart-calculator-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: ${PORT:-3456}
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      STORAGE_PATH: ${STORAGE_PATH:-./uploads}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SUPER_ADMIN_USERNAME: ${SUPER_ADMIN_USERNAME}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
+    ports:
+      - "${APP_PORT:-3456}:${PORT:-3456}"
+    networks:
+      - smart-calculator-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+networks:
+  smart-calculator-network:
+    driver: bridge

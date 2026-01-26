@@ -1,0 +1,790 @@
+'use client';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { useScraperStore } from '@/lib/store/scraper';
+import { useAuthStore } from '@/lib/store/auth-simple';
+import { useScraperSSE } from '@/hooks/useScraperSSE';
+import { useAutoExport } from '@/hooks/useAutoExport';
+import { useToast } from '@/components/ui/Toast/useToast';
+import { AlertTriangle, X, Loader2 } from 'lucide-react';
+import TownInput from '@/components/scraper/TownInput';
+import IndustrySelector from '@/components/scraper/IndustrySelector';
+import ConcurrencyControls from '@/components/scraper/ConcurrencyControls';
+import ControlPanel from '@/components/scraper/ControlPanel';
+import ProgressDisplay from '@/components/scraper/ProgressDisplay';
+import LogViewer from '@/components/scraper/LogViewer';
+import ProviderExport from '@/components/scraper/ProviderExport';
+import ViewAllResults from '@/components/scraper/ViewAllResults';
+import NumberLookup from '@/components/scraper/NumberLookup';
+import BusinessLookup from '@/components/scraper/BusinessLookup';
+import SessionManager from '@/components/scraper/SessionManager';
+import SummaryStats from '@/components/scraper/SummaryStats';
+
+function getDefaultIndustries(): string[] {
+  return [
+    'Engineering Firms',
+    'Pharmacies',
+    'Medical Practices',
+    'Dental Clinics',
+    'Auto Repair Shops',
+    'Law Firms',
+    'Accounting Firms',
+    'Financial Services',
+    'Real Estate Agencies',
+    'Manufacturing',
+    'Construction Companies',
+    'Logistics and Transportation',
+    'Advertising Agencies',
+    'Architecture Firms',
+    'Insurance Agencies',
+    'Property Management',
+    'Funeral Parlours',
+    'Optometrists',
+    'Supermarkets',
+    'Veterinary Clinics',
+    'Restaurants and Cafes',
+    'Hotels',
+    'Fitness Centers',
+    'Hair Salons and Barbershops',
+    'Clothing Stores',
+    'Electronics Retail Stores',
+    'Educational Institutions',
+    'Plumbing Companies',
+    'Electrical Contractors',
+    'Landscaping Services',
+    'Catering Companies',
+    'Travel Agencies',
+    'Car Dealerships',
+    'Printing and Copy Shops',
+    'Wholesale Distributors',
+    'Agricultural Farms and Suppliers',
+    'Chiropractors',
+    'Orthodontic Practices',
+    'Tire Shops',
+    'Tax Preparation Services',
+    'Real Estate Firms',
+    'Freight Companies',
+    'Marketing Firms',
+    'Interior Design Firms',
+    'Security Services',
+  ];
+}
+
+export default function ScraperPage() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Hydrate auth store from localStorage
+  useEffect(() => {
+    useAuthStore.getState().hydrate();
+    setIsHydrated(true);
+  }, []);
+
+  // Redirect to login if not authenticated or unauthorized role
+  useEffect(() => {
+    if (isHydrated) {
+      const { user } = useAuthStore.getState();
+      if (!isAuthenticated) {
+        router.push('/login');
+      } else if (user && !['admin', 'manager', 'telesales'].includes(user.role)) {
+        // Only admin, manager, and telesales can access scraper
+        router.push('/');
+      }
+    }
+  }, [isHydrated, isAuthenticated, router]);
+
+  // Toast notifications
+  const { toast } = useToast();
+
+  // Zustand store
+  const {
+    status,
+    sessionId,
+    config,
+    towns,
+    industries,
+    progress,
+    businesses,
+    logs,
+    setConfig,
+    setTowns,
+    setIndustries,
+    startScraping,
+    stopScraping,
+    clearAll,
+  } = useScraperStore();
+
+  // Connect to SSE for real-time updates
+  useScraperSSE(sessionId, status === 'running');
+
+  // Auto-export when scraping completes
+  useAutoExport(status, businesses, true);
+
+  // Local state
+  const [townInput, setTownInput] = useState('');
+  const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
+  const [sessionManagerOpen, setSessionManagerOpen] = useState(false);
+  const [sessionManagerMode, setSessionManagerMode] = useState<'save' | 'load'>('save');
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showExportToLeadsPrompt, setShowExportToLeadsPrompt] = useState(false);
+  const [leadListName, setLeadListName] = useState('Scraped Leads');
+  
+  // Loading states for async operations
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Load industries from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('smart-scrape-industries');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setAvailableIndustries(parsed);
+      } catch (error) {
+        console.error('Error loading industries:', error);
+        setAvailableIndustries(getDefaultIndustries());
+      }
+    } else {
+      setAvailableIndustries(getDefaultIndustries());
+    }
+
+    // Load selected industries from localStorage
+    const storedSelected = localStorage.getItem('smart-scrape-selected-industries');
+    if (storedSelected) {
+      try {
+        const parsed = JSON.parse(storedSelected);
+        setSelectedIndustries(parsed);
+        setIndustries(parsed);
+      } catch (error) {
+        console.error('Error loading selected industries:', error);
+      }
+    }
+  }, [setIndustries]);
+
+  // Sync industries from store
+  useEffect(() => {
+    if (industries.length > 0) {
+      setSelectedIndustries(industries);
+    }
+  }, [industries]);
+
+  // Update elapsed time
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (status === 'running' && progress.startTime > 0) {
+      interval = setInterval(() => {
+        setElapsedTime(Date.now() - progress.startTime);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [status, progress.startTime]);
+
+  // Calculate progress percentage
+  const progressPercentage = useMemo(() => {
+    if (progress.totalTowns === 0) return 0;
+    return (progress.completedTowns / progress.totalTowns) * 100;
+  }, [progress.completedTowns, progress.totalTowns]);
+
+  // Calculate estimated time remaining
+  const estimatedTimeRemaining = useMemo(() => {
+    if (progress.completedTowns === 0 || progress.townCompletionTimes.length === 0) {
+      return null;
+    }
+    const avgTime =
+      progress.townCompletionTimes.reduce((a, b) => a + b, 0) /
+      progress.townCompletionTimes.length;
+    const remaining = progress.totalTowns - progress.completedTowns;
+    return avgTime * remaining;
+  }, [progress.completedTowns, progress.totalTowns, progress.townCompletionTimes]);
+
+  // Handlers
+  const handleTownInputChange = (value: string) => {
+    setTownInput(value);
+    const townList = value
+      .split('\n')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+    setTowns(townList);
+  };
+
+  const handleIndustrySelectionChange = (selected: string[]) => {
+    setSelectedIndustries(selected);
+    setIndustries(selected);
+    localStorage.setItem('smart-scrape-selected-industries', JSON.stringify(selected));
+  };
+
+  const handleAddIndustry = (industry: string) => {
+    const updated = [...availableIndustries, industry];
+    setAvailableIndustries(updated);
+    localStorage.setItem('smart-scrape-industries', JSON.stringify(updated));
+  };
+
+  const handleRemoveIndustry = (industry: string) => {
+    const updated = availableIndustries.filter((i) => i !== industry);
+    const updatedSelected = selectedIndustries.filter((i) => i !== industry);
+    setAvailableIndustries(updated);
+    setSelectedIndustries(updatedSelected);
+    localStorage.setItem('smart-scrape-industries', JSON.stringify(updated));
+    localStorage.setItem('smart-scrape-selected-industries', JSON.stringify(updatedSelected));
+  };
+
+  const handleStart = () => {
+    startScraping();
+  };
+
+  const handleStop = () => {
+    stopScraping();
+  };
+
+  const handleSave = () => {
+    setSessionManagerMode('save');
+    setSessionManagerOpen(true);
+  };
+
+  const handleLoad = () => {
+    setSessionManagerMode('load');
+    setSessionManagerOpen(true);
+  };
+
+  const handleClear = () => {
+    setShowClearConfirm(true);
+  };
+
+  const handleConfirmClear = () => {
+    clearAll();
+    setTownInput('');
+    setShowClearConfirm(false);
+    toast.success('Data cleared', {
+      message: 'All scraping data has been cleared',
+      section: 'scraper'
+    });
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const filename = `businesses_${timestamp}.xlsx`;
+
+      const response = await fetch('/api/scraper/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businesses,
+          filename,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Export successful', {
+        message: `Downloaded ${filename}`,
+        section: 'scraper'
+      });
+    } catch (error) {
+      console.error('Error exporting:', error);
+      toast.error('Export failed', {
+        message: 'Failed to export data. Please try again.',
+        section: 'scraper'
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportToLeads = async () => {
+    if (businesses.length === 0) {
+      toast.warning('No businesses to export', {
+        message: 'Please scrape some businesses first',
+        section: 'scraper'
+      });
+      return;
+    }
+
+    setShowExportToLeadsPrompt(true);
+  };
+
+  const handleConfirmExportToLeads = async () => {
+    if (!leadListName || leadListName.trim() === '') {
+      toast.warning('List name required', {
+        message: 'Please enter a name for the lead list',
+        section: 'scraper'
+      });
+      return;
+    }
+
+    setShowExportToLeadsPrompt(false);
+    setIsExporting(true);
+    try {
+      // Get token from auth-storage
+      const authStorage = localStorage.getItem('auth-storage');
+      if (!authStorage) {
+        toast.error('Authentication required', {
+          message: 'Please log in to export to leads',
+          section: 'scraper'
+        });
+        return;
+      }
+
+      const authData = JSON.parse(authStorage);
+      const token = authData.token;
+      
+      if (!token) {
+        toast.error('Authentication required', {
+          message: 'Please log in to export to leads',
+          section: 'scraper'
+        });
+        return;
+      }
+
+      const response = await fetch('/api/leads/import/scraper-direct', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          businesses: businesses.map(b => ({
+            name: b.name,
+            phone: b.phone,
+            address: b.address || '',
+            town: b.town,
+            typeOfBusiness: b.industry,
+            mapsUrl: '',
+            provider: b.provider,
+          })),
+          listName: leadListName.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to export to leads');
+      }
+
+      const result = await response.json();
+      toast.success('Export to leads successful', {
+        message: `Exported ${result.importedCount} businesses to list: ${leadListName}`,
+        section: 'scraper'
+      });
+      setLeadListName('Scraped Leads'); // Reset for next time
+    } catch (error: any) {
+      console.error('Error exporting to leads:', error);
+      toast.error('Export to leads failed', {
+        message: error.message || 'An error occurred',
+        section: 'scraper'
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleSaveSession = async (name: string) => {
+    if (!sessionId) {
+      toast.warning('No active session', {
+        message: 'Please start scraping to create a session',
+        section: 'scraper'
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Get token from auth-storage
+      const authStorage = localStorage.getItem('auth-storage');
+      if (!authStorage) {
+        toast.error('Authentication required', {
+          message: 'Please log in to save sessions',
+          section: 'scraper'
+        });
+        return;
+      }
+
+      const authData = JSON.parse(authStorage);
+      const token = authData.token;
+      
+      if (!token) {
+        toast.error('Authentication required', {
+          message: 'Please log in to save sessions',
+          section: 'scraper'
+        });
+        return;
+      }
+
+      // Save session to database via API
+      const response = await fetch('/api/scraper/sessions/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          sessionId,
+          name: name.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save session');
+      }
+
+      const result = await response.json();
+      toast.success('Session saved', {
+        message: `Saved ${result.businessesCount} businesses`,
+        section: 'scraper'
+      });
+      setSessionManagerOpen(false);
+    } catch (error: any) {
+      console.error('Error saving session:', error);
+      toast.error('Failed to save session', {
+        message: error.message || 'An error occurred',
+        section: 'scraper'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleLoadSession = async (sessionId: string) => {
+    setIsLoading(true);
+    try {
+      const stored = localStorage.getItem('smart-scrape-sessions');
+      if (!stored) {
+        throw new Error('No saved sessions found');
+      }
+
+      const sessions = JSON.parse(stored);
+      const session = sessions.find((s: any) => s.id === sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      setTowns(session.currentTowns);
+      setIndustries(session.currentIndustries);
+      
+      setSessionManagerOpen(false);
+      toast.success('Session loaded', {
+        message: 'Session data has been restored',
+        section: 'scraper'
+      });
+    } catch (error) {
+      console.error('Error loading session:', error);
+      toast.error('Failed to load session', {
+        message: 'Please try again',
+        section: 'scraper'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isActive = status === 'running' || status === 'paused';
+  const hasData = businesses.length > 0;
+
+  // Calculate summary stats
+  const summaryStats = useMemo(() => {
+    return {
+      totalTowns: progress.completedTowns,
+      totalBusinesses: businesses.length,
+      totalDuration: elapsedTime,
+      averageBusinessesPerTown:
+        progress.completedTowns > 0 ? businesses.length / progress.completedTowns : 0,
+    };
+  }, [progress.completedTowns, businesses.length, elapsedTime]);
+
+  // Show loading while checking authentication
+  if (!isHydrated || !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900">
+        <div className="flex flex-col items-center">
+          <Loader2 className="w-12 h-12 text-teal-400 animate-spin mb-4" />
+          <div className="text-white text-xl">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 py-4 lg:py-8 px-3 lg:px-4">
+      <div className="max-w-7xl mx-auto space-y-4 lg:space-y-6">
+        {/* Header */}
+        <div className="glass-card p-4 lg:p-6">
+          <h1 className="text-2xl lg:text-3xl font-bold text-white mb-1 lg:mb-2">
+            Smart Scrape
+          </h1>
+          <p className="text-xs lg:text-sm text-gray-300">
+            Scrape business data from Google Maps for multiple towns and industries
+          </p>
+        </div>
+
+        {/* Lookup Tools - Side by Side on desktop, stacked on mobile */}
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+          {/* Number Lookup */}
+          <div className="glass-card p-4 lg:p-6 w-full lg:w-1/2">
+            <NumberLookup />
+          </div>
+
+          {/* Business Lookup */}
+          <div className="glass-card p-4 lg:p-6 w-full lg:w-1/2">
+            <BusinessLookup />
+          </div>
+        </div>
+
+        {/* Progress & Summary Stats (Top Section) - Stacked on mobile */}
+        {(isActive || status === 'completed' || status === 'stopped' || hasData) && (
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+            {/* Progress Display */}
+            {(isActive || status === 'completed' || status === 'stopped') && (
+              <div className="glass-card p-4 lg:p-6 w-full lg:w-1/2">
+                <ProgressDisplay
+                  percentage={progressPercentage}
+                  townsRemaining={progress.totalTowns - progress.completedTowns}
+                  totalTowns={progress.totalTowns}
+                  businessesScraped={businesses.length}
+                  estimatedTimeRemaining={estimatedTimeRemaining}
+                  elapsedTime={elapsedTime}
+                />
+              </div>
+            )}
+
+            {/* Summary Stats */}
+            {(status === 'completed' || status === 'stopped') && hasData && (
+              <div className="glass-card p-4 lg:p-6 w-full lg:w-1/2">
+                <SummaryStats {...summaryStats} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Configuration Section - Stacked vertically on mobile, paired on desktop */}
+        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-6">
+          {/* Row 1: Towns & Industries */}
+          <div className="glass-card p-4 lg:p-6 w-full lg:w-auto">
+            <TownInput
+              value={townInput}
+              onChange={handleTownInputChange}
+              disabled={isActive}
+            />
+          </div>
+
+          <div className="glass-card p-4 lg:p-6 w-full lg:w-auto">
+            <IndustrySelector
+              industries={availableIndustries}
+              selectedIndustries={selectedIndustries}
+              onSelectionChange={handleIndustrySelectionChange}
+              onAddIndustry={handleAddIndustry}
+              onRemoveIndustry={handleRemoveIndustry}
+              disabled={isActive}
+            />
+          </div>
+
+          {/* Row 2: Controls & Concurrency */}
+          <div className="glass-card p-4 lg:p-6 w-full lg:w-auto">
+            <ControlPanel
+              status={status}
+              onStart={handleStart}
+              onStop={handleStop}
+              onSave={handleSave}
+              onLoad={handleLoad}
+              onClear={handleClear}
+              onExport={handleExport}
+              onExportToLeads={handleExportToLeads}
+              hasData={hasData}
+              isSaving={isSaving}
+              isLoading={isLoading}
+              isExporting={isExporting}
+            />
+          </div>
+
+          <div className="glass-card p-4 lg:p-6 w-full lg:w-auto">
+            <ConcurrencyControls
+              simultaneousTowns={config.simultaneousTowns}
+              simultaneousIndustries={config.simultaneousIndustries}
+              simultaneousLookups={config.simultaneousLookups}
+              onTownsChange={(value) => setConfig({ simultaneousTowns: value })}
+              onIndustriesChange={(value) => setConfig({ simultaneousIndustries: value })}
+              onLookupsChange={(value) => setConfig({ simultaneousLookups: value })}
+              disabled={isActive}
+            />
+          </div>
+
+          {/* Row 3: Activity Log & Provider Export */}
+          <div className="glass-card p-4 lg:p-6 w-full lg:w-auto">
+            <LogViewer logs={logs} autoScroll={true} />
+          </div>
+
+          {hasData ? (
+            <div className="glass-card p-4 lg:p-6 w-full lg:w-auto">
+              <ProviderExport businesses={businesses} />
+            </div>
+          ) : (
+            <div className="glass-card p-4 lg:p-6 w-full lg:w-auto flex items-center justify-center">
+              <p className="text-sm text-gray-400 text-center">
+                Provider export will appear here after scraping
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* View All Results (Dropdown) */}
+        {hasData && (
+          <div className="glass-card p-4 lg:p-6">
+            <ViewAllResults businesses={businesses} />
+          </div>
+        )}
+
+        {/* Session Manager Modal */}
+        <SessionManager
+          isOpen={sessionManagerOpen}
+          mode={sessionManagerMode}
+          sessions={[]}
+          onClose={() => setSessionManagerOpen(false)}
+          onSave={handleSaveSession}
+          onLoad={handleLoadSession}
+        />
+
+        {/* Clear Confirmation Modal */}
+        {showClearConfirm && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+            <div className="bg-gradient-to-br from-slate-900 to-teal-900 rounded-2xl shadow-2xl max-w-md w-full border border-teal-500/30">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-teal-500/20">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-500/20 rounded-lg">
+                    <AlertTriangle className="w-6 h-6 text-red-400" />
+                  </div>
+                  <h2 className="text-xl font-bold text-white">Clear All Data</h2>
+                </div>
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-teal-200" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                <p className="text-gray-300 mb-4">
+                  Are you sure you want to clear all data? This action cannot be undone.
+                </p>
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                  <p className="text-sm text-red-300">
+                    This will permanently delete all scraped businesses, logs, and progress data.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-teal-500/20">
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  className="px-6 py-2 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmClear}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-semibold"
+                >
+                  Clear All Data
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Export to Leads Prompt Modal */}
+        {showExportToLeadsPrompt && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+            <div className="bg-gradient-to-br from-slate-900 to-teal-900 rounded-2xl shadow-2xl max-w-md w-full border border-teal-500/30">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-teal-500/20">
+                <h2 className="text-xl font-bold text-white">Export to Leads</h2>
+                <button
+                  onClick={() => {
+                    setShowExportToLeadsPrompt(false);
+                    setLeadListName('Scraped Leads');
+                  }}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-teal-200" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                <div className="space-y-2">
+                  <label className="text-white font-medium">
+                    Lead List Name <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={leadListName}
+                    onChange={(e) => setLeadListName(e.target.value)}
+                    placeholder="Enter a name for this lead list"
+                    className="w-full px-4 py-3 bg-white/10 border border-teal-500/30 rounded-lg text-white placeholder-teal-300/50 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500"
+                    autoFocus
+                  />
+                  <p className="text-sm text-teal-300/70">
+                    This name will be used to identify the imported leads
+                  </p>
+                </div>
+
+                <div className="mt-4 bg-teal-500/10 border border-teal-500/30 rounded-lg p-4">
+                  <p className="text-sm text-teal-300">
+                    {businesses.length} business{businesses.length !== 1 ? 'es' : ''} will be exported to the leads section
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-teal-500/20">
+                <button
+                  onClick={() => {
+                    setShowExportToLeadsPrompt(false);
+                    setLeadListName('Scraped Leads');
+                  }}
+                  className="px-6 py-2 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmExportToLeads}
+                  disabled={!leadListName.trim()}
+                  className={`px-6 py-2 rounded-lg transition-colors font-semibold ${
+                    leadListName.trim()
+                      ? 'bg-teal-600 hover:bg-teal-700 text-white'
+                      : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  Export to Leads
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

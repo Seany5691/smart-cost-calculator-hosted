@@ -1,0 +1,80 @@
+{
+  "ci": {
+    "collect": {
+      "url": [
+        "http://localhost:3000/",
+        "http://localhost:3000/leads",
+        "http://localhost:3000/calculator",
+        "http://localhost:3000/scraper",
+        "http://localhost:3000/dashboard",
+        "http://localhost:3000/admin"
+      ],
+      "numberOfRuns": 3,
+      "settings": {
+        "preset": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.56,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "screenEmulation": {
+          "mobile": true,
+          "width": 390,
+          "height": 844,
+          "deviceScaleFactor": 3,
+          "disabled": false
+        },
+        "formFactor": "mobile",
+        "onlyCategories": [
+          "performance",
+          "accessibility",
+          "best-practices"
+        ]
+      }
+    },
+    "assert": {
+      "preset": "lighthouse:recommended",
+      "assertions": {
+        "categories:performance": ["error", {"minScore": 0.9}],
+        "categories:accessibility": ["warn", {"minScore": 0.9}],
+        "categories:best-practices": ["warn", {"minScore": 0.9}],
+        
+        "first-contentful-paint": ["error", {"maxNumericValue": 2000}],
+        "largest-contentful-paint": ["error", {"maxNumericValue": 2500}],
+        "cumulative-layout-shift": ["error", {"maxNumericValue": 0.1}],
+        "total-blocking-time": ["warn", {"maxNumericValue": 300}],
+        "speed-index": ["warn", {"maxNumericValue": 3000}],
+        
+        "interactive": ["warn", {"maxNumericValue": 3000}],
+        "max-potential-fid": ["warn", {"maxNumericValue": 130}],
+        
+        "uses-responsive-images": "warn",
+        "offscreen-images": "warn",
+        "unminified-css": "warn",
+        "unminified-javascript": "warn",
+        "unused-css-rules": "off",
+        "unused-javascript": "off",
+        
+        "uses-long-cache-ttl": "off",
+        "uses-optimized-images": "warn",
+        "modern-image-formats": "warn",
+        
+        "font-display": "warn",
+        "uses-text-compression": "warn",
+        
+        "tap-targets": ["error", {"minScore": 0.9}],
+        "content-width": "error",
+        
+        "viewport": "error",
+        "document-title": "error",
+        "meta-description": "warn"
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

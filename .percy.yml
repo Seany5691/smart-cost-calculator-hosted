@@ -1,0 +1,83 @@
+# Percy Visual Testing Configuration
+# https://docs.percy.io/docs/configuration
+
+version: 2
+
+static:
+  # Base URL for static snapshots
+  baseUrl: "/"
+  
+  # Include patterns for static files
+  include:
+    - "**/*.html"
+    - "**/*.css"
+    - "**/*.js"
+  
+  # Exclude patterns
+  exclude:
+    - "node_modules/**"
+    - ".next/**"
+    - "coverage/**"
+
+# Snapshot configuration
+snapshot:
+  # Widths to capture for each snapshot
+  widths:
+    - 320   # iPhone SE portrait
+    - 375   # iPhone 12 portrait (legacy)
+    - 390   # iPhone 12/13 portrait
+    - 414   # iPhone Plus portrait (legacy)
+    - 428   # iPhone Pro Max portrait
+    - 768   # iPad portrait
+    - 1024  # Desktop (lg breakpoint)
+    - 1280  # Desktop (xl breakpoint)
+    - 1920  # Full HD desktop
+  
+  # Minimum height for snapshots
+  minHeight: 1024
+  
+  # Enable JavaScript
+  enableJavaScript: true
+  
+  # Percy CSS for hiding dynamic content
+  percyCSS: |
+    /* Hide elements that change frequently */
+    [data-testid="timestamp"],
+    [data-testid="random-id"],
+    .toast-container {
+      visibility: hidden !important;
+    }
+    
+    /* Stabilize animations */
+    * {
+      animation-duration: 0s !important;
+      animation-delay: 0s !important;
+      transition-duration: 0s !important;
+      transition-delay: 0s !important;
+    }
+
+# Discovery configuration
+discovery:
+  # Allowed hostnames
+  allowedHostnames:
+    - "localhost"
+  
+  # Network idle timeout
+  networkIdleTimeout: 750
+
+# Agent configuration
+agent:
+  # Asset discovery settings
+  assetDiscovery:
+    # Allowed hostnames for assets
+    allowedHostnames:
+      - "localhost"
+    
+    # Network idle timeout for assets
+    networkIdleTimeout: 750
+    
+    # Cache responses
+    cacheResponses: true
+
+# Defer uploads for faster builds
+deferUploads: false

@@ -1,0 +1,511 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Mobile Touch Target Utilities */
+  .min-touch-44 {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .min-touch-48 {
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  /* Mobile Spacing Utilities */
+  .mobile-spacing-sm {
+    @apply space-y-3;
+  }
+
+  .mobile-spacing-md {
+    @apply space-y-4;
+  }
+
+  .mobile-spacing-lg {
+    @apply space-y-6;
+  }
+
+  /* Mobile Typography Utilities */
+  .mobile-text-base {
+    @apply text-base lg:text-sm;
+  }
+
+  .mobile-text-lg {
+    @apply text-lg lg:text-base;
+  }
+
+  .mobile-heading {
+    @apply text-2xl lg:text-xl;
+  }
+
+  /* Scroll Container with Indicators */
+  .scrollable-container {
+    @apply overflow-x-auto lg:overflow-x-visible;
+    @apply -mx-4 px-4 lg:mx-0 lg:px-0;
+    @apply scroll-smooth;
+    position: relative;
+  }
+
+  .scrollable-container::before,
+  .scrollable-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .scrollable-container::before {
+    left: 0;
+    background: linear-gradient(to right, rgba(10, 10, 10, 0.8), transparent);
+  }
+
+  .scrollable-container::after {
+    right: 0;
+    background: linear-gradient(to left, rgba(10, 10, 10, 0.8), transparent);
+  }
+
+  /* Mobile-specific momentum scrolling */
+  .momentum-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* Prevent double-tap zoom on interactive elements */
+  .no-tap-zoom {
+    touch-action: manipulation;
+  }
+
+  /* Mobile touch feedback */
+  .touch-feedback {
+    @apply active:scale-95 transition-transform duration-100;
+  }
+
+  .touch-feedback-subtle {
+    @apply active:opacity-80 transition-opacity duration-100;
+  }
+}
+
+/* Glassmorphism gradient backgrounds */
+.gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.animate-gradient {
+  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #4facfe);
+  background-size: 300% 300%;
+  animation: gradient-shift 6s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Animated gradient background */
+.animated-gradient {
+  background: linear-gradient(
+    -45deg,
+    #ee7752,
+    #e73c7e,
+    #23a6d5,
+    #23d5ab
+  );
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Glassmorphism card styles */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-card-hover {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s ease;
+}
+
+.glass-card-hover:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Blob animation for background */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+/* Fade in up animation */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out;
+}
+
+/* Slide up animation for notifications */
+@keyframes slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Bounce subtle animation */
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 1s ease-in-out infinite;
+}
+
+/* Shadow glow effects */
+.shadow-glow-md {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+}
+
+.shadow-glow-lg {
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.6);
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Button styles - Dark theme with gradient accents */
+@layer components {
+  .btn {
+    @apply px-4 py-2.5 text-sm font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply sm:h-12 sm:px-6 sm:text-base lg:h-10 lg:px-4 lg:text-sm;
+    @apply no-tap-zoom touch-feedback;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg focus:ring-purple-400;
+  }
+
+  /* Scraper-specific buttons with teal/cyan theme */
+  .btn-scraper-primary {
+    @apply bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:shadow-lg focus:ring-teal-400;
+  }
+
+  .btn-secondary {
+    @apply bg-white/10 text-white hover:bg-white/20 focus:ring-white/50 border border-white/20;
+  }
+
+  .btn-success {
+    @apply bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg focus:ring-green-400;
+  }
+
+  .btn-danger {
+    @apply bg-gradient-to-r from-red-500 to-rose-500 text-white hover:shadow-lg focus:ring-red-400;
+  }
+
+  .btn-warning {
+    @apply bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-lg focus:ring-amber-400;
+  }
+
+  .btn-info {
+    @apply bg-gradient-to-r from-sky-500 to-blue-500 text-white hover:shadow-lg focus:ring-sky-400;
+  }
+
+  /* Icon buttons with mobile touch targets */
+  .btn-icon {
+    @apply w-8 h-8 lg:w-8 lg:h-8 sm:w-11 sm:h-11;
+    @apply flex items-center justify-center;
+    @apply rounded-lg transition-all duration-200;
+    @apply no-tap-zoom touch-feedback;
+  }
+
+  /* Form inputs - Dark theme with mobile optimization */
+  .input {
+    @apply w-full px-4 py-3 text-white bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply sm:h-12 sm:text-base lg:h-10 lg:text-sm;
+    @apply no-tap-zoom;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-gray-300 mb-2;
+    @apply sm:text-base lg:text-sm;
+  }
+
+  /* Mobile-optimized select/dropdown */
+  .select-mobile {
+    @apply h-12 text-base lg:h-10 lg:text-sm;
+    @apply no-tap-zoom;
+  }
+}
+
+/* Custom Scrollbar for Modals - Glassmorphic Style */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox Support */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+}
+
+/* Toast Notification Animations */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-slide-out-right {
+  animation: slide-out-right 0.3s ease-in;
+}
+
+/* Navigation Animations */
+@keyframes nav-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+  }
+}
+
+.nav-glow-active {
+  animation: nav-glow 2s ease-in-out infinite;
+}
+
+/* Global Dropdown/Select Styles - Glassmorphic Design */
+select {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  transition: all 0.2s ease;
+  /* Mobile optimization */
+  height: 3rem; /* 48px for mobile */
+  font-size: 1rem; /* 16px for mobile */
+  touch-action: manipulation;
+}
+
+@media (min-width: 1024px) {
+  select {
+    height: 2.5rem; /* 40px for desktop */
+    font-size: 0.875rem; /* 14px for desktop */
+  }
+}
+
+select:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+select:focus {
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+/* Dropdown options styling */
+select option {
+  background-color: #1f2937; /* gray-800 */
+  color: white;
+  padding: 0.5rem;
+}
+
+select option:hover {
+  background-color: #374151; /* gray-700 */
+}
+
+select option:checked {
+  background-color: #4b5563; /* gray-600 */
+  font-weight: 600;
+}
+
+/* Section-specific dropdown focus styles */
+/* Leads Section - Emerald */
+.leads-section select:focus,
+select.leads-dropdown:focus {
+  border-color: rgb(16 185 129); /* emerald-500 */
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+/* Calculator Section - Purple */
+.calculator-section select:focus,
+select.calculator-dropdown:focus {
+  border-color: rgb(168 85 247); /* purple-500 */
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+}
+
+/* Scraper Section - Teal */
+.scraper-section select:focus,
+select.scraper-dropdown:focus {
+  border-color: rgb(20 184 166); /* teal-500 */
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
+}
+
+/* Disabled dropdown state */
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Multi-select styling */
+select[multiple] {
+  padding: 0.5rem;
+}
+
+select[multiple] option {
+  padding: 0.5rem 0.75rem;
+  margin: 0.125rem 0;
+  border-radius: 0.25rem;
+}
+
+select[multiple] option:checked {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+}

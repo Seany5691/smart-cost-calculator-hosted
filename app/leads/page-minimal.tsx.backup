@@ -1,0 +1,56 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '../../../lib/store/auth';
+import { ArrowRight } from 'lucide-react';
+
+// MINIMAL VERSION - NO COMPONENT IMPORTS
+// Use this to test if the base page works without any component imports
+
+const TABS = [
+  { id: 'dashboard', label: 'Dashboard' },
+] as const;
+
+export default function LeadsPage() {
+  const router = useRouter();
+  const authStore = useAuthStore();
+  const { isAuthenticated, isLoading, token } = authStore;
+  const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !isLoading) {
+      if (!isAuthenticated || !token) {
+        router.push('/login');
+      }
+    }
+  }, [mounted, isAuthenticated, isLoading, router, token]);
+
+  if (!mounted || isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 py-8 px-4">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="glass-card p-6">
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Lead Management - Minimal Test
+          </h1>
+          <p className="text-gray-300">
+            If you see this, the base page works. The issue is with component imports.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

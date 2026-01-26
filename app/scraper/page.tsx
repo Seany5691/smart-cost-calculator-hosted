@@ -7,7 +7,7 @@ import { useAuthStore } from '@/lib/store/auth-simple';
 import { useScraperSSE } from '@/hooks/useScraperSSE';
 import { useAutoExport } from '@/hooks/useAutoExport';
 import { useToast } from '@/components/ui/Toast/useToast';
-import { AlertTriangle, X, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import TownInput from '@/components/scraper/TownInput';
 import IndustrySelector from '@/components/scraper/IndustrySelector';
 import ConcurrencyControls from '@/components/scraper/ConcurrencyControls';
@@ -20,6 +20,8 @@ import NumberLookup from '@/components/scraper/NumberLookup';
 import BusinessLookup from '@/components/scraper/BusinessLookup';
 import SessionManager from '@/components/scraper/SessionManager';
 import SummaryStats from '@/components/scraper/SummaryStats';
+import ClearConfirmModal from '@/components/scraper/ClearConfirmModal';
+import ExportToLeadsModal from '@/components/scraper/ExportToLeadsModal';
 
 function getDefaultIndustries(): string[] {
   return [
@@ -664,126 +666,23 @@ export default function ScraperPage() {
         />
 
         {/* Clear Confirmation Modal */}
-        {showClearConfirm && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-            <div className="bg-gradient-to-br from-slate-900 to-teal-900 rounded-2xl shadow-2xl max-w-md w-full border border-teal-500/30">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-teal-500/20">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-500/20 rounded-lg">
-                    <AlertTriangle className="w-6 h-6 text-red-400" />
-                  </div>
-                  <h2 className="text-xl font-bold text-white">Clear All Data</h2>
-                </div>
-                <button
-                  onClick={() => setShowClearConfirm(false)}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-teal-200" />
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="p-6">
-                <p className="text-gray-300 mb-4">
-                  Are you sure you want to clear all data? This action cannot be undone.
-                </p>
-                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-                  <p className="text-sm text-red-300">
-                    This will permanently delete all scraped businesses, logs, and progress data.
-                  </p>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-teal-500/20">
-                <button
-                  onClick={() => setShowClearConfirm(false)}
-                  className="px-6 py-2 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmClear}
-                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-semibold"
-                >
-                  Clear All Data
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ClearConfirmModal
+          isOpen={showClearConfirm}
+          onClose={() => setShowClearConfirm(false)}
+          onConfirm={handleConfirmClear}
+        />
 
         {/* Export to Leads Prompt Modal */}
-        {showExportToLeadsPrompt && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-            <div className="bg-gradient-to-br from-slate-900 to-teal-900 rounded-2xl shadow-2xl max-w-md w-full border border-teal-500/30">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-teal-500/20">
-                <h2 className="text-xl font-bold text-white">Export to Leads</h2>
-                <button
-                  onClick={() => {
-                    setShowExportToLeadsPrompt(false);
-                    setLeadListName('Scraped Leads');
-                  }}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-teal-200" />
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="p-6">
-                <div className="space-y-2">
-                  <label className="text-white font-medium">
-                    Lead List Name <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={leadListName}
-                    onChange={(e) => setLeadListName(e.target.value)}
-                    placeholder="Enter a name for this lead list"
-                    className="w-full px-4 py-3 bg-white/10 border border-teal-500/30 rounded-lg text-white placeholder-teal-300/50 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500"
-                    autoFocus
-                  />
-                  <p className="text-sm text-teal-300/70">
-                    This name will be used to identify the imported leads
-                  </p>
-                </div>
-
-                <div className="mt-4 bg-teal-500/10 border border-teal-500/30 rounded-lg p-4">
-                  <p className="text-sm text-teal-300">
-                    {businesses.length} business{businesses.length !== 1 ? 'es' : ''} will be exported to the leads section
-                  </p>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-teal-500/20">
-                <button
-                  onClick={() => {
-                    setShowExportToLeadsPrompt(false);
-                    setLeadListName('Scraped Leads');
-                  }}
-                  className="px-6 py-2 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmExportToLeads}
-                  disabled={!leadListName.trim()}
-                  className={`px-6 py-2 rounded-lg transition-colors font-semibold ${
-                    leadListName.trim()
-                      ? 'bg-teal-600 hover:bg-teal-700 text-white'
-                      : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
-                  }`}
-                >
-                  Export to Leads
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ExportToLeadsModal
+          isOpen={showExportToLeadsPrompt}
+          onClose={() => {
+            setShowExportToLeadsPrompt(false);
+            setLeadListName('Scraped Leads');
+          }}
+          onConfirm={handleConfirmExportToLeads}
+          businessCount={businesses.length}
+          initialListName={leadListName}
+        />
       </div>
     </div>
   );

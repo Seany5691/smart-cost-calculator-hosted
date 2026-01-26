@@ -26,7 +26,7 @@ import {
 import { useLeadsStore } from '@/lib/store/leads';
 import type { Lead } from '@/lib/leads/types';
 import { storage } from '@/lib/localStorage';
-import { ConfirmModal } from '@/components/ui';
+import ConfirmModal from '@/components/leads/ConfirmModal';
 import { extractCoordinatesFromMapsUrl, generateRouteUrl, calculateStopCount } from '@/lib/routes';
 import ExcelImporter from '@/components/leads/import/ExcelImporter';
 import ScrapedListSelector from '@/components/leads/import/ScrapedListSelector';
@@ -1268,31 +1268,66 @@ export default function MainSheetPage() {
 
         {/* Import Modal */}
         {isMounted && showImportModal && createPortal(
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-            <div className="bg-gradient-to-br from-slate-900 to-emerald-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-emerald-500/30">
-              <div className="flex items-center justify-between p-6 border-b border-emerald-500/20">
-                <h2 className="text-2xl font-bold text-white">Import Leads</h2>
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+            onClick={(e) => {
+              // Click outside to close
+              if (e.target === e.currentTarget) {
+                setShowImportModal(false);
+                setSelectedImportMethod(null);
+              }
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-modal-title"
+          >
+            <div 
+              className="bg-gradient-to-br from-slate-900 via-emerald-900/20 to-slate-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-emerald-500/30"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Sticky Header */}
+              <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-emerald-500/20 bg-gradient-to-br from-slate-900 via-emerald-900/20 to-slate-900 backdrop-blur-sm">
+                <h2 id="import-modal-title" className="text-2xl font-bold text-white">Import Leads</h2>
                 <button
                   onClick={() => {
                     setShowImportModal(false);
                     setSelectedImportMethod(null);
                   }}
                   className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  aria-label="Close modal"
                 >
                   <X className="w-5 h-5 text-emerald-200" />
                 </button>
               </div>
               
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+              {/* Scrollable Content with Custom Scrollbar */}
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] custom-scrollbar">
+                <style jsx>{`
+                  .custom-scrollbar::-webkit-scrollbar {
+                    width: 8px;
+                  }
+                  .custom-scrollbar::-webkit-scrollbar-track {
+                    background: rgba(255, 255, 255, 0.05);
+                    border-radius: 4px;
+                  }
+                  .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(16, 185, 129, 0.3);
+                    border-radius: 4px;
+                  }
+                  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: rgba(16, 185, 129, 0.5);
+                  }
+                `}</style>
+                
                 {!selectedImportMethod ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <button
                       onClick={() => setSelectedImportMethod('scraper')}
                       className="group relative overflow-hidden rounded-xl p-8 bg-white/5 border-2 border-emerald-500/30 hover:border-emerald-500 hover:shadow-xl transition-all duration-300 text-left"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
                       <div className="relative">
-                        <div className="inline-flex p-4 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 mb-4">
+                        <div className="inline-flex p-4 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 mb-4">
                           <Database className="w-8 h-8 text-white" />
                         </div>
                         <h3 className="text-xl font-bold text-white mb-2">
@@ -1308,9 +1343,9 @@ export default function MainSheetPage() {
                       onClick={() => setSelectedImportMethod('excel')}
                       className="group relative overflow-hidden rounded-xl p-8 bg-white/5 border-2 border-emerald-500/30 hover:border-teal-500 hover:shadow-xl transition-all duration-300 text-left"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-teal-500 to-emerald-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
                       <div className="relative">
-                        <div className="inline-flex p-4 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 mb-4">
+                        <div className="inline-flex p-4 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 mb-4">
                           <FileUp className="w-8 h-8 text-white" />
                         </div>
                         <h3 className="text-xl font-bold text-white mb-2">

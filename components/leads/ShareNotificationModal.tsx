@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { UserPlus, X } from 'lucide-react';
 
 interface ShareNotification {
@@ -20,6 +22,15 @@ export default function ShareNotificationModal({
   notification,
   onClose,
 }: ShareNotificationModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  if (!mounted) return null;
+
   const handleOk = async () => {
     // Mark notification as read
     try {
@@ -34,27 +45,38 @@ export default function ShareNotificationModal({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleOk();
+        }
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="share-notification-title"
+    >
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={handleOk}
-      />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10">
+      <div 
+        className="relative w-full max-w-md bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-500/20 rounded-lg">
               <UserPlus className="w-5 h-5 text-green-400" />
             </div>
-            <h2 className="text-xl font-semibold text-white">Lead Shared With You</h2>
+            <h2 id="share-notification-title" className="text-xl font-semibold text-white">Lead Shared With You</h2>
           </div>
           <button
             onClick={handleOk}
             className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5 text-slate-400" />
           </button>
@@ -98,6 +120,7 @@ export default function ShareNotificationModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Users, Check, Loader2 } from 'lucide-react';
 
 interface User {
@@ -46,6 +47,12 @@ export default function BatchShareLeadsModal({
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -143,17 +150,28 @@ export default function BatchShareLeadsModal({
   );
 
   if (!isOpen) return null;
+  if (!mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !loading) {
+          onClose();
+        }
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="batch-share-modal-title"
+    >
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10">
+      <div 
+        className="relative w-full max-w-md bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
@@ -161,7 +179,7 @@ export default function BatchShareLeadsModal({
               <Users className="w-5 h-5 text-blue-400" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-white">Share Leads</h2>
+              <h2 id="batch-share-modal-title" className="text-xl font-semibold text-white">Share Leads</h2>
               <p className="text-sm text-slate-400 mt-0.5">{leadCount} lead{leadCount !== 1 ? 's' : ''} selected</p>
             </div>
           </div>
@@ -169,6 +187,7 @@ export default function BatchShareLeadsModal({
             onClick={onClose}
             disabled={loading}
             className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5 text-slate-400" />
           </button>
@@ -281,6 +300,7 @@ export default function BatchShareLeadsModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

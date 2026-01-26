@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Users, Check } from 'lucide-react';
 
 interface User {
@@ -46,6 +47,12 @@ export default function ShareLeadModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -156,17 +163,28 @@ export default function ShareLeadModal({
   );
 
   if (!isOpen) return null;
+  if (!mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !loading) {
+          onClose();
+        }
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="share-modal-title"
+    >
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10">
+      <div 
+        className="relative w-full max-w-md bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
@@ -174,13 +192,15 @@ export default function ShareLeadModal({
               <Users className="w-5 h-5 text-blue-400" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-white">Share Lead</h2>
+              <h2 id="share-modal-title" className="text-xl font-semibold text-white">Share Lead</h2>
               <p className="text-sm text-slate-400 mt-0.5">{leadName}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            disabled={loading}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5 text-slate-400" />
           </button>
@@ -195,7 +215,8 @@ export default function ShareLeadModal({
               placeholder="Search users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-800/50 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              disabled={loading}
+              className="w-full px-4 py-2.5 bg-slate-800/50 border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50"
             />
           </div>
 
@@ -214,6 +235,7 @@ export default function ShareLeadModal({
                       type="checkbox"
                       checked={selectedUserIds.includes(user.id)}
                       onChange={() => handleToggleUser(user.id)}
+                      disabled={loading}
                       className="sr-only"
                     />
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
@@ -254,7 +276,8 @@ export default function ShareLeadModal({
         <div className="flex gap-3 p-6 border-t border-white/10">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-colors"
+            disabled={loading}
+            className="flex-1 px-4 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-white rounded-lg transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
@@ -267,6 +290,7 @@ export default function ShareLeadModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

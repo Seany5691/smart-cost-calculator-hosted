@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Costings } from '@/lib/store/deals';
 import { X } from 'lucide-react';
 import HardwareBreakdown from './costings/HardwareBreakdown';
@@ -25,31 +27,46 @@ interface CostingsModalProps {
  * - Gross profit analysis
  * - Term analysis
  * - Print-friendly layout
+ * - Uses portal to render above all content
  * 
  * Requirements: AC-6.1 through AC-9.6
  */
 export default function CostingsModal({ isOpen, onClose, costings, isLoading }: CostingsModalProps) {
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      ></div>
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-      {/* Modal */}
-      <div className="relative min-h-screen flex items-center justify-center p-4">
-        <div className="relative w-full max-w-6xl bg-gradient-to-br from-slate-900 via-orange-900/20 to-slate-900 rounded-2xl shadow-2xl border border-white/10 max-h-[90vh] overflow-y-auto">
-          {/* Close Button */}
+  if (!isOpen || !mounted) return null;
+
+  const modalContent = (
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="costings-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="relative w-full max-w-6xl bg-gradient-to-br from-slate-900 via-orange-900/20 to-slate-900 rounded-2xl shadow-2xl border border-orange-500/30 max-h-[90vh] overflow-hidden">
+        {/* Header with Close Button */}
+        <div className="flex items-center justify-between p-6 border-b border-orange-500/20 sticky top-0 bg-gradient-to-br from-slate-900 via-orange-900/20 to-slate-900 z-10">
+          <h2 id="costings-modal-title" className="text-2xl font-bold text-white bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
+            Cost Breakdown Analysis
+          </h2>
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-300 z-10"
-            title="Close"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Close modal"
           >
-            <X className="w-6 h-6 text-white" />
+            <X className="w-6 h-6 text-orange-200" />
           </button>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="overflow-y-auto max-h-[calc(90vh-80px)] custom-scrollbar">
 
           {/* Loading State */}
           {isLoading && (
@@ -62,12 +79,9 @@ export default function CostingsModal({ isOpen, onClose, costings, isLoading }: 
           {/* Content */}
           {!isLoading && costings && (
             <div className="p-8 space-y-8">
-              {/* Header */}
-              <div className="border-b border-white/10 pb-6">
-                <h2 className="text-3xl font-bold text-white mb-2 bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
-                  Cost Breakdown Analysis
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+              {/* Deal Info */}
+              <div className="border-b border-orange-500/20 pb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-gray-400">Deal Name</p>
                     <p className="text-white font-semibold">{costings.dealName}</p>
@@ -114,7 +128,7 @@ export default function CostingsModal({ isOpen, onClose, costings, isLoading }: 
               <TermAnalysis termAnalysis={costings.termAnalysis} />
 
               {/* Print Button */}
-              <div className="flex justify-center pt-6 border-t border-white/10">
+              <div className="flex justify-center pt-6 border-t border-orange-500/20">
                 <button
                   onClick={() => generateCostingsHTML(costings)}
                   className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 transition-all duration-300 shadow-lg hover:shadow-orange-500/50 font-medium flex items-center gap-2"
@@ -131,6 +145,9 @@ export default function CostingsModal({ isOpen, onClose, costings, isLoading }: 
       </div>
     </div>
   );
+
+  // Use createPortal to render at document.body level - ensures modal appears above ALL content
+  return createPortal(modalContent, document.body);
 }
 
 // Helper function to generate HTML for costings

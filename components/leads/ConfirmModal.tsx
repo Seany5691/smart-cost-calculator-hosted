@@ -74,20 +74,35 @@ export default function ConfirmModal({
   const Icon = style.Icon;
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-      <div className="bg-gradient-to-br from-slate-900 to-emerald-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-emerald-500/30">
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+      onClick={(e) => {
+        // Click outside to close (only if not loading)
+        if (e.target === e.currentTarget && !loading) {
+          onClose();
+        }
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-modal-title"
+    >
+      <div 
+        className="bg-gradient-to-br from-slate-900 to-emerald-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-emerald-500/30"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-emerald-500/20">
           <div className="flex items-center gap-3">
             <div className={`p-2 ${style.iconBg} rounded-lg`}>
               <Icon className={`w-5 h-5 ${style.iconColor}`} />
             </div>
-            <h2 className="text-xl font-semibold text-white">{title}</h2>
+            <h2 id="confirm-modal-title" className="text-xl font-semibold text-white">{title}</h2>
           </div>
           <button
             onClick={onClose}
             disabled={loading}
             className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5 text-emerald-200" />
           </button>

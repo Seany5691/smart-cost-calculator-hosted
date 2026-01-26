@@ -10,6 +10,8 @@ import AddNoteModal from './AddNoteModal';
 import AddReminderModal from './AddReminderModal';
 import ShareLeadModal from './ShareLeadModal';
 import SharedWithIndicator from './SharedWithIndicator';
+import DeleteNoteModal from './DeleteNoteModal';
+import DeleteReminderModal from './DeleteReminderModal';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/Toast/useToast';
 
@@ -65,6 +67,10 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
   const [addNoteModalLead, setAddNoteModalLead] = useState<Lead | null>(null);
   const [addReminderModalLead, setAddReminderModalLead] = useState<Lead | null>(null);
   const [shareModalLead, setShareModalLead] = useState<Lead | null>(null);
+  const [deleteNoteModal, setDeleteNoteModal] = useState<{ leadId: string; noteId: string } | null>(null);
+  const [deleteReminderModal, setDeleteReminderModal] = useState<{ leadId: string; reminderId: string } | null>(null);
+  const [isDeletingNote, setIsDeletingNote] = useState(false);
+  const [isDeletingReminder, setIsDeletingReminder] = useState(false);
 
   const handleCreateProposal = (lead: Lead) => {
     // Store lead ID in localStorage for the calculator to attach the proposal
@@ -202,9 +208,14 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
     return `In ${diffDays} days`;
   };
 
-  const handleDeleteNote = async (leadId: string, noteId: string) => {
-    if (!window.confirm('Are you sure you want to delete this note?')) return;
+  const handleDeleteNote = (leadId: string, noteId: string) => {
+    setDeleteNoteModal({ leadId, noteId });
+  };
 
+  const confirmDeleteNote = async () => {
+    if (!deleteNoteModal) return;
+    
+    setIsDeletingNote(true);
     try {
       const token = getAuthToken();
       if (!token) {
@@ -215,7 +226,7 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
         return;
       }
 
-      const response = await fetch(`/api/leads/${leadId}/notes/${noteId}`, {
+      const response = await fetch(`/api/leads/${deleteNoteModal.leadId}/notes/${deleteNoteModal.noteId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -223,19 +234,27 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
       if (!response.ok) throw new Error('Failed to delete note');
 
       // Refresh notes/reminders
-      fetchNotesReminders(leadId);
+      fetchNotesReminders(deleteNoteModal.leadId);
+      setDeleteNoteModal(null);
     } catch (error) {
       console.error('Error deleting note:', error);
       toast.error('Failed to delete note', {
         message: 'Please try again',
         section: 'leads'
       });
+    } finally {
+      setIsDeletingNote(false);
     }
   };
 
-  const handleDeleteReminder = async (leadId: string, reminderId: string) => {
-    if (!window.confirm('Are you sure you want to delete this reminder?')) return;
+  const handleDeleteReminder = (leadId: string, reminderId: string) => {
+    setDeleteReminderModal({ leadId, reminderId });
+  };
 
+  const confirmDeleteReminder = async () => {
+    if (!deleteReminderModal) return;
+    
+    setIsDeletingReminder(true);
     try {
       const token = getAuthToken();
       if (!token) {
@@ -246,7 +265,7 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
         return;
       }
 
-      const response = await fetch(`/api/leads/${leadId}/reminders/${reminderId}`, {
+      const response = await fetch(`/api/leads/${deleteReminderModal.leadId}/reminders/${deleteReminderModal.reminderId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -254,13 +273,16 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
       if (!response.ok) throw new Error('Failed to delete reminder');
 
       // Refresh notes/reminders
-      fetchNotesReminders(leadId);
+      fetchNotesReminders(deleteReminderModal.leadId);
+      setDeleteReminderModal(null);
     } catch (error) {
       console.error('Error deleting reminder:', error);
       toast.error('Failed to delete reminder', {
         message: 'Please try again',
         section: 'leads'
       });
+    } finally {
+      setIsDeletingReminder(false);
     }
   };
 
@@ -750,6 +772,22 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
           }}
         />
       )}
+
+      {/* Delete Note Modal */}
+      <DeleteNoteModal
+        isOpen={deleteNoteModal !== null}
+        onClose={() => setDeleteNoteModal(null)}
+        onConfirm={confirmDeleteNote}
+        isDeleting={isDeletingNote}
+      />
+
+      {/* Delete Reminder Modal */}
+      <DeleteReminderModal
+        isOpen={deleteReminderModal !== null}
+        onClose={() => setDeleteReminderModal(null)}
+        onConfirm={confirmDeleteReminder}
+        isDeleting={isDeletingReminder}
+      />
     </>
   );
 }

@@ -110,8 +110,12 @@ export async function POST(request: NextRequest) {
       user_id // Optional: for creating events on shared calendars
     } = body;
 
+    // Extract just the date part to avoid timezone issues (same as reminders)
+    const eventDateOnly = event_date.split('T')[0];
+    const endDateOnly = end_date ? end_date.split('T')[0] : eventDateOnly;
+
     // Validate required fields
-    if (!title || !event_date) {
+    if (!title || !eventDateOnly) {
       return NextResponse.json(
         { error: 'Title and event_date are required' },
         { status: 400 }
@@ -139,7 +143,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the event
-    // Cast event_date explicitly to DATE to prevent timezone conversion
+    // Use date-only string (no timezone conversion) - same approach as reminders
     const result = await query(
       `INSERT INTO calendar_events (
         user_id,
@@ -152,13 +156,13 @@ export async function POST(request: NextRequest) {
         priority,
         location,
         created_by
-      ) VALUES ($1, $2, $3, $4::date, $5, $6, $7, $8, $9, $10)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
       [
         eventOwnerId,
         title,
         description || null,
-        event_date,
+        eventDateOnly, // Use date-only string
         event_time || null,
         is_all_day || false,
         event_type || 'event',
@@ -169,10 +173,10 @@ export async function POST(request: NextRequest) {
     );
 
     // If multi-day event, create additional entries for each day
-    if (is_multi_day && end_date && end_date > event_date) {
+    if (is_multi_day && endDateOnly && endDateOnly > eventDateOnly) {
       // Parse dates without timezone conversion to avoid date shifts
-      const [startYear, startMonth, startDay] = event_date.split('-').map(Number);
-      const [endYear, endMonth, endDay] = end_date.split('-').map(Number);
+      const [startYear, startMonth, startDay] = eventDateOnly.split('-').map(Number);
+      const [endYear, endMonth, endDay] = endDateOnly.split('-').map(Number);
       
       // Create date objects in local timezone
       const startDateObj = new Date(startYear, startMonth - 1, startDay);
@@ -199,12 +203,12 @@ export async function POST(request: NextRequest) {
             priority,
             location,
             created_by
-          ) VALUES ($1, $2, $3, $4::date, $5, $6, $7, $8, $9, $10)`,
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
           [
             eventOwnerId,
             title,
             description || null,
-            dateStr,
+            dateStr, // Already a date-only string
             event_time || null,
             is_all_day || false,
             event_type || 'event',

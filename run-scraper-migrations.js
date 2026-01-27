@@ -115,7 +115,8 @@ async function main() {
     await pool.query('SELECT NOW()');
     log('✅ Database connection successful (with SSL)', 'green');
   }
-    
+
+  try {
     // Run migrations
     const migration015Success = await runMigration(
       pool,

@@ -872,6 +872,18 @@ export default function ScraperPage() {
             <ViewAllResults businesses={businesses} />
           </div>
         )}
+
+        {/* Analytics Card - Below View All Results */}
+        {hasData && (
+          <ScrapingAnalytics
+            isOpen={true}
+            onClose={() => {}}
+            businesses={businesses}
+            progress={progress}
+            elapsedTime={elapsedTime}
+          />
+        )}
+
         {/* Retry Failed Button - Only show if there are failures */}
         {progress.failedTowns && progress.failedTowns.length > 0 && (
           <div className="glass-card p-4 lg:p-6">

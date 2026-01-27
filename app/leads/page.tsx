@@ -158,6 +158,22 @@ export default function LeadsPage() {
         signedCount: allLeads.filter(lead => lead.status === 'signed').length,
         routesCount: 0 // Will be fetched from routes API in future tasks
       };
+      
+      // Debug logging to verify counts
+      console.log('📊 Dashboard Stats Breakdown:');
+      console.log('  Total Leads:', newStats.totalLeads);
+      console.log('  New (Main Sheet):', newStats.newCount);
+      console.log('  Leads (Ready to work on):', newStats.leadsCount);
+      console.log('  Working On:', newStats.workingCount);
+      console.log('  Later Stage:', newStats.laterCount);
+      console.log('  Bad Leads:', newStats.badCount);
+      console.log('  Signed:', newStats.signedCount);
+      
+      // Show sample leads for each status
+      console.log('\n📋 Sample Leads by Status:');
+      console.log('  Leads status:', allLeads.filter(l => l.status === 'leads').slice(0, 3).map(l => ({ id: l.id, name: l.name, status: l.status })));
+      console.log('  Working status:', allLeads.filter(l => l.status === 'working').slice(0, 3).map(l => ({ id: l.id, name: l.name, status: l.status })));
+      
       setStats(newStats);
     }
   }, [allLeads]);

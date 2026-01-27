@@ -169,33 +169,54 @@ export default function ReminderCalendar({ reminders, onDateClick }: ReminderCal
                     key={dayIndex}
                     onClick={() => onDateClick?.(date, dateReminders)}
                     className={`
-                      min-h-[100px] p-2 rounded-lg border transition-all
-                      ${today ? 'bg-blue-500/20 border-blue-500/50' : 'bg-white/5 border-white/10'}
+                      min-h-[100px] p-2 rounded-lg border transition-all relative
+                      ${today ? 'ring-2 ring-emerald-400 bg-white/5 border-emerald-500/30' : 'bg-white/5 border-white/10'}
                       ${!currentMonth ? 'opacity-40' : ''}
-                      hover:bg-white/10 hover:border-white/20
+                      hover:bg-white/10 hover:border-emerald-500/30
+                      ${dateReminders.length > 0 ? 'cursor-pointer' : ''}
                     `}
                   >
-                    <div className="text-left">
-                      <div className={`text-sm font-medium mb-1 ${today ? 'text-blue-400' : 'text-white'}`}>
-                        {date.getDate()}
+                    <div className="text-left h-full flex flex-col">
+                      {/* Date number with indicator dots */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`text-sm font-semibold ${today ? 'text-emerald-400' : 'text-white'}`}>
+                          {date.getDate()}
+                        </div>
+                        {dateReminders.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            {/* Status indicator */}
+                            <div className={`w-2 h-2 rounded-full ${
+                              date < new Date(new Date().setHours(0, 0, 0, 0)) ? 'bg-red-500' :
+                              isToday(date) ? 'bg-blue-500' :
+                              'bg-green-500'
+                            }`} />
+                            {/* Count badge */}
+                            <span className="text-[10px] font-bold bg-emerald-500 text-white rounded-full px-1.5 py-0.5">
+                              {dateReminders.length}
+                            </span>
+                          </div>
+                        )}
                       </div>
+                      
+                      {/* Reminder previews */}
                       {dateReminders.length > 0 && (
-                        <div className="space-y-1">
+                        <div className="space-y-1 flex-1 overflow-hidden">
                           {dateReminders.slice(0, 3).map(reminder => (
                             <div
                               key={reminder.id}
                               className={`text-xs px-1.5 py-0.5 rounded truncate ${
-                                reminder.priority === 'high' ? 'bg-red-500/20 text-red-400' :
-                                reminder.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                                'bg-green-500/20 text-green-400'
+                                reminder.priority === 'high' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                reminder.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                                'bg-green-500/20 text-green-400 border border-green-500/30'
                               }`}
                               title={reminder.message || reminder.title || ''}
                             >
-                              {getReminderTypeIcon(reminder.reminder_type)} {reminder.message?.slice(0, 10) || reminder.title?.slice(0, 10)}
+                              <span className="mr-1">{getReminderTypeIcon(reminder.reminder_type)}</span>
+                              {reminder.message?.slice(0, 12) || reminder.title?.slice(0, 12) || 'Reminder'}
                             </div>
                           ))}
                           {dateReminders.length > 3 && (
-                            <div className="text-xs text-white/60">
+                            <div className="text-xs text-emerald-300 font-medium">
                               +{dateReminders.length - 3} more
                             </div>
                           )}
@@ -412,6 +433,26 @@ export default function ReminderCalendar({ reminders, onDateClick }: ReminderCal
         {viewMode === 'month' && renderMonthView()}
         {viewMode === 'week' && renderWeekView()}
         {viewMode === 'day' && renderDayView()}
+        
+        {/* Legend */}
+        {viewMode === 'month' && (
+          <div className="mt-6 pt-4 border-t border-white/10">
+            <div className="flex items-center justify-center gap-6 text-xs text-emerald-200">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                <span>Past</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span>Today</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span>Future</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

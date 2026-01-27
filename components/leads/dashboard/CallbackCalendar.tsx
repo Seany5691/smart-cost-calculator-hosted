@@ -10,9 +10,11 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, X, User, MapPin, Phone, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, User, MapPin, Phone, Clock, Plus } from 'lucide-react';
 import type { LeadReminder, Lead } from '@/lib/leads/types';
 import { getReminderTypeIcon, getReminderTypeLabel, getReminderPriorityLabel, formatReminderTime } from '@/lib/leads/types';
+import ShareCalendarModal from '@/components/leads/ShareCalendarModal';
+import AddCalendarEventModal from '@/components/leads/AddCalendarEventModal';
 
 interface CallbackCalendarProps {
   reminders: LeadReminder[];
@@ -25,6 +27,22 @@ interface CalendarDate {
   isCurrentMonth: boolean;
   isToday: boolean;
   reminders: LeadReminder[];
+  events: CalendarEvent[];
+}
+
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  event_date: string;
+  event_time: string | null;
+  is_all_day: boolean;
+  event_type: string;
+  priority: string;
+  location: string | null;
+  created_by: string;
+  creator_username: string;
+  is_owner: boolean;
 }
 
 export default function CallbackCalendar({ reminders, leads, onLeadClick }: CallbackCalendarProps) {
@@ -32,11 +50,62 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showPopover, setShowPopover] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [selectedDateForEvent, setSelectedDateForEvent] = useState<Date | undefined>();
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  // Fetch calendar events
+  useEffect(() => {
+    fetchCalendarEvents();
+  }, [currentMonth]);
+
+  const fetchCalendarEvents = async () => {
+    setLoadingEvents(true);
+    try {
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) return;
+
+      // Get first and last day of current month
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+
+      const startDate = firstDay.toISOString().split('T')[0];
+      const endDate = lastDay.toISOString().split('T')[0];
+
+      const response = await fetch(
+        `/api/calendar/events?start_date=${startDate}&end_date=${endDate}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setCalendarEvents(data.events || []);
+      }
+    } catch (err) {
+      console.error('Error fetching calendar events:', err);
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
 
   // Get lead data for a reminder
   const getLeadData = (leadId: string) => {
@@ -74,7 +143,8 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
         date,
         isCurrentMonth: false,
         isToday: false,
-        reminders: []
+        reminders: [],
+        events: []
       });
     }
     
@@ -91,12 +161,20 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
         const reminderDateStr = reminder.reminder_date.split('T')[0];
         return reminderDateStr === dateStr;
       });
+
+      // Find calendar events on this date
+      const dateEvents = calendarEvents.filter(event => {
+        if (!event.event_date) return false;
+        const eventDateStr = event.event_date.split('T')[0];
+        return eventDateStr === dateStr;
+      });
       
       dates.push({
         date,
         isCurrentMonth: true,
         isToday,
-        reminders: dateReminders
+        reminders: dateReminders,
+        events: dateEvents
       });
     }
     
@@ -108,12 +186,13 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
         date,
         isCurrentMonth: false,
         isToday: false,
-        reminders: []
+        reminders: [],
+        events: []
       });
     }
     
     return dates;
-  }, [currentMonth, reminders]);
+  }, [currentMonth, reminders, calendarEvents]);
 
   // Navigate to previous month
   const handlePrevMonth = () => {
@@ -127,7 +206,7 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
 
   // Handle date click
   const handleDateClick = (calendarDate: CalendarDate) => {
-    if (calendarDate.reminders.length > 0) {
+    if (calendarDate.reminders.length > 0 || calendarDate.events.length > 0) {
       setSelectedDate(calendarDate.date);
       setShowPopover(true);
     }
@@ -150,30 +229,47 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
     });
   }, [selectedDate, reminders]);
 
-  // Get color for date based on reminder status
-  // FIX #1: Text must be black when day has reminders for visibility
-  const getDateColor = (calendarDate: CalendarDate) => {
-    if (calendarDate.reminders.length === 0) return '';
+  // Get events for selected date
+  const selectedDateEvents = useMemo(() => {
+    if (!selectedDate) return [];
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    return calendarEvents.filter(event => {
+      if (!event.event_date) return false;
+      return event.event_date.split('T')[0] === dateStr;
+    });
+  }, [selectedDate, calendarEvents]);
+
+  // Get color for date based on reminder/event status
+  const getDateIndicators = (calendarDate: CalendarDate) => {
+    const hasItems = calendarDate.reminders.length > 0 || calendarDate.events.length > 0;
+    if (!hasItems) return null;
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dateTime = calendarDate.date.getTime();
     const todayTime = today.getTime();
     
-    // Requirement: 33.11 - Color coding: past (red), today (blue), future (green)
-    // Text is always black for visibility when highlighted
+    // Determine status color
+    let statusColor = '';
     if (dateTime < todayTime) {
-      return 'bg-red-100 text-black border-red-300';
+      statusColor = 'bg-red-500';
     } else if (dateTime === todayTime) {
-      return 'bg-blue-100 text-black border-blue-300';
+      statusColor = 'bg-blue-500';
     } else {
-      return 'bg-green-100 text-black border-green-300';
+      statusColor = 'bg-green-500';
     }
+    
+    return {
+      statusColor,
+      reminderCount: calendarDate.reminders.length,
+      eventCount: calendarDate.events.length,
+      totalCount: calendarDate.reminders.length + calendarDate.events.length
+    };
   };
 
   return (
     <div className="relative">
-      {/* Month/Year header with navigation */}
+      {/* Month/Year header with navigation and Share button */}
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={handlePrevMonth}
@@ -183,9 +279,34 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
           <ChevronLeft className="w-5 h-5 text-emerald-300" />
         </button>
         
-        <h3 className="text-lg font-semibold text-white">
-          {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-        </h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-white">
+            {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </h3>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setSelectedDateForEvent(undefined);
+                setShowAddEventModal(true);
+              }}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors flex items-center gap-2 font-medium"
+              title="Add a calendar event"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Event</span>
+            </button>
+            
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg transition-colors flex items-center gap-2 font-medium"
+              title="Share your calendar with other users"
+            >
+              <User className="w-4 h-4" />
+              <span className="hidden sm:inline">Share Calendar</span>
+            </button>
+          </div>
+        </div>
         
         <button
           onClick={handleNextMonth}
@@ -212,29 +333,51 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
       <div className="overflow-x-auto -mx-2 px-2 lg:mx-0 lg:px-0">
         <div className="grid grid-cols-7 gap-1 min-w-[280px]">
           {calendarDates.map((calendarDate, index) => {
-            const hasReminders = calendarDate.reminders.length > 0;
-            const colorClass = getDateColor(calendarDate);
+            const hasItems = calendarDate.reminders.length > 0 || calendarDate.events.length > 0;
+            const indicators = getDateIndicators(calendarDate);
             
             return (
               <button
                 key={index}
                 onClick={() => handleDateClick(calendarDate)}
-                disabled={!hasReminders}
+                disabled={!hasItems}
                 className={`
                   relative aspect-square p-1 sm:p-2 rounded-lg text-xs sm:text-sm
                   transition-all duration-200 min-w-[44px] min-h-[44px]
                   ${calendarDate.isCurrentMonth ? 'text-white' : 'text-emerald-400/50'}
-                  ${calendarDate.isToday ? 'ring-2 ring-emerald-500' : ''}
-                  ${hasReminders ? `${colorClass} cursor-pointer hover:scale-105 hover:shadow-md border-2` : 'hover:bg-white/5'}
-                  ${!hasReminders && !calendarDate.isCurrentMonth ? 'opacity-50' : ''}
+                  ${calendarDate.isToday ? 'ring-2 ring-emerald-400' : ''}
+                  ${hasItems ? 'bg-white/5 hover:bg-white/10 cursor-pointer border border-emerald-500/20 hover:border-emerald-500/40' : 'hover:bg-white/5'}
+                  ${!hasItems && !calendarDate.isCurrentMonth ? 'opacity-50' : ''}
                 `}
+                title={hasItems ? `${indicators?.totalCount} item(s)` : ''}
               >
-                <div className="flex flex-col items-center justify-center h-full">
-                  <span className="font-medium">{calendarDate.date.getDate()}</span>
-                  {hasReminders && (
-                    <span className="text-xs font-bold mt-1">
-                      {calendarDate.reminders.length}
-                    </span>
+                <div className="flex flex-col items-center justify-center h-full relative">
+                  {/* Date Number - Always visible */}
+                  <span className="font-semibold text-base">{calendarDate.date.getDate()}</span>
+                  
+                  {/* Indicators */}
+                  {indicators && (
+                    <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex items-center gap-0.5">
+                      {/* Status indicator dot */}
+                      <div className={`w-1.5 h-1.5 rounded-full ${indicators.statusColor}`} />
+                      
+                      {/* Event indicator (if has events) */}
+                      {indicators.eventCount > 0 && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                      )}
+                      
+                      {/* Reminder indicator (if has reminders) */}
+                      {indicators.reminderCount > 0 && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Count badge for multiple items */}
+                  {indicators && indicators.totalCount > 1 && (
+                    <div className="absolute top-0.5 right-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                      {indicators.totalCount}
+                    </div>
                   )}
                 </div>
               </button>
@@ -250,7 +393,7 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-emerald-500/20">
               <h3 className="text-lg font-semibold text-white">
-                Reminders for {selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                {selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </h3>
               <button
                 onClick={handleClosePopover}
@@ -260,9 +403,100 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
               </button>
             </div>
 
-            {/* Reminder list */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] custom-scrollbar space-y-3">
-              {selectedDateReminders.map(reminder => {
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] custom-scrollbar space-y-4">
+              {/* Calendar Events Section */}
+              {selectedDateEvents.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-emerald-300 mb-3 flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    Calendar Events ({selectedDateEvents.length})
+                  </h4>
+                  <div className="space-y-3">
+                    {selectedDateEvents.map(event => {
+                      const eventTypeIcons: Record<string, string> = {
+                        event: '📅',
+                        appointment: '🗓️',
+                        meeting: '🤝',
+                        deadline: '⏰',
+                        reminder: '🔔',
+                        other: '📌'
+                      };
+
+                      return (
+                        <div
+                          key={event.id}
+                          className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg"
+                        >
+                          {/* Type and Priority */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xl" title={event.event_type}>
+                              {eventTypeIcons[event.event_type] || '📅'}
+                            </span>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              event.priority === 'high' ? 'bg-red-500/20 text-red-400' :
+                              event.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                              'bg-green-500/20 text-green-400'
+                            }`}>
+                              {event.priority.toUpperCase()}
+                            </span>
+                            {!event.is_owner && (
+                              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">
+                                Shared
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Title */}
+                          <div className="font-semibold text-white mb-2">
+                            {event.title}
+                          </div>
+
+                          {/* Description */}
+                          {event.description && (
+                            <p className="text-sm text-emerald-200 mb-2">
+                              {event.description}
+                            </p>
+                          )}
+
+                          {/* Time and Location */}
+                          <div className="space-y-1 text-sm text-emerald-300">
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-3.5 h-3.5" />
+                              <span>
+                                {event.is_all_day ? 'All day' : 
+                                  event.event_time ? new Date(`2000-01-01T${event.event_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 
+                                  'No time set'}
+                              </span>
+                            </div>
+                            {event.location && (
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-3.5 h-3.5" />
+                                <span>{event.location}</span>
+                              </div>
+                            )}
+                            {event.creator_username && (
+                              <div className="flex items-center gap-2 text-xs text-emerald-400">
+                                <User className="w-3.5 h-3.5" />
+                                <span>Created by {event.creator_username}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Reminders Section */}
+              {selectedDateReminders.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-emerald-300 mb-3">
+                    Lead Reminders ({selectedDateReminders.length})
+                  </h4>
+                  <div className="space-y-3">
+                    {selectedDateReminders.map(reminder => {
                 const leadData = getLeadData(reminder.lead_id || '');
                 const isCompleted = reminder.completed || reminder.status === 'completed';
                 
@@ -333,6 +567,16 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
                   </button>
                 );
               })}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {selectedDateReminders.length === 0 && selectedDateEvents.length === 0 && (
+                <div className="text-center py-8 text-emerald-300/70">
+                  No reminders or events for this date
+                </div>
+              )}
             </div>
           </div>
         </div>,
@@ -340,20 +584,49 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
       )}
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-4 mt-4 text-xs text-emerald-200">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
-          <span>Past</span>
+      <div className="mt-4 space-y-2">
+        <div className="flex items-center justify-center gap-4 text-xs text-emerald-200">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            <span>Past</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <span>Today</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span>Future</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
-          <span>Today</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
-          <span>Future</span>
+        <div className="flex items-center justify-center gap-4 text-xs text-emerald-200">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+            <span>Events</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+            <span>Reminders</span>
+          </div>
         </div>
       </div>
+
+      {/* Share Calendar Modal */}
+      <ShareCalendarModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+      />
+
+      {/* Add Calendar Event Modal */}
+      <AddCalendarEventModal
+        isOpen={showAddEventModal}
+        onClose={() => setShowAddEventModal(false)}
+        preselectedDate={selectedDateForEvent}
+        onSuccess={() => {
+          // Refresh calendar events
+          fetchCalendarEvents();
+        }}
+      />
     </div>
   );
 }

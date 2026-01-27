@@ -1,60 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
-import { verifyAuth } from '@/lib/middleware';
+import { Pool } from 'pg';
+import { verifyToken } from '@/lib/auth';
 
-// GET /api/calendar/events - Get all calendar events for the authenticated user
-// Includes events from owned calendar and shared calendars
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+/**
+ * GET /api/calendar/events
+ * Get all calendar events for the current user
+ * Includes events from shared calendars if user has access
+ */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await verifyAuth(request);
-    if (!authResult.authenticated || !authResult.user) {
+    // Verify authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = authResult.user.userId;
-    const { searchParams } = new URL(request.url);
-    const viewUserId = searchParams.get('viewUserId'); // Optional: view another user's calendar if shared
-
-    // If viewUserId is provided, check if current user has access to that calendar
-    if (viewUserId && viewUserId !== userId) {
-      const shareCheck = await query(
-        `SELECT * FROM calendar_shares 
-         WHERE owner_user_id = $1 AND shared_with_user_id = $2`,
-        [viewUserId, userId]
-      );
-
-      if (shareCheck.rows.length === 0) {
-        return NextResponse.json({ error: 'Access denied to this calendar' }, { status: 403 });
-      }
-
-      // Return events for the viewed user's calendar
-      const events = await query(
-        `SELECT ce.*, 
-                u.username as created_by_username,
-                u.email as created_by_email
-         FROM calendar_events ce
-         LEFT JOIN users u ON ce.created_by = u.id
-         WHERE ce.user_id = $1
-         ORDER BY ce.event_date DESC, ce.event_time DESC`,
-        [viewUserId]
-      );
-
-      return NextResponse.json({ events: events.rows });
+    const token = authHeader.substring(7);
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Return events for the authenticated user's own calendar
-    const events = await query(
-      `SELECT ce.*, 
-              u.username as created_by_username,
-              u.email as created_by_email
-       FROM calendar_events ce
-       LEFT JOIN users u ON ce.created_by = u.id
-       WHERE ce.user_id = $1
-       ORDER BY ce.event_date DESC, ce.event_time DESC`,
-      [userId]
-    );
+    const userId = decoded.userId;
 
-    return NextResponse.json({ events: events.rows });
+    // Get query parameters for filtering
+    const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get('start_date');
+    const endDate = searchParams.get('end_date');
+
+    let query = `
+      SELECT 
+        ce.*,
+        u.username as creator_username,
+        CASE 
+          WHEN ce.user_id = $1 THEN true
+          ELSE false
+        END as is_owner
+      FROM calendar_events ce
+      JOIN users u ON ce.created_by = u.id
+      WHERE (
+        ce.user_id = $1
+        OR ce.user_id IN (
+          SELECT owner_user_id 
+          FROM calendar_shares 
+          WHERE shared_with_user_id = $1
+        )
+      )
+    `;
+
+    const params: any[] = [userId];
+    let paramIndex = 2;
+
+    if (startDate) {
+      query += ` AND ce.event_date >= $${paramIndex}`;
+      params.push(startDate);
+      paramIndex++;
+    }
+
+    if (endDate) {
+      query += ` AND ce.event_date <= $${paramIndex}`;
+      params.push(endDate);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY ce.event_date, ce.event_time NULLS LAST`;
+
+    const result = await pool.query(query, params);
+
+    return NextResponse.json({
+      events: result.rows
+    });
   } catch (error) {
     console.error('Error fetching calendar events:', error);
     return NextResponse.json(
@@ -64,63 +84,82 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/calendar/events - Create a new calendar event
+/**
+ * POST /api/calendar/events
+ * Create a new calendar event
+ */
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await verifyAuth(request);
-    if (!authResult.authenticated || !authResult.user) {
+    // Verify authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = authResult.user.userId;
-    const body = await request.json();
+    const token = authHeader.substring(7);
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
 
+    const userId = decoded.userId;
+    const body = await request.json();
     const {
       title,
       description,
       event_date,
+      end_date,
       event_time,
-      is_all_day = false,
-      event_type = 'event',
-      priority = 'medium',
+      end_time,
+      is_all_day,
+      is_multi_day,
+      event_type,
+      priority,
       location,
-      owner_user_id // Optional: if creating event on someone else's calendar
+      user_id // Optional: for creating events on shared calendars
     } = body;
 
-    // Validation
+    // Validate required fields
     if (!title || !event_date) {
       return NextResponse.json(
-        { error: 'Title and event date are required' },
+        { error: 'Title and event_date are required' },
         { status: 400 }
       );
     }
 
     // Determine the owner of the event
-    let eventOwnerId = owner_user_id || userId;
+    let eventOwnerId = user_id || userId;
 
     // If creating on someone else's calendar, verify permission
-    if (owner_user_id && owner_user_id !== userId) {
-      const shareCheck = await query(
-        `SELECT * FROM calendar_shares 
-         WHERE owner_user_id = $1 AND shared_with_user_id = $2 AND can_add_events = true`,
-        [owner_user_id, userId]
+    if (user_id && user_id !== userId) {
+      const permissionCheck = await pool.query(
+        `SELECT can_add_events 
+         FROM calendar_shares 
+         WHERE owner_user_id = $1 AND shared_with_user_id = $2`,
+        [user_id, userId]
       );
 
-      if (shareCheck.rows.length === 0) {
+      if (permissionCheck.rows.length === 0 || !permissionCheck.rows[0].can_add_events) {
         return NextResponse.json(
           { error: 'You do not have permission to add events to this calendar' },
           { status: 403 }
         );
       }
-
-      eventOwnerId = owner_user_id;
     }
 
     // Create the event
-    const result = await query(
+    const result = await pool.query(
       `INSERT INTO calendar_events (
-        user_id, title, description, event_date, event_time, is_all_day,
-        event_type, priority, location, created_by
+        user_id,
+        title,
+        description,
+        event_date,
+        event_time,
+        is_all_day,
+        event_type,
+        priority,
+        location,
+        created_by
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
       [
@@ -128,16 +167,60 @@ export async function POST(request: NextRequest) {
         title,
         description || null,
         event_date,
-        is_all_day ? null : event_time,
-        is_all_day,
-        event_type,
-        priority,
+        event_time || null,
+        is_all_day || false,
+        event_type || 'event',
+        priority || 'medium',
         location || null,
-        userId // created_by is always the current user
+        userId // The person who created it
       ]
     );
 
-    return NextResponse.json({ event: result.rows[0] }, { status: 201 });
+    // If multi-day event, create additional entries for each day
+    if (is_multi_day && end_date && end_date > event_date) {
+      const startDateObj = new Date(event_date);
+      const endDateObj = new Date(end_date);
+      const currentDate = new Date(startDateObj);
+      currentDate.setDate(currentDate.getDate() + 1); // Start from day after first
+
+      while (currentDate <= endDateObj) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        
+        await pool.query(
+          `INSERT INTO calendar_events (
+            user_id,
+            title,
+            description,
+            event_date,
+            event_time,
+            is_all_day,
+            event_type,
+            priority,
+            location,
+            created_by
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [
+            eventOwnerId,
+            title,
+            description || null,
+            dateStr,
+            event_time || null,
+            is_all_day || false,
+            event_type || 'event',
+            priority || 'medium',
+            location || null,
+            userId
+          ]
+        );
+
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+    }
+
+    return NextResponse.json({
+      message: 'Calendar event created successfully',
+      event: result.rows[0]
+    }, { status: 201 });
   } catch (error) {
     console.error('Error creating calendar event:', error);
     return NextResponse.json(
@@ -146,4 +229,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

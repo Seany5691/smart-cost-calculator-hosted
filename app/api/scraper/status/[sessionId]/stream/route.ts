@@ -90,6 +90,16 @@ export async function GET(
           controller.enqueue(encoder.encode(message));
         };
 
+        // Providers updated event handler (NEW - Fix for provider display)
+        const onProvidersUpdated = (data: any) => {
+          const message = `data: ${JSON.stringify({
+            type: 'providers-updated',
+            data,
+            timestamp: new Date().toISOString(),
+          })}\n\n`;
+          controller.enqueue(encoder.encode(message));
+        };
+
         // Log event handler
         const onLog = (data: any) => {
           const message = `data: ${JSON.stringify({
@@ -132,6 +142,7 @@ export async function GET(
         eventEmitter.on('business', onBusiness); // NEW - Phase 2
         eventEmitter.on('town-complete', onTownComplete); // NEW - Phase 2
         eventEmitter.on('lookup-progress', onLookupProgress); // NEW - Phase 2
+        eventEmitter.on('providers-updated', onProvidersUpdated); // NEW - Provider fix
         eventEmitter.on('log', onLog);
         eventEmitter.on('complete', onComplete);
         eventEmitter.on('error', onError);
@@ -142,6 +153,7 @@ export async function GET(
           eventEmitter.off('business', onBusiness);
           eventEmitter.off('town-complete', onTownComplete);
           eventEmitter.off('lookup-progress', onLookupProgress);
+          eventEmitter.off('providers-updated', onProvidersUpdated);
           eventEmitter.off('log', onLog);
           eventEmitter.off('complete', onComplete);
           eventEmitter.off('error', onError);

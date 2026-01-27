@@ -298,6 +298,12 @@ export class ScrapingOrchestrator {
       this.loggingManager.logMessage(`Provider lookups completed: ${providerMap.size} results`);
       console.log(`[Orchestrator] Provider lookups completed: ${providerMap.size} results`);
 
+      // Emit providers-updated event so UI can refresh businesses with provider data
+      this.eventEmitter.emit('providers-updated', {
+        businesses: this.allBusinesses,
+        updatedCount: providerMap.size,
+      });
+
       // Cleanup
       await providerService.cleanup();
 

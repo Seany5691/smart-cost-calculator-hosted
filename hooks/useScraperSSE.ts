@@ -89,6 +89,25 @@ export function useScraperSSE(sessionId: string | null, enabled: boolean = true)
               });
               break;
 
+            case 'providers-updated':
+              // NEW - Provider fix: Update businesses with provider data
+              console.log('[SSE] Providers updated:', message.data);
+              if (message.data.businesses && Array.isArray(message.data.businesses)) {
+                // Replace all businesses with updated ones (includes providers)
+                useScraperStore.getState().clearAll();
+                addBusinesses(message.data.businesses);
+              }
+              
+              // Deactivate lookup progress
+              updateLookupProgress({ isActive: false });
+              
+              addLog({
+                timestamp: new Date().toISOString(),
+                message: `✅ Provider lookups completed! ${message.data.updatedCount} phone numbers identified`,
+                level: 'success',
+              });
+              break;
+
             case 'complete':
               console.log('[SSE] Scraping complete:', message.data);
               setStatus('completed');

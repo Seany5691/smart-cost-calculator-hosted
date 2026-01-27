@@ -45,12 +45,49 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
   const { reminders, fetchAllReminders } = useRemindersStore();
   const { importSessions, fetchImportSessions } = useImportStore();
   const [routesCount, setRoutesCount] = useState(0);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+
+  // Fetch calendar events
+  const fetchCalendarEvents = async () => {
+    try {
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) return;
+
+      // Get events for the next 30 days
+      const today = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 30);
+
+      const startDateStr = today.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+
+      const response = await fetch(`/api/calendar/events?start_date=${startDateStr}&end_date=${endDateStr}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCalendarEvents(data.events || []);
+      }
+    } catch (err) {
+      console.error('Error fetching calendar events:', err);
+    }
+  };
 
   // Fetch routes and reminders on mount
   useEffect(() => {
     fetchRoutes();
     fetchAllReminders();
     fetchImportSessions(undefined, undefined, 5); // Fetch last 5 imports
+    fetchCalendarEvents();
   }, [fetchRoutes, fetchAllReminders, fetchImportSessions]);
 
   // Update routes count when routes change
@@ -201,6 +238,7 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
           <UpcomingReminders 
             reminders={reminders}
             leads={allLeads}
+            calendarEvents={calendarEvents}
             onLeadClick={(leadId) => {
               // Find the lead and navigate to its status tab
               const lead = allLeads.find(l => l.id === leadId);
@@ -211,6 +249,7 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
             onReminderUpdate={() => {
               // Refresh reminders when a reminder is updated
               fetchAllReminders();
+              fetchCalendarEvents();
             }}
           />
         </div>

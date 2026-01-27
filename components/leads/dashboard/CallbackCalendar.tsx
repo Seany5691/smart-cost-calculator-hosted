@@ -10,11 +10,12 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, X, User, MapPin, Phone, Clock, Plus, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, User, MapPin, Phone, Clock, Plus, Calendar as CalendarIcon, Edit2, Trash2 } from 'lucide-react';
 import type { LeadReminder, Lead } from '@/lib/leads/types';
 import { getReminderTypeIcon, getReminderTypeLabel, getReminderPriorityLabel, formatReminderTime } from '@/lib/leads/types';
 import ShareCalendarModal from '@/components/leads/ShareCalendarModal';
 import AddCalendarEventModal from '@/components/leads/AddCalendarEventModal';
+import EditCalendarEventModal from '@/components/leads/EditCalendarEventModal';
 
 interface CallbackCalendarProps {
   reminders: LeadReminder[];
@@ -52,11 +53,14 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
   const [showPopover, setShowPopover] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [showEditEventModal, setShowEditEventModal] = useState(false);
   const [selectedDateForEvent, setSelectedDateForEvent] = useState<Date | undefined>();
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [sharedCalendars, setSharedCalendars] = useState<any[]>([]);
-  const [selectedCalendarUserId, setSelectedCalendarUserId] = useState<string | null>(null); // null = my calendar
+  const [selectedCalendarUserId, setSelectedCalendarUserId] = useState<string | null>(null);
+  const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -137,6 +141,44 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
       console.error('Error fetching calendar events:', err);
     } finally {
       setLoadingEvents(false);
+    }
+  };
+
+  // Delete calendar event
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!confirm('Are you sure you want to delete this event?')) return;
+    
+    setDeletingEventId(eventId);
+    try {
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`/api/calendar/events/${eventId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (response.ok) {
+        await fetchCalendarEvents(); // Refresh calendar
+        handleClosePopover();
+      } else {
+        throw new Error('Failed to delete event');
+      }
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      alert('Failed to delete event. Please try again.');
+    } finally {
+      setDeletingEventId(null);
     }
   };
 
@@ -302,68 +344,72 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
 
   return (
     <div className="relative">
-      {/* Month/Year header with navigation and Share button */}
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={handlePrevMonth}
-          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-          aria-label="Previous month"
-        >
-          <ChevronLeft className="w-5 h-5 text-emerald-300" />
-        </button>
+      {/* Redesigned Header with Glassmorphic Styling */}
+      <div className="space-y-3 mb-4">
+        {/* Calendar Selector - Top (if shared calendars exist) */}
+        {sharedCalendars.length > 0 && (
+          <div className="flex justify-center">
+            <select
+              value={selectedCalendarUserId || ''}
+              onChange={(e) => setSelectedCalendarUserId(e.target.value || null)}
+              className="px-4 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-white/15 transition-colors"
+            >
+              <option value="">📅 My Calendar</option>
+              {sharedCalendars.map(cal => (
+                <option key={cal.id} value={cal.owner_user_id}>
+                  📅 {cal.owner_name || cal.owner_username}'s Calendar
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         
-        <div className="flex flex-col items-center gap-2">
+        {/* Month Navigation - Middle */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={handlePrevMonth}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Previous month"
+          >
+            <ChevronLeft className="w-5 h-5 text-emerald-300" />
+          </button>
+          
           <h3 className="text-lg font-semibold text-white">
             {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </h3>
           
-          {/* Calendar Selector Dropdown */}
-          {sharedCalendars.length > 0 && (
-            <select
-              value={selectedCalendarUserId || ''}
-              onChange={(e) => setSelectedCalendarUserId(e.target.value || null)}
-              className="px-3 py-1.5 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-white/20 transition-colors"
-            >
-              <option value="">My Calendar</option>
-              {sharedCalendars.map(cal => (
-                <option key={cal.id} value={cal.owner_user_id}>
-                  {cal.owner_name || cal.owner_username}'s Calendar
-                </option>
-              ))}
-            </select>
-          )}
-          
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                setSelectedDateForEvent(undefined);
-                setShowAddEventModal(true);
-              }}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors flex items-center gap-2 font-medium"
-              title="Add a calendar event"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Event</span>
-            </button>
-            
-            <button
-              onClick={() => setShowShareModal(true)}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg transition-colors flex items-center gap-2 font-medium"
-              title="Share your calendar with other users"
-            >
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Share Calendar</span>
-            </button>
-          </div>
+          <button
+            onClick={handleNextMonth}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Next month"
+          >
+            <ChevronRight className="w-5 h-5 text-emerald-300" />
+          </button>
         </div>
         
-        <button
-          onClick={handleNextMonth}
-          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-          aria-label="Next month"
-        >
-          <ChevronRight className="w-5 h-5 text-emerald-300" />
-        </button>
+        {/* Action Buttons - Bottom (Glassmorphic) */}
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => {
+              setSelectedDateForEvent(undefined);
+              setShowAddEventModal(true);
+            }}
+            className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-emerald-500/30 rounded-lg text-white text-sm transition-colors flex items-center gap-2"
+            title="Add a calendar event"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Event</span>
+          </button>
+          
+          <button
+            onClick={() => setShowShareModal(true)}
+            className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-emerald-500/30 rounded-lg text-white text-sm transition-colors flex items-center gap-2"
+            title="Share your calendar with other users"
+          >
+            <User className="w-4 h-4" />
+            <span>Share</span>
+          </button>
+        </div>
       </div>
 
       {/* Day names row */}
@@ -509,7 +555,7 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
                           )}
 
                           {/* Time and Location */}
-                          <div className="space-y-1 text-sm text-emerald-300">
+                          <div className="space-y-1 text-sm text-emerald-300 mb-3">
                             <div className="flex items-center gap-2">
                               <Clock className="w-3.5 h-3.5" />
                               <span>
@@ -531,6 +577,36 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
                               </div>
                             )}
                           </div>
+
+                          {/* Edit/Delete Buttons - Only show if user is owner */}
+                          {event.is_owner && (
+                            <div className="flex items-center gap-2 pt-2 border-t border-blue-500/20">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedEvent(event);
+                                  setShowEditEventModal(true);
+                                }}
+                                className="flex-1 px-3 py-2 bg-white/10 hover:bg-white/15 border border-emerald-500/30 rounded-lg text-white text-sm transition-colors flex items-center justify-center gap-2"
+                                title="Edit event"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteEvent(event.id);
+                                }}
+                                disabled={deletingEventId === event.id}
+                                className="flex-1 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                title="Delete event"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>{deletingEventId === event.id ? 'Deleting...' : 'Delete'}</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -678,6 +754,21 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
         onSuccess={() => {
           // Refresh calendar events
           fetchCalendarEvents();
+        }}
+      />
+
+      {/* Edit Calendar Event Modal */}
+      <EditCalendarEventModal
+        isOpen={showEditEventModal}
+        onClose={() => {
+          setShowEditEventModal(false);
+          setSelectedEvent(null);
+        }}
+        event={selectedEvent}
+        onSuccess={() => {
+          // Refresh calendar events
+          fetchCalendarEvents();
+          handleClosePopover();
         }}
       />
     </div>

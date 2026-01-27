@@ -135,11 +135,26 @@ export class IndustryScraper {
       // Extract Google Maps URL from anchor tag (OPTIONAL - set to empty string if missing)
       let mapsUrl = '';
       try {
-        mapsUrl = await cardElement.$eval(
-          'a[href*="/maps/place/"]',
-          (el: Element) => el.getAttribute('href') || ''
-        );
+        // Use evaluate to extract href in browser context (more reliable)
+        mapsUrl = await cardElement.evaluate((el: Element) => {
+          const anchor = el.querySelector('a');
+          if (anchor) {
+            // Get the full resolved href (not just the attribute)
+            const href = (anchor as HTMLAnchorElement).href;
+            console.log('[IndustryScraper] Found anchor href:', href);
+            return href || '';
+          }
+          console.log('[IndustryScraper] No anchor found in card');
+          return '';
+        });
+        
+        if (mapsUrl) {
+          console.log(`[IndustryScraper] Extracted maps URL for ${name}: ${mapsUrl}`);
+        } else {
+          console.log(`[IndustryScraper] No maps URL found for ${name}`);
+        }
       } catch (error) {
+        console.log(`[IndustryScraper] Error extracting maps URL for ${name}:`, error);
         mapsUrl = '';
       }
 

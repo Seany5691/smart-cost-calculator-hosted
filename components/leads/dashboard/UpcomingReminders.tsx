@@ -18,11 +18,27 @@ interface UpcomingRemindersProps {
   leads: Lead[];
   onLeadClick: (leadId: string) => void;
   onReminderUpdate?: () => void;
+  calendarEvents?: CalendarEvent[];
+}
+
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  event_date: string;
+  event_time: string | null;
+  is_all_day: boolean;
+  event_type: string;
+  priority: string;
+  location: string | null;
+  created_by: string;
+  creator_username: string;
+  is_owner: boolean;
 }
 
 type TimeRange = 'all' | 'today' | 'tomorrow' | 'week' | 'next7';
 
-export default function UpcomingReminders({ reminders, leads, onLeadClick, onReminderUpdate }: UpcomingRemindersProps) {
+export default function UpcomingReminders({ reminders, leads, onLeadClick, onReminderUpdate, calendarEvents = [] }: UpcomingRemindersProps) {
   const [selectedRange, setSelectedRange] = useState<TimeRange>('all');
   const [updatingReminders, setUpdatingReminders] = useState<Set<string>>(new Set());
 
@@ -53,9 +69,9 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
     return leads.find(l => l.id === reminder.lead_id);
   };
 
-  // Filter and sort reminders based on selected time range
+  // Filter and sort reminders AND events based on selected time range
   // FIX #5: "This Week" vs "7 Days" logic
-  const filteredReminders = useMemo(() => {
+  const filteredItems = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today);
@@ -71,12 +87,9 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
     const next7DaysEnd = new Date(today);
     next7DaysEnd.setDate(next7DaysEnd.getDate() + 7);
     
-    // Filter by time range
-    let filtered = reminders.filter(reminder => {
-      // For 'all', show all reminders
-      if (selectedRange === 'all') {
-        return true;
-      }
+    // Filter reminders
+    let filteredReminders = reminders.filter(reminder => {
+      if (selectedRange === 'all') return true;
       
       const reminderDate = new Date(reminder.reminder_date);
       const reminderDateTime = new Date(
@@ -91,26 +104,58 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
         case 'tomorrow':
           return reminderDateTime.getTime() === tomorrow.getTime();
         case 'week':
-          // This Week: today through end of current week (Sunday)
           return reminderDateTime >= today && reminderDateTime < thisWeekEnd;
         case 'next7':
-          // Next 7 Days: consecutive 7 days from today
           return reminderDateTime >= today && reminderDateTime < next7DaysEnd;
         default:
           return true;
       }
     });
+
+    // Filter calendar events
+    let filteredEvents = calendarEvents.filter(event => {
+      if (selectedRange === 'all') return true;
+      
+      const eventDate = new Date(event.event_date);
+      const eventDateTime = new Date(
+        eventDate.getFullYear(),
+        eventDate.getMonth(),
+        eventDate.getDate()
+      );
+      
+      switch (selectedRange) {
+        case 'today':
+          return eventDateTime.getTime() === today.getTime();
+        case 'tomorrow':
+          return eventDateTime.getTime() === tomorrow.getTime();
+        case 'week':
+          return eventDateTime >= today && eventDateTime < thisWeekEnd;
+        case 'next7':
+          return eventDateTime >= today && eventDateTime < next7DaysEnd;
+        default:
+          return true;
+      }
+    });
     
-    // Sort by date and time (earliest first)
-    filtered.sort((a, b) => {
-      const dateA = new Date(`${a.reminder_date}T${a.reminder_time}`);
-      const dateB = new Date(`${b.reminder_date}T${b.reminder_time}`);
+    // Combine and sort by date/time (earliest first)
+    const combined: Array<{type: 'reminder' | 'event', data: LeadReminder | CalendarEvent}> = [
+      ...filteredReminders.map(r => ({ type: 'reminder' as const, data: r })),
+      ...filteredEvents.map(e => ({ type: 'event' as const, data: e }))
+    ];
+
+    combined.sort((a, b) => {
+      const dateA = a.type === 'reminder' 
+        ? new Date(`${(a.data as LeadReminder).reminder_date}T${(a.data as LeadReminder).reminder_time}`)
+        : new Date(`${(a.data as CalendarEvent).event_date}T${(a.data as CalendarEvent).event_time || '00:00'}`);
+      const dateB = b.type === 'reminder'
+        ? new Date(`${(b.data as LeadReminder).reminder_date}T${(b.data as LeadReminder).reminder_time}`)
+        : new Date(`${(b.data as CalendarEvent).event_date}T${(b.data as CalendarEvent).event_time || '00:00'}`);
       return dateA.getTime() - dateB.getTime();
     });
     
-    // Limit to 10 reminders
-    return filtered.slice(0, 10);
-  }, [reminders, selectedRange]);
+    // Limit to 10 items
+    return combined.slice(0, 10);
+  }, [reminders, calendarEvents, selectedRange]);
 
   // Check if reminder is overdue or today
   const getReminderStatus = (reminder: LeadReminder) => {
@@ -342,15 +387,96 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
         </button>
       </div>
 
-      {/* Reminders list */}
-      {filteredReminders.length === 0 ? (
+      {/* Reminders and Events list */}
+      {filteredItems.length === 0 ? (
         <div className="text-center py-8">
           <Clock className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
-          <p className="text-emerald-200">No reminders for this time range</p>
+          <p className="text-emerald-200">No reminders or events for this time range</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredReminders.map(reminder => {
+          {filteredItems.map(item => {
+            // Handle calendar events
+            if (item.type === 'event') {
+              const event = item.data as CalendarEvent;
+              const eventTypeIcons: Record<string, string> = {
+                event: '📅',
+                appointment: '🗓️',
+                meeting: '🤝',
+                deadline: '⏰',
+                reminder: '🔔',
+                other: '📌'
+              };
+
+              return (
+                <div
+                  key={`event-${event.id}`}
+                  className="w-full p-4 rounded-xl border-2 transition-all min-h-[44px] border-blue-500/30 bg-blue-500/10"
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Type Icon */}
+                    <div className="flex-shrink-0 mt-1 text-2xl" title={event.event_type}>
+                      {eventTypeIcons[event.event_type] || '📅'}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Header with Priority */}
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${
+                          event.priority === 'high' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                          event.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                          'bg-green-500/20 text-green-400 border-green-500/30'
+                        }`}>
+                          {event.priority.toUpperCase()}
+                        </span>
+                        {!event.is_owner && (
+                          <span className="px-2 py-0.5 text-xs font-semibold rounded-full border bg-purple-500/20 text-purple-400 border-purple-500/30">
+                            Shared
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <div className="font-semibold text-white mb-2 truncate">
+                        {event.title}
+                      </div>
+
+                      {/* Description */}
+                      {event.description && (
+                        <p className="text-sm text-white/90 mb-2 truncate">
+                          {event.description}
+                        </p>
+                      )}
+
+                      {/* Date and time */}
+                      <div className="flex items-center gap-3 text-sm text-white/80 flex-wrap">
+                        <span>
+                          {new Date(event.event_date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                        <span>
+                          {event.is_all_day ? 'All day' : 
+                            event.event_time ? new Date(`2000-01-01T${event.event_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 
+                            'No time set'}
+                        </span>
+                        {event.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5" />
+                            {event.location}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // Handle reminders
+            const reminder = item.data as LeadReminder;
             const status = getReminderStatus(reminder);
             const colors = getColorClasses(reminder, status);
             const isCompleted = reminder.status === 'completed' || reminder.completed;
@@ -360,7 +486,7 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
             
             return (
               <div
-                key={reminder.id}
+                key={`reminder-${reminder.id}`}
                 className={`
                   w-full p-4 rounded-xl border-2 transition-all
                   min-h-[44px]

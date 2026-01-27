@@ -108,117 +108,114 @@ export default function ScrapingAnalytics({
         <h2 className="text-xl font-bold text-white">Scraping Analytics</h2>
       </div>
 
-      {/* Scrollable content container with fixed height */}
-      <div className="max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* Avg Businesses per Town */}
-          <div className="glass-card p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-5 h-5 text-rose-400" />
-              <span className="text-sm text-gray-400">Avg per Town</span>
-            </div>
-            <div className="text-2xl font-bold text-white">
-              {analytics.avgBusinessesPerTown}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">businesses</div>
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Avg Businesses per Town */}
+        <div className="glass-card p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-5 h-5 text-rose-400" />
+            <span className="text-sm text-gray-400">Avg per Town</span>
           </div>
-
-          {/* Avg Time per Town */}
-          <div className="glass-card p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-5 h-5 text-blue-400" />
-              <span className="text-sm text-gray-400">Avg Time</span>
-            </div>
-            <div className="text-2xl font-bold text-white">
-              {analytics.avgTimeFormatted}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">minutes per town</div>
+          <div className="text-2xl font-bold text-white">
+            {analytics.avgBusinessesPerTown}
           </div>
+          <div className="text-xs text-gray-500 mt-1">businesses</div>
+        </div>
 
-          {/* Phone Coverage */}
-          <div className="glass-card p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Phone className="w-5 h-5 text-green-400" />
-              <span className="text-sm text-gray-400">Phone Coverage</span>
-            </div>
-            <div className="text-2xl font-bold text-white">
-              {analytics.phonePercentage}%
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {analytics.withPhone} of {businesses.length}
-            </div>
+        {/* Avg Time per Town */}
+        <div className="glass-card p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="w-5 h-5 text-blue-400" />
+            <span className="text-sm text-gray-400">Avg Time</span>
           </div>
+          <div className="text-2xl font-bold text-white">
+            {analytics.avgTimeFormatted}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">minutes per town</div>
+        </div>
 
-          {/* Total Businesses */}
-          <div className="glass-card p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Building2 className="w-5 h-5 text-purple-400" />
-              <span className="text-sm text-gray-400">Total Scraped</span>
-            </div>
-            <div className="text-2xl font-bold text-white">
-              {businesses.length}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">businesses</div>
+        {/* Phone Coverage */}
+        <div className="glass-card p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Phone className="w-5 h-5 text-green-400" />
+            <span className="text-sm text-gray-400">Phone Coverage</span>
+          </div>
+          <div className="text-2xl font-bold text-white">
+            {analytics.phonePercentage}%
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {analytics.withPhone} of {businesses.length}
           </div>
         </div>
 
-        {/* Distributions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Provider Distribution */}
-          <div className="glass-card p-4">
-            <h3 className="text-sm font-semibold text-gray-300 mb-3">
-              Provider Distribution
-            </h3>
-            <div className="space-y-2">
-              {analytics.providerDistribution.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-300 truncate flex-1">{item.provider}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-medium">{item.count}</span>
-                    <span className="text-gray-500">({item.percentage}%)</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Total Businesses */}
+        <div className="glass-card p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Building2 className="w-5 h-5 text-purple-400" />
+            <span className="text-sm text-gray-400">Total Scraped</span>
           </div>
-
-          {/* Top Towns */}
-          <div className="glass-card p-4">
-            <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              Top Towns
-            </h3>
-            <div className="space-y-2">
-              {analytics.townDistribution.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-300 truncate flex-1">{item.town}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-medium">{item.count}</span>
-                    <span className="text-gray-500">({item.percentage}%)</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="text-2xl font-bold text-white">
+            {businesses.length}
           </div>
+          <div className="text-xs text-gray-500 mt-1">businesses</div>
+        </div>
+      </div>
 
-          {/* Top Industries */}
-          <div className="glass-card p-4">
-            <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-              <Building2 className="w-4 h-4" />
-              Top Industries
-            </h3>
-            <div className="space-y-2">
-              {analytics.industryDistribution.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-300 truncate flex-1">{item.industry}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-medium">{item.count}</span>
-                    <span className="text-gray-500">({item.percentage}%)</span>
-                  </div>
+      {/* Distributions - Each box is scrollable */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Provider Distribution */}
+        <div className="glass-card p-4 h-[200px] flex flex-col">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3 flex-shrink-0">
+            Provider Distribution
+          </h3>
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+            {analytics.providerDistribution.map((item, index) => (
+              <div key={index} className="flex items-center justify-between text-sm">
+                <span className="text-gray-300 truncate flex-1">{item.provider}</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-white font-medium">{item.count}</span>
+                  <span className="text-gray-500">({item.percentage}%)</span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top Towns */}
+        <div className="glass-card p-4 h-[200px] flex flex-col">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2 flex-shrink-0">
+            <MapPin className="w-4 h-4" />
+            Top Towns
+          </h3>
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+            {analytics.townDistribution.map((item, index) => (
+              <div key={index} className="flex items-center justify-between text-sm">
+                <span className="text-gray-300 truncate flex-1">{item.town}</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-white font-medium">{item.count}</span>
+                  <span className="text-gray-500">({item.percentage}%)</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top Industries */}
+        <div className="glass-card p-4 h-[200px] flex flex-col">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2 flex-shrink-0">
+            <Building2 className="w-4 h-4" />
+            Top Industries
+          </h3>
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+            {analytics.industryDistribution.map((item, index) => (
+              <div key={index} className="flex items-center justify-between text-sm">
+                <span className="text-gray-300 truncate flex-1">{item.industry}</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-white font-medium">{item.count}</span>
+                  <span className="text-gray-500">({item.percentage}%)</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

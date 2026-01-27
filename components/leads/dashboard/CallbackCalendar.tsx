@@ -84,11 +84,12 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
       const dateStr = date.toISOString().split('T')[0];
       const isToday = date.getTime() === today.getTime();
       
-      // Find reminders on this date
+      // FIX #6: Find reminders on this date - ensure proper date comparison
       const dateReminders = reminders.filter(reminder => {
         if (!reminder.reminder_date) return false;
-        const reminderDate = new Date(reminder.reminder_date);
-        return reminderDate.toISOString().split('T')[0] === dateStr;
+        // Parse the reminder date properly to avoid timezone issues
+        const reminderDateStr = reminder.reminder_date.split('T')[0];
+        return reminderDateStr === dateStr;
       });
       
       dates.push({
@@ -150,6 +151,7 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
   }, [selectedDate, reminders]);
 
   // Get color for date based on reminder status
+  // FIX #1: Text must be black when day has reminders for visibility
   const getDateColor = (calendarDate: CalendarDate) => {
     if (calendarDate.reminders.length === 0) return '';
     
@@ -159,12 +161,13 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
     const todayTime = today.getTime();
     
     // Requirement: 33.11 - Color coding: past (red), today (blue), future (green)
+    // Text is always black for visibility when highlighted
     if (dateTime < todayTime) {
-      return 'bg-red-100 text-red-700 border-red-300';
+      return 'bg-red-100 text-black border-red-300';
     } else if (dateTime === todayTime) {
-      return 'bg-blue-100 text-blue-700 border-blue-300';
+      return 'bg-blue-100 text-black border-blue-300';
     } else {
-      return 'bg-green-100 text-green-700 border-green-300';
+      return 'bg-green-100 text-black border-green-300';
     }
   };
 

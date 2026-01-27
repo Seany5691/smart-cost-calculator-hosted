@@ -742,17 +742,6 @@ export default function ScraperPage() {
           </div>
         </div>
 
-        {/* Analytics Card - Inline (not modal) */}
-        {hasData && (
-          <ScrapingAnalytics
-            isOpen={true}
-            onClose={() => {}}
-            businesses={businesses}
-            progress={progress}
-            elapsedTime={elapsedTime}
-          />
-        )}
-
         {/* Progress & Summary Stats (Top Section) - Stacked on mobile */}
         {(isActive || status === 'completed' || status === 'stopped' || hasData) && (
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">

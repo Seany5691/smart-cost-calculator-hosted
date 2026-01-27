@@ -54,13 +54,22 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
   };
 
   // Filter and sort reminders based on selected time range
+  // FIX #5: "This Week" vs "7 Days" logic
   const filteredReminders = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const weekEnd = new Date(today);
-    weekEnd.setDate(weekEnd.getDate() + 7);
+    
+    // "This Week" = Remaining days in current week (today through Sunday)
+    const currentDayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
+    const daysUntilSunday = 7 - currentDayOfWeek; // Days remaining in week including today
+    const thisWeekEnd = new Date(today);
+    thisWeekEnd.setDate(thisWeekEnd.getDate() + daysUntilSunday);
+    
+    // "7 Days" = Next consecutive 7 days from today
+    const next7DaysEnd = new Date(today);
+    next7DaysEnd.setDate(next7DaysEnd.getDate() + 7);
     
     // Filter by time range
     let filtered = reminders.filter(reminder => {
@@ -82,9 +91,11 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
         case 'tomorrow':
           return reminderDateTime.getTime() === tomorrow.getTime();
         case 'week':
-          return reminderDateTime >= today && reminderDateTime < weekEnd;
+          // This Week: today through end of current week (Sunday)
+          return reminderDateTime >= today && reminderDateTime < thisWeekEnd;
         case 'next7':
-          return reminderDateTime >= today && reminderDateTime < weekEnd;
+          // Next 7 Days: consecutive 7 days from today
+          return reminderDateTime >= today && reminderDateTime < next7DaysEnd;
         default:
           return true;
       }

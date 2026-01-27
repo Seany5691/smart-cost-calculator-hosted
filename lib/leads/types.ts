@@ -100,6 +100,53 @@ export interface LeadReminder {
 }
 
 // =====================================================
+// Calendar Event Interface
+// =====================================================
+
+export type CalendarEventType = 'event' | 'appointment' | 'meeting' | 'deadline' | 'reminder' | 'other';
+
+export interface CalendarEvent {
+  id: string;
+  user_id: string; // Owner of the event (whose calendar it appears on)
+  title: string;
+  description?: string | null;
+  event_date: string; // Date in YYYY-MM-DD format
+  event_time?: string | null; // Time in HH:MM format (24-hour)
+  is_all_day: boolean;
+  event_type: CalendarEventType;
+  priority: ReminderPriority; // Reuse same priority type
+  location?: string | null;
+  created_by: string; // User who created the event (may differ from owner if shared)
+  created_at: string;
+  updated_at: string;
+}
+
+// =====================================================
+// Calendar Share Interface
+// =====================================================
+
+export interface CalendarShare {
+  id: string;
+  owner_user_id: string; // User who owns the calendar
+  shared_with_user_id: string; // User who can view the calendar
+  can_add_events: boolean; // Whether sharee can add events
+  can_edit_events: boolean; // Whether sharee can edit events
+  created_at: string;
+  updated_at: string;
+}
+
+// =====================================================
+// Calendar Share with User Info
+// =====================================================
+
+export interface CalendarShareWithUser extends CalendarShare {
+  owner_username?: string;
+  owner_email?: string;
+  shared_with_username?: string;
+  shared_with_email?: string;
+}
+
+// =====================================================
 // Lead Attachment Interface
 // =====================================================
 

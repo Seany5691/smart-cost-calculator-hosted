@@ -28,6 +28,8 @@ export default function AddReminderModal({
   const [message, setMessage] = useState('');
   const [reminderDate, setReminderDate] = useState('');
   const [reminderTime, setReminderTime] = useState('09:00');
+  const [reminderType, setReminderType] = useState<'call' | 'email' | 'meeting' | 'task' | 'followup' | 'quote' | 'document'>('task');
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -166,8 +168,8 @@ export default function AddReminderModal({
           message: message.trim(),
           reminder_date: reminderDate,
           reminder_time: reminderTime,
-          reminder_type: 'task',
-          priority: 'medium',
+          reminder_type: reminderType,
+          priority: priority,
           status: 'pending',
           completed: false,
           shared_with_user_ids: selectedUserIds // Only selected users will receive the reminder
@@ -183,6 +185,8 @@ export default function AddReminderModal({
       setMessage('');
       setReminderDate('');
       setReminderTime('09:00');
+      setReminderType('task');
+      setPriority('medium');
       setSelectedUserIds([]);
       onSuccess?.();
       onClose();
@@ -199,6 +203,8 @@ export default function AddReminderModal({
       setMessage('');
       setReminderDate('');
       setReminderTime('09:00');
+      setReminderType('task');
+      setPriority('medium');
       setSelectedUserIds([]);
       setError('');
       onClose();
@@ -272,6 +278,77 @@ export default function AddReminderModal({
             />
           </div>
 
+          {/* FIX #4: Add Type Selection */}
+          <div>
+            <label className="block text-white font-medium mb-2">
+              Type <span className="text-red-400">*</span>
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {(['call', 'email', 'meeting', 'task', 'followup', 'quote', 'document'] as const).map(type => {
+                const icons = {
+                  call: '📞',
+                  email: '📧',
+                  meeting: '🤝',
+                  task: '✅',
+                  followup: '🔄',
+                  quote: '💰',
+                  document: '📄'
+                };
+                const labels = {
+                  call: 'Call',
+                  email: 'Email',
+                  meeting: 'Meeting',
+                  task: 'Task',
+                  followup: 'Follow Up',
+                  quote: 'Quote',
+                  document: 'Document'
+                };
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setReminderType(type)}
+                    disabled={loading}
+                    className={`p-3 rounded-lg border transition-all ${
+                      reminderType === type
+                        ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                        : 'bg-white/5 border-emerald-500/20 text-white/60 hover:bg-white/10 hover:border-emerald-500/30'
+                    }`}
+                  >
+                    <div className="text-2xl mb-1">{icons[type]}</div>
+                    <div className="text-xs">{labels[type]}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* FIX #4: Add Priority Selection */}
+          <div>
+            <label className="block text-white font-medium mb-2">
+              Priority <span className="text-red-400">*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              {(['high', 'medium', 'low'] as const).map(priorityOption => (
+                <button
+                  key={priorityOption}
+                  type="button"
+                  onClick={() => setPriority(priorityOption)}
+                  disabled={loading}
+                  className={`p-3 rounded-lg border transition-all ${
+                    priority === priorityOption
+                      ? priorityOption === 'high' ? 'bg-red-500/20 border-red-500/50 text-red-400' :
+                        priorityOption === 'medium' ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400' :
+                        'bg-green-500/20 border-green-500/50 text-green-400'
+                      : 'bg-white/5 border-emerald-500/20 text-white/60 hover:bg-white/10 hover:border-emerald-500/30'
+                  }`}
+                >
+                  <div className="text-sm font-medium capitalize">{priorityOption}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Date and Time */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -286,7 +363,10 @@ export default function AddReminderModal({
                 required
                 min={new Date().toISOString().split('T')[0]}
                 disabled={loading}
-                className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
+                style={{
+                  colorScheme: 'dark'
+                }}
               />
             </div>
 
@@ -295,14 +375,69 @@ export default function AddReminderModal({
                 <Clock className="w-4 h-4 inline mr-1" />
                 Time <span className="text-red-400">*</span>
               </label>
-              <input
-                type="time"
+              <select
                 value={reminderTime}
                 onChange={(e) => setReminderTime(e.target.value)}
                 required
                 disabled={loading}
-                className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-              />
+                className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.5rem center',
+                  backgroundSize: '1.5em 1.5em',
+                  paddingRight: '2.5rem'
+                }}
+              >
+                <option value="00:00">12:00 AM</option>
+                <option value="00:30">12:30 AM</option>
+                <option value="01:00">1:00 AM</option>
+                <option value="01:30">1:30 AM</option>
+                <option value="02:00">2:00 AM</option>
+                <option value="02:30">2:30 AM</option>
+                <option value="03:00">3:00 AM</option>
+                <option value="03:30">3:30 AM</option>
+                <option value="04:00">4:00 AM</option>
+                <option value="04:30">4:30 AM</option>
+                <option value="05:00">5:00 AM</option>
+                <option value="05:30">5:30 AM</option>
+                <option value="06:00">6:00 AM</option>
+                <option value="06:30">6:30 AM</option>
+                <option value="07:00">7:00 AM</option>
+                <option value="07:30">7:30 AM</option>
+                <option value="08:00">8:00 AM</option>
+                <option value="08:30">8:30 AM</option>
+                <option value="09:00">9:00 AM</option>
+                <option value="09:30">9:30 AM</option>
+                <option value="10:00">10:00 AM</option>
+                <option value="10:30">10:30 AM</option>
+                <option value="11:00">11:00 AM</option>
+                <option value="11:30">11:30 AM</option>
+                <option value="12:00">12:00 PM</option>
+                <option value="12:30">12:30 PM</option>
+                <option value="13:00">1:00 PM</option>
+                <option value="13:30">1:30 PM</option>
+                <option value="14:00">2:00 PM</option>
+                <option value="14:30">2:30 PM</option>
+                <option value="15:00">3:00 PM</option>
+                <option value="15:30">3:30 PM</option>
+                <option value="16:00">4:00 PM</option>
+                <option value="16:30">4:30 PM</option>
+                <option value="17:00">5:00 PM</option>
+                <option value="17:30">5:30 PM</option>
+                <option value="18:00">6:00 PM</option>
+                <option value="18:30">6:30 PM</option>
+                <option value="19:00">7:00 PM</option>
+                <option value="19:30">7:30 PM</option>
+                <option value="20:00">8:00 PM</option>
+                <option value="20:30">8:30 PM</option>
+                <option value="21:00">9:00 PM</option>
+                <option value="21:30">9:30 PM</option>
+                <option value="22:00">10:00 PM</option>
+                <option value="22:30">10:30 PM</option>
+                <option value="23:00">11:00 PM</option>
+                <option value="23:30">11:30 PM</option>
+              </select>
             </div>
           </div>
 

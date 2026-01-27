@@ -10,7 +10,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, X, User, MapPin, Phone, Clock, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, User, MapPin, Phone, Clock, Plus, Calendar as CalendarIcon } from 'lucide-react';
 import type { LeadReminder, Lead } from '@/lib/leads/types';
 import { getReminderTypeIcon, getReminderTypeLabel, getReminderPriorityLabel, formatReminderTime } from '@/lib/leads/types';
 import ShareCalendarModal from '@/components/leads/ShareCalendarModal';

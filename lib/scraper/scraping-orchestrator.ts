@@ -271,9 +271,26 @@ export class ScrapingOrchestrator {
       // Update businesses with provider information
       for (const business of this.allBusinesses) {
         if (business.phone && business.phone.trim() !== '') {
-          const provider = providerMap.get(business.phone);
+          // Try exact match first
+          let provider = providerMap.get(business.phone);
+          
+          // If no exact match, try cleaned version (remove spaces, dashes, etc.)
+          if (!provider) {
+            const cleanedPhone = business.phone.replace(/\D/g, '');
+            // Try to find a match with cleaned phone number
+            for (const [mapPhone, mapProvider] of providerMap.entries()) {
+              const cleanedMapPhone = mapPhone.replace(/\D/g, '');
+              if (cleanedPhone === cleanedMapPhone) {
+                provider = mapProvider;
+                break;
+              }
+            }
+          }
+          
           if (provider) {
             business.provider = provider;
+          } else {
+            console.warn(`[Orchestrator] No provider found for phone: ${business.phone}`);
           }
         }
       }

@@ -89,15 +89,32 @@ async function main() {
   log('✅ DATABASE_URL is set', 'green');
   
   // Create database pool
-  const pool = new Pool({
-    connectionString: databaseUrl,
-    ssl: databaseUrl.includes('localhost') ? false : { rejectUnauthorized: false }
-  });
+  // Try without SSL first (for local databases), then with SSL if that fails
+  let pool;
   
   try {
+    // First attempt: no SSL (for local databases)
+    pool = new Pool({
+      connectionString: databaseUrl,
+      ssl: false
+    });
+    
     // Test connection
     await pool.query('SELECT NOW()');
-    log('✅ Database connection successful', 'green');
+    log('✅ Database connection successful (no SSL)', 'green');
+  } catch (error) {
+    // If no-SSL fails, try with SSL (for remote databases)
+    log('⚠️  No-SSL connection failed, trying with SSL...', 'yellow');
+    
+    pool = new Pool({
+      connectionString: databaseUrl,
+      ssl: { rejectUnauthorized: false }
+    });
+    
+    // Test connection
+    await pool.query('SELECT NOW()');
+    log('✅ Database connection successful (with SSL)', 'green');
+  }
     
     // Run migrations
     const migration015Success = await runMigration(

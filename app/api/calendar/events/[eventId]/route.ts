@@ -92,6 +92,8 @@ export async function PATCH(
     const { eventId } = params;
     const body = await request.json();
 
+    console.log('[CALENDAR EVENT UPDATE] Request:', { eventId, userId, body });
+
     // Check if user owns the event or has edit permission
     const eventCheck = await pool.query(
       `SELECT ce.user_id, ce.created_by
@@ -156,21 +158,25 @@ export async function PATCH(
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
     values.push(eventId);
 
-    const query = `
+    const queryText = `
       UPDATE calendar_events 
       SET ${updates.join(', ')}
       WHERE id = $${paramIndex}
       RETURNING *
     `;
 
-    const result = await pool.query(query, values);
+    console.log('[CALENDAR EVENT UPDATE] Query:', { queryText, values });
+
+    const result = await pool.query(queryText, values);
+
+    console.log('[CALENDAR EVENT UPDATE] Success:', result.rows[0]);
 
     return NextResponse.json({
       message: 'Event updated successfully',
       event: result.rows[0]
     });
   } catch (error) {
-    console.error('Error updating calendar event:', error);
+    console.error('[CALENDAR EVENT UPDATE] Error:', error);
     return NextResponse.json(
       { error: 'Failed to update calendar event' },
       { status: 500 }
@@ -201,6 +207,8 @@ export async function DELETE(
 
     const userId = decoded.userId;
     const { eventId } = params;
+
+    console.log('[CALENDAR EVENT DELETE] Request:', { eventId, userId });
 
     // Check if user owns the event or created it
     const eventCheck = await pool.query(
@@ -234,11 +242,13 @@ export async function DELETE(
       [eventId]
     );
 
+    console.log('[CALENDAR EVENT DELETE] Success');
+
     return NextResponse.json({
       message: 'Event deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting calendar event:', error);
+    console.error('[CALENDAR EVENT DELETE] Error:', error);
     return NextResponse.json(
       { error: 'Failed to delete calendar event' },
       { status: 500 }

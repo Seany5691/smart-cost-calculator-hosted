@@ -169,13 +169,22 @@ export async function POST(request: NextRequest) {
 
     // If multi-day event, create additional entries for each day
     if (is_multi_day && end_date && end_date > event_date) {
-      const startDateObj = new Date(event_date);
-      const endDateObj = new Date(end_date);
+      // Parse dates without timezone conversion to avoid date shifts
+      const [startYear, startMonth, startDay] = event_date.split('-').map(Number);
+      const [endYear, endMonth, endDay] = end_date.split('-').map(Number);
+      
+      // Create date objects in local timezone
+      const startDateObj = new Date(startYear, startMonth - 1, startDay);
+      const endDateObj = new Date(endYear, endMonth - 1, endDay);
       const currentDate = new Date(startDateObj);
       currentDate.setDate(currentDate.getDate() + 1); // Start from day after first
 
       while (currentDate <= endDateObj) {
-        const dateStr = currentDate.toISOString().split('T')[0];
+        // Format date as YYYY-MM-DD without timezone conversion
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
         
         await query(
           `INSERT INTO calendar_events (

@@ -21,6 +21,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { sessionIds, listName } = body;
 
+    console.log('[SCRAPER IMPORT] Request received:', { sessionIds, listName, userId: decoded.userId });
+
     if (!sessionIds || !Array.isArray(sessionIds) || sessionIds.length === 0) {
       return NextResponse.json({ error: 'At least one session ID is required' }, { status: 400 });
     }
@@ -35,6 +37,8 @@ export async function POST(request: NextRequest) {
     // Fetch scraper session data for all selected sessions
     let allResults: any[] = [];
     for (const sessionId of sessionIds) {
+      console.log('[SCRAPER IMPORT] Fetching session:', sessionId);
+      
       // Use the businesses endpoint to fetch session data
       const sessionResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scraper/sessions/${sessionId}/businesses`, {
         headers: {
@@ -43,15 +47,20 @@ export async function POST(request: NextRequest) {
       });
 
       if (!sessionResponse.ok) {
-        throw new Error(`Failed to fetch scraper session ${sessionId}`);
+        const errorText = await sessionResponse.text();
+        console.error('[SCRAPER IMPORT] Failed to fetch session:', sessionId, errorText);
+        throw new Error(`Failed to fetch scraper session ${sessionId}: ${sessionResponse.status}`);
       }
 
       const sessionData = await sessionResponse.json();
+      console.log('[SCRAPER IMPORT] Session data received:', { sessionId, businessCount: sessionData.businesses?.length || 0 });
       
       if (sessionData.businesses && Array.isArray(sessionData.businesses)) {
         allResults = allResults.concat(sessionData.businesses);
       }
     }
+
+    console.log('[SCRAPER IMPORT] Total results to import:', allResults.length);
 
     if (allResults.length === 0) {
       await client.query('ROLLBACK');
@@ -64,6 +73,7 @@ export async function POST(request: NextRequest) {
       [decoded.userId]
     );
     let currentNumber = maxNumberResult.rows[0].max_number;
+    console.log('[SCRAPER IMPORT] Starting from lead number:', currentNumber + 1);
 
     // Import leads
     let importedCount = 0;
@@ -140,6 +150,8 @@ export async function POST(request: NextRequest) {
     // Commit transaction
     await client.query('COMMIT');
 
+    console.log('[SCRAPER IMPORT] Import completed:', { importedCount, totalResults: allResults.length, errors: errors.length });
+
     return NextResponse.json({
       success: true,
       importedCount,
@@ -148,7 +160,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     await client.query('ROLLBACK');
-    console.error('Error importing from scraper:', error);
+    console.error('[SCRAPER IMPORT] Error importing from scraper:', error);
+    console.error('[SCRAPER IMPORT] Error stack:', error.stack);
     return NextResponse.json(
       { error: error.message || 'Failed to import from scraper' },
       { status: 500 }

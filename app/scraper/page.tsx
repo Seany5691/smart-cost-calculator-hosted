@@ -25,6 +25,7 @@ import ExportToLeadsModal from '@/components/scraper/ExportToLeadsModal';
 import SessionSelector from '@/components/scraper/SessionSelector';
 import ProviderLookupProgress from '@/components/scraper/ProviderLookupProgress';
 import DuplicateWarningModal from '@/components/scraper/DuplicateWarningModal';
+import ActiveSessionBanner from '@/components/scraper/ActiveSessionBanner';
 
 function getDefaultIndustries(): string[] {
   return [
@@ -148,6 +149,10 @@ export default function ScraperPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
+  // Active session detection (Resume Viewing)
+  const [activeSession, setActiveSession] = useState<any>(null);
+  const [showActiveBanner, setShowActiveBanner] = useState(false);
+
   // Load industries from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem('smart-scrape-industries');
@@ -245,7 +250,45 @@ export default function ScraperPage() {
     }
   }, [isHydrated, isAuthenticated, addBusinesses, clearAll]);
 
-  // Sync industries from store
+  // Check for active scraping session (Resume Viewing)
+  useEffect(() => {
+    const checkActiveSession = async () => {
+      try {
+        const authStorage = localStorage.getItem('auth-storage');
+        if (!authStorage) return;
+
+        const authData = JSON.parse(authStorage);
+        const token = authData.token;
+        if (!token) return;
+
+        // Check if user has an active session
+        const response = await fetch('/api/scraper/active-session', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        if (data.hasActiveSession && data.session) {
+          console.log('[Scraper] Active session detected:', data.session.name);
+          setActiveSession(data.session);
+          setShowActiveBanner(true);
+        }
+      } catch (error) {
+        console.error('[Scraper] Error checking active session:', error);
+        // Fail silently
+      }
+    };
+
+    // Only check if authenticated, hydrated, and not currently scraping
+    if (isHydrated && isAuthenticated && status === 'idle') {
+      checkActiveSession();
+    }
+  }, [isHydrated, isAuthenticated, status]);
+
   useEffect(() => {
     if (industries.length > 0) {
       setSelectedIndustries(industries);
@@ -656,6 +699,29 @@ export default function ScraperPage() {
   const isActive = status === 'running' || status === 'paused';
   const hasData = businesses.length > 0;
 
+  // Handlers for active session banner
+  const handleReconnect = () => {
+    if (!activeSession) return;
+    
+    // Set session ID and status to reconnect using store actions
+    useScraperStore.getState().setSessionId(activeSession.id);
+    useScraperStore.getState().setStatus('running');
+    setShowActiveBanner(false);
+    
+    toast.success('Reconnected to scraping session', {
+      message: `Viewing live progress for: ${activeSession.name}`,
+      section: 'scraper'
+    });
+  };
+
+  const handleDismissBanner = () => {
+    setShowActiveBanner(false);
+    toast.info('Banner dismissed', {
+      message: 'Scraping continues in background. You can reconnect anytime.',
+      section: 'scraper'
+    });
+  };
+
   // Calculate summary stats
   const summaryStats = useMemo(() => {
     return {
@@ -691,6 +757,17 @@ export default function ScraperPage() {
             Scrape business data from Google Maps for multiple towns and industries
           </p>
         </div>
+
+        {/* Active Session Banner (Resume Viewing) */}
+        {showActiveBanner && activeSession && (
+          <ActiveSessionBanner
+            sessionName={activeSession.name}
+            sessionId={activeSession.id}
+            createdAt={activeSession.createdAt}
+            onReconnect={handleReconnect}
+            onDismiss={handleDismissBanner}
+          />
+        )}
 
         {/* Lookup Tools - Side by Side on desktop, stacked on mobile */}
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">

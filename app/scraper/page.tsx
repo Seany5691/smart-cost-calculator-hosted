@@ -150,6 +150,7 @@ export default function ScraperPage() {
   
   // New Phase 3 & 4 modals
   const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const [templateMode, setTemplateMode] = useState<'save' | 'load'>('load');
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showRetryFailed, setShowRetryFailed] = useState(false);
   const [showBatchExport, setShowBatchExport] = useState(false);
@@ -914,7 +915,10 @@ export default function ScraperPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Templates Button */}
               <button
-                onClick={() => setShowTemplateManager(true)}
+                onClick={() => {
+                  setTemplateMode('load');
+                  setShowTemplateManager(true);
+                }}
                 className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg transition-all shadow-lg hover:shadow-purple-500/50"
               >
                 <FolderOpen className="w-5 h-5" />
@@ -1001,19 +1005,17 @@ export default function ScraperPage() {
         {/* Template Manager Modal (Phase 3) */}
         <TemplateManager
           isOpen={showTemplateManager}
+          mode={templateMode}
           onClose={() => setShowTemplateManager(false)}
           currentTowns={towns}
           currentIndustries={industries}
-          onLoadTemplate={(template) => {
-            setTowns(template.towns);
-            setIndustries(template.industries);
-            setTownInput(template.towns.join('\n'));
-            setSelectedIndustries(template.industries);
+          onLoadTemplate={(loadedTowns, loadedIndustries) => {
+            setTowns(loadedTowns);
+            setIndustries(loadedIndustries);
+            setTownInput(loadedTowns.join('\n'));
+            setSelectedIndustries(loadedIndustries);
             setShowTemplateManager(false);
-            toast.success('Template loaded', {
-              message: `Loaded template: ${template.name}`,
-              section: 'scraper'
-            });
+            toast.success('Template loaded successfully');
           }}
         />
 
@@ -1031,13 +1033,13 @@ export default function ScraperPage() {
           isOpen={showRetryFailed}
           onClose={() => setShowRetryFailed(false)}
           failedTowns={progress.failedTowns || []}
-          onRetry={async (townsToRetry) => {
+          onRetry={() => {
             setShowRetryFailed(false);
             // TODO: Implement retry logic
-            toast.info('Retry feature', {
-              message: 'Retry functionality will be implemented',
-              section: 'scraper'
-            });
+            toast.info('Retry functionality will be implemented');
+          }}
+          onSkip={() => {
+            setShowRetryFailed(false);
           }}
         />
 

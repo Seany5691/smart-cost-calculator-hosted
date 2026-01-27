@@ -49,6 +49,8 @@ export interface ProgressState {
   totalBusinesses: number;
   startTime: number;
   townCompletionTimes: number[];
+  failedTowns?: string[]; // Phase 4: Track failed towns
+  successfulTowns?: string[]; // Phase 4: Track successful towns
 }
 
 export interface LookupProgressState {

@@ -7,31 +7,33 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { TrendingUp, Clock, MapPin, Building2, Phone, BarChart3 } from 'lucide-react';
-import { Business } from '@/lib/store/scraper';
+import { TrendingUp, Clock, MapPin, Building2, Phone, BarChart3, X } from 'lucide-react';
+import { Business, ProgressState } from '@/lib/store/scraper';
 
 interface ScrapingAnalyticsProps {
+  isOpen: boolean;
+  onClose: () => void;
   businesses: Business[];
-  completedTowns: number;
-  totalDuration: number;
-  townCompletionTimes: number[];
+  progress: ProgressState;
+  elapsedTime: number;
 }
 
 export default function ScrapingAnalytics({
+  isOpen,
+  onClose,
   businesses,
-  completedTowns,
-  totalDuration,
-  townCompletionTimes,
+  progress,
+  elapsedTime,
 }: ScrapingAnalyticsProps) {
   const analytics = useMemo(() => {
     // Average businesses per town
-    const avgBusinessesPerTown = completedTowns > 0
-      ? (businesses.length / completedTowns).toFixed(1)
+    const avgBusinessesPerTown = progress.completedTowns > 0
+      ? (businesses.length / progress.completedTowns).toFixed(1)
       : '0';
 
     // Average time per town
-    const avgTimePerTown = townCompletionTimes.length > 0
-      ? townCompletionTimes.reduce((a, b) => a + b, 0) / townCompletionTimes.length
+    const avgTimePerTown = progress.townCompletionTimes.length > 0
+      ? progress.townCompletionTimes.reduce((a, b) => a + b, 0) / progress.townCompletionTimes.length
       : 0;
     const avgTimeFormatted = (avgTimePerTown / 1000 / 60).toFixed(1); // minutes
 
@@ -93,18 +95,46 @@ export default function ScrapingAnalytics({
       withPhone,
       phonePercentage,
     };
-  }, [businesses, completedTowns, townCompletionTimes]);
+  }, [businesses, progress.completedTowns, progress.townCompletionTimes]);
 
-  if (businesses.length === 0) {
+  if (!isOpen) {
     return null;
   }
 
-  return (
-    <div className="glass-card p-4 lg:p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <BarChart3 className="w-6 h-6 text-teal-400" />
-        <h2 className="text-xl font-bold text-white">Scraping Analytics</h2>
+  if (businesses.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="glass-card p-6 max-w-md w-full mx-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-white">Analytics</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <p className="text-gray-400">No data available yet. Start scraping to see analytics.</p>
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="glass-card p-4 lg:p-6 max-w-6xl w-full my-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <BarChart3 className="w-6 h-6 text-teal-400" />
+            <h2 className="text-xl font-bold text-white">Scraping Analytics</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -216,6 +246,7 @@ export default function ScrapingAnalytics({
             ))}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

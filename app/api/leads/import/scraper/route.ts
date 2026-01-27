@@ -39,25 +39,29 @@ export async function POST(request: NextRequest) {
     for (const sessionId of sessionIds) {
       console.log('[SCRAPER IMPORT] Fetching session:', sessionId);
       
-      // Use internal API call instead of external fetch
-      // This avoids ECONNREFUSED errors on VPS
-      const sessionResponse = await fetch(`${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scraper/sessions/${sessionId}/businesses`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      // Query database directly instead of using fetch to avoid ECONNREFUSED
+      // This is more reliable on VPS as it doesn't require internal HTTP calls
+      console.log('[SCRAPER IMPORT] Querying database for session:', sessionId);
+      const sessionResult = await client.query(
+        `SELECT businesses FROM scraper_sessions WHERE id = $1`,
+        [sessionId]
+      );
 
-      if (!sessionResponse.ok) {
-        const errorText = await sessionResponse.text();
-        console.error('[SCRAPER IMPORT] Failed to fetch session:', sessionId, errorText);
-        throw new Error(`Failed to fetch scraper session ${sessionId}: ${sessionResponse.status}`);
+      if (sessionResult.rows.length === 0) {
+        console.error('[SCRAPER IMPORT] Session not found in database:', sessionId);
+        throw new Error(`Scraper session ${sessionId} not found`);
       }
 
-      const sessionData = await sessionResponse.json();
-      console.log('[SCRAPER IMPORT] Session data received:', { sessionId, businessCount: sessionData.businesses?.length || 0 });
+      const businesses = sessionResult.rows[0].businesses;
+      console.log('[SCRAPER IMPORT] Session data retrieved from database:', { 
+        sessionId, 
+        businessCount: businesses?.length || 0,
+        hasBusinesses: !!businesses,
+        isArray: Array.isArray(businesses)
+      });
       
-      if (sessionData.businesses && Array.isArray(sessionData.businesses)) {
-        allResults = allResults.concat(sessionData.businesses);
+      if (businesses && Array.isArray(businesses)) {
+        allResults = allResults.concat(businesses);
       }
     }
 

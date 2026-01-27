@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the event
+    // Cast event_date explicitly to DATE to prevent timezone conversion
     const result = await query(
       `INSERT INTO calendar_events (
         user_id,
@@ -151,7 +152,7 @@ export async function POST(request: NextRequest) {
         priority,
         location,
         created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      ) VALUES ($1, $2, $3, $4::date, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
       [
         eventOwnerId,
@@ -198,7 +199,7 @@ export async function POST(request: NextRequest) {
             priority,
             location,
             created_by
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          ) VALUES ($1, $2, $3, $4::date, $5, $6, $7, $8, $9, $10)`,
           [
             eventOwnerId,
             title,

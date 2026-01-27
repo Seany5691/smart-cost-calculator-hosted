@@ -82,7 +82,7 @@ export default function BatchExportModal({
         {/* Header */}
         <div className="flex items-center justify-between p-4 lg:p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <Upload className="w-6 h-6 text-teal-400" />
+            <Upload className="w-6 h-6 text-rose-400" />
             <h2 className="text-xl lg:text-2xl font-bold text-white">
               Export to Leads
             </h2>
@@ -105,7 +105,7 @@ export default function BatchExportModal({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search businesses..."
-              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
+              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-rose-500"
             />
           </div>
 
@@ -116,7 +116,7 @@ export default function BatchExportModal({
               className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors"
             >
               {selectedIds.size === filteredBusinesses.length ? (
-                <CheckSquare className="w-5 h-5 text-teal-400" />
+                <CheckSquare className="w-5 h-5 text-rose-400" />
               ) : (
                 <Square className="w-5 h-5" />
               )}
@@ -137,7 +137,7 @@ export default function BatchExportModal({
               value={listName}
               onChange={(e) => setListName(e.target.value)}
               placeholder="Enter list name"
-              className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
+              className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-rose-500"
             />
           </div>
         </div>
@@ -159,14 +159,14 @@ export default function BatchExportModal({
                     key={index}
                     onClick={() => toggleSelect(business)}
                     className={`glass-card p-4 cursor-pointer transition-all ${
-                      isSelected ? 'bg-teal-600/20 border-teal-500' : 'hover:bg-white/5'
+                      isSelected ? 'bg-rose-600/20 border-rose-500' : 'hover:bg-white/5'
                     }`}
                   >
                     <div className="flex items-start gap-3">
                       {/* Checkbox */}
                       <div className="mt-1">
                         {isSelected ? (
-                          <CheckSquare className="w-5 h-5 text-teal-400" />
+                          <CheckSquare className="w-5 h-5 text-rose-400" />
                         ) : (
                           <Square className="w-5 h-5 text-gray-400" />
                         )}
@@ -186,7 +186,7 @@ export default function BatchExportModal({
                           {business.provider && business.provider !== 'Unknown' && (
                             <>
                               <span className="text-gray-400">•</span>
-                              <span className="text-teal-400">{business.provider}</span>
+                              <span className="text-rose-400">{business.provider}</span>
                             </>
                           )}
                         </div>
@@ -211,7 +211,7 @@ export default function BatchExportModal({
             <button
               onClick={handleExport}
               disabled={isExporting || selectedIds.size === 0 || !listName.trim()}
-              className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               {isExporting ? (
                 <>
@@ -231,3 +231,4 @@ export default function BatchExportModal({
     </div>
   );
 }
+

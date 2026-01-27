@@ -445,10 +445,7 @@ export default function ScraperPage() {
     clearAll();
     setTownInput('');
     setShowClearConfirm(false);
-    toast.success('Data cleared', {
-      message: 'All scraping data has been cleared',
-      section: 'scraper'
-    });
+    toast.success('All scraping data has been cleared');
   };
 
   const handleExport = async () => {
@@ -480,16 +477,10 @@ export default function ScraperPage() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
-      toast.success('Export successful', {
-        message: `Downloaded ${filename}`,
-        section: 'scraper'
-      });
+      toast.success(`Downloaded ${filename}`);
     } catch (error) {
       console.error('Error exporting:', error);
-      toast.error('Export failed', {
-        message: 'Failed to export data. Please try again.',
-        section: 'scraper'
-      });
+      toast.error('Export failed. Please try again.');
     } finally {
       setIsExporting(false);
     }
@@ -497,10 +488,7 @@ export default function ScraperPage() {
 
   const handleExportToLeads = async () => {
     if (businesses.length === 0) {
-      toast.warning('No businesses to export', {
-        message: 'Please scrape some businesses first',
-        section: 'scraper'
-      });
+      toast.warning('No businesses to export. Please scrape some businesses first.');
       return;
     }
 
@@ -509,10 +497,7 @@ export default function ScraperPage() {
 
   const handleConfirmExportToLeads = async () => {
     if (!leadListName || leadListName.trim() === '') {
-      toast.warning('List name required', {
-        message: 'Please enter a name for the lead list',
-        section: 'scraper'
-      });
+      toast.warning('List name required. Please enter a name for the lead list.');
       return;
     }
 
@@ -522,10 +507,7 @@ export default function ScraperPage() {
       // Get token from auth-storage
       const authStorage = localStorage.getItem('auth-storage');
       if (!authStorage) {
-        toast.error('Authentication required', {
-          message: 'Please log in to export to leads',
-          section: 'scraper'
-        });
+        toast.error('Authentication required. Please log in to export to leads.');
         return;
       }
 
@@ -533,10 +515,7 @@ export default function ScraperPage() {
       const token = authData.token;
       
       if (!token) {
-        toast.error('Authentication required', {
-          message: 'Please log in to export to leads',
-          section: 'scraper'
-        });
+        toast.error('Authentication required. Please log in to export to leads.');
         return;
       }
 
@@ -566,17 +545,11 @@ export default function ScraperPage() {
       }
 
       const result = await response.json();
-      toast.success('Export to leads successful', {
-        message: `Exported ${result.importedCount} businesses to list: ${leadListName}`,
-        section: 'scraper'
-      });
+      toast.success(`Exported ${result.importedCount} businesses to list: ${leadListName}`);
       setLeadListName('Scraped Leads'); // Reset for next time
     } catch (error: any) {
       console.error('Error exporting to leads:', error);
-      toast.error('Export to leads failed', {
-        message: error.message || 'An error occurred',
-        section: 'scraper'
-      });
+      toast.error(`Export to leads failed: ${error.message || 'An error occurred'}`);
     } finally {
       setIsExporting(false);
     }
@@ -584,10 +557,7 @@ export default function ScraperPage() {
 
   const handleSaveSession = async (name: string) => {
     if (!sessionId) {
-      toast.warning('No active session', {
-        message: 'Please start scraping to create a session',
-        section: 'scraper'
-      });
+      toast.warning('No active session. Please start scraping to create a session.');
       return;
     }
 
@@ -596,10 +566,7 @@ export default function ScraperPage() {
       // Get token from auth-storage
       const authStorage = localStorage.getItem('auth-storage');
       if (!authStorage) {
-        toast.error('Authentication required', {
-          message: 'Please log in to save sessions',
-          section: 'scraper'
-        });
+        toast.error('Authentication required. Please log in to save sessions.');
         return;
       }
 
@@ -607,10 +574,7 @@ export default function ScraperPage() {
       const token = authData.token;
       
       if (!token) {
-        toast.error('Authentication required', {
-          message: 'Please log in to save sessions',
-          section: 'scraper'
-        });
+        toast.error('Authentication required. Please log in to save sessions.');
         return;
       }
 
@@ -633,17 +597,11 @@ export default function ScraperPage() {
       }
 
       const result = await response.json();
-      toast.success('Session saved', {
-        message: `Saved ${result.businessesCount} businesses`,
-        section: 'scraper'
-      });
+      toast.success(`Session saved: ${result.businessesCount} businesses`);
       setSessionManagerOpen(false);
     } catch (error: any) {
       console.error('Error saving session:', error);
-      toast.error('Failed to save session', {
-        message: error.message || 'An error occurred',
-        section: 'scraper'
-      });
+      toast.error(`Failed to save session: ${error.message || 'An error occurred'}`);
     } finally {
       setIsSaving(false);
     }
@@ -654,10 +612,7 @@ export default function ScraperPage() {
     try {
       const authStorage = localStorage.getItem('auth-storage');
       if (!authStorage) {
-        toast.error('Authentication required', {
-          message: 'Please log in to load sessions',
-          section: 'scraper'
-        });
+        toast.error('Authentication required. Please log in to load sessions.');
         return;
       }
 
@@ -665,10 +620,7 @@ export default function ScraperPage() {
       const token = authData.token;
       
       if (!token) {
-        toast.error('Authentication required', {
-          message: 'Please log in to load sessions',
-          section: 'scraper'
-        });
+        toast.error('Authentication required. Please log in to load sessions.');
         return;
       }
 
@@ -690,18 +642,12 @@ export default function ScraperPage() {
       clearAll();
       addBusinesses(data.businesses);
       
-      toast.success('Session loaded', {
-        message: `Loaded ${data.businesses.length} businesses from "${sessionName}"`,
-        section: 'scraper'
-      });
+      toast.success(`Loaded ${data.businesses.length} businesses from "${sessionName}"`);
       
       setSessionSelectorOpen(false);
     } catch (error: any) {
       console.error('Error loading session:', error);
-      toast.error('Failed to load session', {
-        message: error.message || 'Please try again',
-        section: 'scraper'
-      });
+      toast.error(`Failed to load session: ${error.message || 'Please try again'}`);
     } finally {
       setIsLoading(false);
     }
@@ -719,18 +665,12 @@ export default function ScraperPage() {
     useScraperStore.getState().setStatus('running');
     setShowActiveBanner(false);
     
-    toast.success('Reconnected to scraping session', {
-      message: `Viewing live progress for: ${activeSession.name}`,
-      section: 'scraper'
-    });
+    toast.success(`Reconnected to scraping session: ${activeSession.name}`);
   };
 
   const handleDismissBanner = () => {
     setShowActiveBanner(false);
-    toast.info('Banner dismissed', {
-      message: 'Scraping continues in background. You can reconnect anytime.',
-      section: 'scraper'
-    });
+    toast.info('Banner dismissed. Scraping continues in background.');
   };
 
   // Calculate summary stats
@@ -747,9 +687,9 @@ export default function ScraperPage() {
   // Show loading while checking authentication
   if (!isHydrated || !isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-rose-900 to-slate-900">
         <div className="flex flex-col items-center">
-          <Loader2 className="w-12 h-12 text-teal-400 animate-spin mb-4" />
+          <Loader2 className="w-12 h-12 text-rose-400 animate-spin mb-4" />
           <div className="text-white text-xl">Loading...</div>
         </div>
       </div>
@@ -757,14 +697,23 @@ export default function ScraperPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-slate-900 py-4 lg:py-8 px-3 lg:px-4">
-      <div className="max-w-7xl mx-auto space-y-4 lg:space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-rose-900 to-slate-900 relative overflow-hidden">
+      {/* Animated Background Blobs - Red/Rose Theme */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-rose-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-red-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute bottom-1/4 left-1/3 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 py-4 lg:py-8 px-3 lg:px-4">
+        <div className="max-w-7xl mx-auto space-y-4 lg:space-y-6">
         {/* Header */}
         <div className="glass-card p-4 lg:p-6">
-          <h1 className="text-2xl lg:text-3xl font-bold text-white mb-1 lg:mb-2">
+          <h1 className="text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-rose-400 to-red-400 bg-clip-text text-transparent">
             Smart Scrape
           </h1>
-          <p className="text-xs lg:text-sm text-gray-300">
+          <p className="text-gray-300">
             Scrape business data from Google Maps for multiple towns and industries
           </p>
         </div>
@@ -792,6 +741,17 @@ export default function ScraperPage() {
             <BusinessLookup />
           </div>
         </div>
+
+        {/* Analytics Card - Inline (not modal) */}
+        {hasData && (
+          <ScrapingAnalytics
+            isOpen={true}
+            onClose={() => {}}
+            businesses={businesses}
+            progress={progress}
+            elapsedTime={elapsedTime}
+          />
+        )}
 
         {/* Progress & Summary Stats (Top Section) - Stacked on mobile */}
         {(isActive || status === 'completed' || status === 'stopped' || hasData) && (
@@ -850,6 +810,10 @@ export default function ScraperPage() {
               onAddIndustry={handleAddIndustry}
               onRemoveIndustry={handleRemoveIndustry}
               disabled={isActive}
+              onTemplatesClick={() => {
+                setTemplateMode('load');
+                setShowTemplateManager(true);
+              }}
             />
           </div>
 
@@ -864,6 +828,7 @@ export default function ScraperPage() {
               onClear={handleClear}
               onExport={handleExport}
               onExportToLeads={handleExportToLeads}
+              onBatchExport={() => setShowBatchExport(true)}
               hasData={hasData}
               isSaving={isSaving}
               isLoading={isLoading}
@@ -908,57 +873,23 @@ export default function ScraperPage() {
           </div>
         )}
 
-        {/* Phase 3 & 4: Advanced Features */}
-        {(hasData || status === 'completed') && (
+        {/* Retry Failed Button - Only show if there are failures */}
+        {progress.failedTowns && progress.failedTowns.length > 0 && (
           <div className="glass-card p-4 lg:p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Advanced Features</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* Templates Button */}
-              <button
-                onClick={() => {
-                  setTemplateMode('load');
-                  setShowTemplateManager(true);
-                }}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg transition-all shadow-lg hover:shadow-purple-500/50"
-              >
-                <FolderOpen className="w-5 h-5" />
-                <span className="font-medium">Templates</span>
-              </button>
-
-              {/* Analytics Button */}
-              <button
-                onClick={() => setShowAnalytics(true)}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all shadow-lg hover:shadow-blue-500/50"
-              >
-                <Gamepad2 className="w-5 h-5" />
-                <span className="font-medium">Analytics</span>
-              </button>
-
-              {/* Batch Export Button */}
-              <button
-                onClick={() => setShowBatchExport(true)}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-all shadow-lg hover:shadow-green-500/50"
-              >
-                <Download className="w-5 h-5" />
-                <span className="font-medium">Batch Export</span>
-              </button>
-
-              {/* Retry Failed Button (only if there are failures) */}
-              {progress.failedTowns && progress.failedTowns.length > 0 && (
-                <button
-                  onClick={() => setShowRetryFailed(true)}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg transition-all shadow-lg hover:shadow-orange-500/50"
-                >
-                  <Play className="w-5 h-5" />
-                  <span className="font-medium">Retry Failed ({progress.failedTowns.length})</span>
-                </button>
-              )}
-            </div>
+            <button
+              onClick={() => setShowRetryFailed(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg transition-all shadow-lg hover:shadow-orange-500/50"
+            >
+              <Play className="w-5 h-5" />
+              <span className="font-medium">Retry Failed Towns ({progress.failedTowns.length})</span>
+            </button>
           </div>
         )}
+        </div>
+      </div>
 
-        {/* Session Manager Modal */}
-        <SessionManager
+      {/* Session Manager Modal */}
+      <SessionManager
           isOpen={sessionManagerOpen}
           mode={sessionManagerMode}
           sessions={[]}
@@ -1055,10 +986,7 @@ export default function ScraperPage() {
             try {
               const authStorage = localStorage.getItem('auth-storage');
               if (!authStorage) {
-                toast.error('Authentication required', {
-                  message: 'Please log in to export to leads',
-                  section: 'scraper'
-                });
+                toast.error('Authentication required. Please log in to export to leads.');
                 return;
               }
 
@@ -1066,10 +994,7 @@ export default function ScraperPage() {
               const token = authData.token;
               
               if (!token) {
-                toast.error('Authentication required', {
-                  message: 'Please log in to export to leads',
-                  section: 'scraper'
-                });
+                toast.error('Authentication required. Please log in to export to leads.');
                 return;
               }
 
@@ -1099,22 +1024,43 @@ export default function ScraperPage() {
               }
 
               const result = await response.json();
-              toast.success('Batch export successful', {
-                message: `Exported ${result.importedCount} businesses to list: ${listName}`,
-                section: 'scraper'
-              });
+              toast.success(`Batch export successful: Exported ${result.importedCount} businesses to list: ${listName}`);
             } catch (error: any) {
               console.error('Error exporting to leads:', error);
-              toast.error('Batch export failed', {
-                message: error.message || 'An error occurred',
-                section: 'scraper'
-              });
+              toast.error(`Batch export failed: ${error.message || 'An error occurred'}`);
             } finally {
               setIsExporting(false);
             }
           }}
         />
       </div>
+
+      {/* CSS for blob animations */}
+      <style jsx>{`
+        @keyframes blob {
+          0% {
+            transform: translate(0px, 0px) scale(1);
+          }
+          33% {
+            transform: translate(30px, -50px) scale(1.1);
+          }
+          66% {
+            transform: translate(-20px, 20px) scale(0.9);
+          }
+          100% {
+            transform: translate(0px, 0px) scale(1);
+          }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 }

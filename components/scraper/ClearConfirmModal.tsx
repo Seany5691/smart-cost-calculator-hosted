@@ -50,11 +50,11 @@ export default function ClearConfirmModal({
       aria-labelledby="clear-confirm-title"
     >
       <div 
-        className="bg-gradient-to-br from-slate-900 to-teal-900 rounded-2xl shadow-2xl max-w-md w-full border border-teal-500/30"
+        className="bg-gradient-to-br from-slate-900 to-rose-900 rounded-2xl shadow-2xl max-w-md w-full border border-rose-500/30"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-teal-500/20">
+        <div className="flex items-center justify-between p-6 border-b border-rose-500/20">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-500/20 rounded-lg">
               <AlertTriangle className="w-6 h-6 text-red-400" />
@@ -66,7 +66,7 @@ export default function ClearConfirmModal({
             className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             aria-label="Close modal"
           >
-            <X className="w-5 h-5 text-teal-200" />
+            <X className="w-5 h-5 text-rose-200" />
           </button>
         </div>
 
@@ -83,7 +83,7 @@ export default function ClearConfirmModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-teal-500/20">
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-rose-500/20">
           <button
             onClick={onClose}
             className="px-6 py-2 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors"

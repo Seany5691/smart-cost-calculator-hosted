@@ -144,7 +144,7 @@ export default function DuplicateWarningModal({
               {/* Load Button */}
               <button
                 onClick={() => onLoadExisting(topDuplicate.sessionId)}
-                className="w-full mt-4 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors font-medium"
+                className="w-full mt-4 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors font-medium"
               >
                 Load This Session Instead
               </button>
@@ -200,3 +200,4 @@ export default function DuplicateWarningModal({
     </div>
   );
 }
+

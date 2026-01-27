@@ -186,7 +186,7 @@ export default function SessionSelector({ isOpen, onClose, onLoadSession }: Sess
         {/* Header */}
         <div className="flex items-center justify-between p-4 lg:p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <FolderOpen className="w-6 h-6 text-teal-400" />
+            <FolderOpen className="w-6 h-6 text-rose-400" />
             <h2 className="text-xl lg:text-2xl font-bold text-white">
               Your Scraping Sessions
             </h2>
@@ -203,7 +203,7 @@ export default function SessionSelector({ isOpen, onClose, onLoadSession }: Sess
         <div className="flex-1 overflow-y-auto p-4 lg:p-6">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="w-12 h-12 text-teal-400 animate-spin mb-4" />
+              <Loader2 className="w-12 h-12 text-rose-400 animate-spin mb-4" />
               <p className="text-gray-400">Loading sessions...</p>
             </div>
           ) : sessions.length === 0 ? (
@@ -263,7 +263,7 @@ export default function SessionSelector({ isOpen, onClose, onLoadSession }: Sess
                       <button
                         onClick={() => handleLoadSession(session.id, session.name)}
                         disabled={loadingSessionId === session.id || session.businessCount === 0}
-                        className="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
                       >
                         {loadingSessionId === session.id ? (
                           <>
@@ -312,3 +312,4 @@ export default function SessionSelector({ isOpen, onClose, onLoadSession }: Sess
     </div>
   );
 }
+

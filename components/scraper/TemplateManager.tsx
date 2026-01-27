@@ -299,14 +299,14 @@ export default function TemplateManager({
           <div className="flex items-center gap-3">
             {mode === 'save' ? (
               <>
-                <Save className="w-6 h-6 text-teal-400" />
+                <Save className="w-6 h-6 text-rose-400" />
                 <h2 className="text-xl lg:text-2xl font-bold text-white">
                   Save Template
                 </h2>
               </>
             ) : (
               <>
-                <FolderOpen className="w-6 h-6 text-teal-400" />
+                <FolderOpen className="w-6 h-6 text-rose-400" />
                 <h2 className="text-xl lg:text-2xl font-bold text-white">
                   Load Template
                 </h2>
@@ -335,7 +335,7 @@ export default function TemplateManager({
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
                   placeholder="e.g., Gauteng Pharmacies"
-                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-rose-500"
                 />
               </div>
 
@@ -348,7 +348,7 @@ export default function TemplateManager({
                   onChange={(e) => setTemplateDescription(e.target.value)}
                   placeholder="What is this template for?"
                   rows={3}
-                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 resize-none"
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-rose-500 resize-none"
                 />
               </div>
 
@@ -371,7 +371,7 @@ export default function TemplateManager({
             <>
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="w-12 h-12 text-teal-400 animate-spin mb-4" />
+                  <Loader2 className="w-12 h-12 text-rose-400 animate-spin mb-4" />
                   <p className="text-gray-400">Loading templates...</p>
                 </div>
               ) : templates.length === 0 ? (
@@ -442,7 +442,7 @@ export default function TemplateManager({
                           {/* Load Button */}
                           <button
                             onClick={() => handleLoadTemplate(template)}
-                            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
                           >
                             <FolderOpen className="w-4 h-4" />
                             Load
@@ -484,7 +484,7 @@ export default function TemplateManager({
               <button
                 onClick={handleSaveTemplate}
                 disabled={isSaving || !templateName.trim()}
-                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 {isSaving ? (
                   <>
@@ -512,3 +512,4 @@ export default function TemplateManager({
     </div>
   );
 }
+

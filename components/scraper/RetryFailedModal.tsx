@@ -77,7 +77,7 @@ export default function RetryFailedModal({
             </button>
             <button
               onClick={onRetry}
-              className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               <RefreshCw className="w-5 h-5" />
               Retry
@@ -88,3 +88,4 @@ export default function RetryFailedModal({
     </div>
   );
 }
+

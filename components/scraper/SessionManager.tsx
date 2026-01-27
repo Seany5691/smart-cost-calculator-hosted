@@ -123,14 +123,14 @@ export default function SessionManager({
         }
       }}
     >
-      <div className="bg-gradient-to-br from-slate-900 to-teal-900 rounded-none sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] overflow-hidden border-0 sm:border sm:border-teal-500/30">
+      <div className="bg-gradient-to-br from-slate-900 to-rose-900 rounded-none sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] overflow-hidden border-0 sm:border sm:border-rose-500/30">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-teal-500/20">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-rose-500/20">
           <div className="flex items-center gap-2 sm:gap-3">
             {mode === 'save' ? (
-              <Save className="w-5 h-5 sm:w-6 sm:h-6 text-teal-400" />
+              <Save className="w-5 h-5 sm:w-6 sm:h-6 text-rose-400" />
             ) : (
-              <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-teal-400" />
+              <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-rose-400" />
             )}
             <h2 id="session-modal-title" className="text-xl sm:text-2xl font-bold text-white">
               {mode === 'save' ? 'Save Session' : 'Load Session'}
@@ -142,7 +142,7 @@ export default function SessionManager({
             disabled={isLoading}
             aria-label="Close modal"
           >
-            <X className="w-5 h-5 text-teal-200" />
+            <X className="w-5 h-5 text-rose-200" />
           </button>
         </div>
 
@@ -165,12 +165,12 @@ export default function SessionManager({
                     }
                   }}
                   placeholder="e.g., Johannesburg Scrape - Jan 2024"
-                  className="w-full px-4 py-3 h-12 text-base bg-white/10 border border-teal-500/30 rounded-lg text-white placeholder-teal-300/50 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500 transition-all"
+                  className="w-full px-4 py-3 h-12 text-base bg-white/10 border border-rose-500/30 rounded-lg text-white placeholder-rose-300/50 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500 transition-all"
                   autoFocus
                   disabled={isLoading}
                 />
               </div>
-              <p className="text-sm text-teal-300/70">
+              <p className="text-sm text-rose-300/70">
                 Give your session a descriptive name to easily identify it later.
               </p>
             </div>
@@ -178,9 +178,9 @@ export default function SessionManager({
             <div className="space-y-3">
               {sessions.length === 0 ? (
                 <div className="text-center py-12">
-                  <FolderOpen className="w-12 h-12 text-teal-500/50 mx-auto mb-3" />
-                  <p className="text-teal-200">No saved sessions found.</p>
-                  <p className="text-sm text-teal-300/70 mt-1">
+                  <FolderOpen className="w-12 h-12 text-rose-500/50 mx-auto mb-3" />
+                  <p className="text-rose-200">No saved sessions found.</p>
+                  <p className="text-sm text-rose-300/70 mt-1">
                     Complete a scraping session and save it to see it here.
                   </p>
                 </div>
@@ -192,14 +192,14 @@ export default function SessionManager({
                     disabled={isLoading}
                     className={`w-full text-left p-4 rounded-lg border-2 transition-all min-h-[44px] ${
                       selectedSessionId === session.id
-                        ? 'border-teal-500 bg-teal-500/20'
-                        : 'border-teal-500/30 hover:border-teal-500/50 bg-white/5'
+                        ? 'border-rose-500 bg-rose-500/20'
+                        : 'border-rose-500/30 hover:border-rose-500/50 bg-white/5'
                     } disabled:opacity-50`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-white truncate text-base">{session.name}</h3>
-                        <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-teal-300">
+                        <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-rose-300">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
                             <span>{formatDate(session.created_at)}</span>
@@ -216,7 +216,7 @@ export default function SessionManager({
                       </div>
                       {selectedSessionId === session.id && (
                         <div className="flex-shrink-0">
-                          <div className="w-6 h-6 rounded-full bg-teal-500 flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full bg-rose-500 flex items-center justify-center">
                             <svg
                               className="w-4 h-4 text-white"
                               fill="none"
@@ -240,7 +240,7 @@ export default function SessionManager({
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 p-4 sm:p-6 border-t border-teal-500/20">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 p-4 sm:p-6 border-t border-rose-500/20">
           <button
             onClick={onClose}
             disabled={isLoading}
@@ -252,7 +252,7 @@ export default function SessionManager({
             <button
               onClick={handleSave}
               disabled={!sessionName.trim() || isLoading}
-              className="w-full sm:w-auto px-6 py-3 h-12 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-6 py-3 h-12 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>
@@ -270,7 +270,7 @@ export default function SessionManager({
             <button
               onClick={handleLoad}
               disabled={!selectedSessionId || isLoading}
-              className="w-full sm:w-auto px-6 py-3 h-12 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-6 py-3 h-12 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>

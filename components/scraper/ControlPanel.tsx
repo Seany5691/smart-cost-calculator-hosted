@@ -22,6 +22,7 @@ interface ControlPanelProps {
   onClear: () => void;
   onExport: () => void;
   onExportToLeads?: () => void;
+  onBatchExport?: () => void;
   hasData: boolean;
   isSaving?: boolean;
   isLoading?: boolean;
@@ -37,6 +38,7 @@ export default function ControlPanel({
   onClear,
   onExport,
   onExportToLeads,
+  onBatchExport,
   hasData,
   isSaving,
   isLoading,
@@ -111,24 +113,44 @@ export default function ControlPanel({
         </button>
       </div>
 
-      {/* Export to Leads Button - Full Width */}
-      {onExportToLeads && (
-        <button
-          type="button"
-          onClick={onExportToLeads}
-          disabled={!hasData || isActive || isExporting}
-          className="w-full btn btn-primary flex items-center justify-center gap-2 text-sm h-12 lg:h-10 disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Export businesses to leads section"
-        >
-          {isExporting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
+      {/* Export to Leads and Batch Export Buttons - Side by Side */}
+      {(onExportToLeads || onBatchExport) && (
+        <div className="flex flex-col sm:grid sm:grid-cols-2 gap-2">
+          {onExportToLeads && (
+            <button
+              type="button"
+              onClick={onExportToLeads}
+              disabled={!hasData || isActive || isExporting}
+              className="btn btn-primary flex items-center justify-center gap-2 text-sm h-12 lg:h-10 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Export businesses to leads section"
+            >
+              {isExporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              )}
+              <span>Export to Leads</span>
+            </button>
           )}
-          <span>Export to Leads</span>
-        </button>
+          {onBatchExport && (
+            <button
+              type="button"
+              onClick={onBatchExport}
+              disabled={!hasData || isActive || isExporting}
+              className="btn btn-secondary flex items-center justify-center gap-2 text-sm h-12 lg:h-10 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-green-500/20 to-green-600/20 border-green-500/30 hover:from-green-500/30 hover:to-green-600/30"
+              title="Batch export businesses"
+            >
+              {isExporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              <span>Batch Export</span>
+            </button>
+          )}
+        </div>
       )}
 
       <div className="flex flex-col sm:grid sm:grid-cols-3 gap-2">

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Trash2, CheckSquare, Square, Briefcase, X, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, CheckSquare, Square, Briefcase, X, AlertCircle, FolderOpen } from 'lucide-react';
 
 interface IndustrySelectorProps {
   industries: string[];
@@ -11,6 +11,7 @@ interface IndustrySelectorProps {
   onAddIndustry: (industry: string) => void;
   onRemoveIndustry: (industry: string) => void;
   disabled?: boolean;
+  onTemplatesClick?: () => void;
 }
 
 export default function IndustrySelector({
@@ -20,6 +21,7 @@ export default function IndustrySelector({
   onAddIndustry,
   onRemoveIndustry,
   disabled,
+  onTemplatesClick,
 }: IndustrySelectorProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newIndustry, setNewIndustry] = useState('');
@@ -85,7 +87,7 @@ export default function IndustrySelector({
             type="button"
             onClick={handleSelectAll}
             disabled={disabled}
-            className="font-medium text-teal-400 hover:text-teal-300 hover:underline disabled:opacity-50"
+            className="font-medium text-rose-400 hover:text-rose-300 hover:underline disabled:opacity-50"
           >
             All
           </button>
@@ -94,7 +96,7 @@ export default function IndustrySelector({
             type="button"
             onClick={handleDeselectAll}
             disabled={disabled}
-            className="font-medium text-teal-400 hover:text-teal-300 hover:underline disabled:opacity-50"
+            className="font-medium text-rose-400 hover:text-rose-300 hover:underline disabled:opacity-50"
           >
             None
           </button>
@@ -113,7 +115,7 @@ export default function IndustrySelector({
               className={`
                 flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg cursor-pointer transition-all duration-200
                 ${selectedIndustries.includes(industry)
-                  ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-rose-500 to-red-500 text-white shadow-md'
                   : 'hover:bg-white/10'
                 }
               `}
@@ -123,7 +125,7 @@ export default function IndustrySelector({
                 checked={selectedIndustries.includes(industry)}
                 onChange={() => handleToggleIndustry(industry)}
                 disabled={disabled}
-                className="w-[14px] h-[14px] text-teal-600 rounded focus:ring-1 focus:ring-teal-500 flex-shrink-0"
+                className="w-[14px] h-[14px] text-rose-600 rounded focus:ring-1 focus:ring-rose-500 flex-shrink-0"
                 style={{ minWidth: '14px', minHeight: '14px' }}
               />
               <span className={`text-xs sm:text-sm flex-1 ${
@@ -173,6 +175,17 @@ export default function IndustrySelector({
           <Plus className="w-4 h-4" />
           Add Industry
         </button>
+        {onTemplatesClick && (
+          <button
+            type="button"
+            onClick={onTemplatesClick}
+            disabled={disabled}
+            className="btn btn-secondary flex items-center gap-2 bg-gradient-to-r from-purple-500/20 to-purple-600/20 border-purple-500/30 hover:from-purple-500/30 hover:to-purple-600/30"
+          >
+            <FolderOpen className="w-4 h-4" />
+            Templates
+          </button>
+        )}
         {selectedForRemoval.length > 0 && (
           <button
             type="button"
@@ -200,10 +213,10 @@ export default function IndustrySelector({
             }}
           >
             {/* Modal Container - The glassmorphic card that "floats" */}
-            <div className="bg-gradient-to-br from-slate-900 to-teal-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden border border-teal-500/30">
+            <div className="bg-gradient-to-br from-slate-900 to-rose-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden border border-rose-500/30">
               
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-teal-500/20">
+              <div className="flex items-center justify-between p-6 border-b border-rose-500/20">
                 <h3 className="text-xl font-bold text-white">Add Custom Industry</h3>
                 <button
                   onClick={() => {
@@ -213,7 +226,7 @@ export default function IndustrySelector({
                   className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                   aria-label="Close modal"
                 >
-                  <X className="w-5 h-5 text-teal-200" />
+                  <X className="w-5 h-5 text-rose-200" />
                 </button>
               </div>
               
@@ -237,10 +250,10 @@ export default function IndustrySelector({
                         }
                       }}
                       placeholder="e.g., Restaurants, Law Firms, etc."
-                      className="w-full px-4 py-3 bg-white/10 border border-teal-500/30 rounded-lg text-white placeholder-teal-300/50 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500"
+                      className="w-full px-4 py-3 bg-white/10 border border-rose-500/30 rounded-lg text-white placeholder-rose-300/50 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500"
                       autoFocus
                     />
-                    <p className="text-sm text-teal-300/70">
+                    <p className="text-sm text-rose-300/70">
                       Enter a custom industry category to add to your list
                     </p>
                   </div>
@@ -263,7 +276,7 @@ export default function IndustrySelector({
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-teal-500/20">
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-rose-500/20">
                 <button
                   type="button"
                   onClick={() => {
@@ -278,7 +291,7 @@ export default function IndustrySelector({
                   type="button"
                   onClick={handleAddIndustry}
                   disabled={!newIndustry.trim() || industries.includes(newIndustry.trim())}
-                  className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Add Industry
                 </button>

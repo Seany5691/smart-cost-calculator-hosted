@@ -84,18 +84,18 @@ export default function ExportToLeadsModal({
       aria-labelledby="export-modal-title"
     >
       <div 
-        className="bg-gradient-to-br from-slate-900 to-teal-900 rounded-2xl shadow-2xl max-w-md w-full border border-teal-500/30"
+        className="bg-gradient-to-br from-slate-900 to-rose-900 rounded-2xl shadow-2xl max-w-md w-full border border-rose-500/30"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-teal-500/20">
+        <div className="flex items-center justify-between p-6 border-b border-rose-500/20">
           <h2 id="export-modal-title" className="text-xl font-bold text-white">Export to Leads</h2>
           <button
             onClick={handleClose}
             className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             aria-label="Close modal"
           >
-            <X className="w-5 h-5 text-teal-200" />
+            <X className="w-5 h-5 text-rose-200" />
           </button>
         </div>
 
@@ -111,23 +111,23 @@ export default function ExportToLeadsModal({
               value={listName}
               onChange={(e) => setListName(e.target.value)}
               placeholder="Enter a name for this lead list"
-              className="w-full px-4 py-3 bg-white/10 border border-teal-500/30 rounded-lg text-white placeholder-teal-300/50 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500"
+              className="w-full px-4 py-3 bg-white/10 border border-rose-500/30 rounded-lg text-white placeholder-rose-300/50 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500"
               autoFocus
             />
-            <p className="text-sm text-teal-300/70">
+            <p className="text-sm text-rose-300/70">
               This name will be used to identify the imported leads
             </p>
           </div>
 
-          <div className="mt-4 bg-teal-500/10 border border-teal-500/30 rounded-lg p-4">
-            <p className="text-sm text-teal-300">
+          <div className="mt-4 bg-rose-500/10 border border-rose-500/30 rounded-lg p-4">
+            <p className="text-sm text-rose-300">
               {businessCount} business{businessCount !== 1 ? 'es' : ''} will be exported to the leads section
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-teal-500/20">
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-rose-500/20">
           <button
             onClick={handleClose}
             className="px-6 py-2 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors"
@@ -139,7 +139,7 @@ export default function ExportToLeadsModal({
             disabled={!listName.trim()}
             className={`px-6 py-2 rounded-lg transition-colors font-semibold ${
               listName.trim()
-                ? 'bg-teal-600 hover:bg-teal-700 text-white'
+                ? 'bg-rose-600 hover:bg-rose-700 text-white'
                 : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
             }`}
           >

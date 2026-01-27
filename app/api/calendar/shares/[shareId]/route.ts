@@ -13,7 +13,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = authResult.user.id;
+    const userId = authResult.user.userId;
     const { shareId } = params;
     const body = await request.json();
 
@@ -64,7 +64,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = authResult.user.id;
+    const userId = authResult.user.userId;
     const { shareId } = params;
 
     // Check if share exists and user is the owner

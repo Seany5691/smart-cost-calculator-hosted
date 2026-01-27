@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = authResult.user.id;
+    const userId = authResult.user.userId;
 
     // Get calendars shared BY this user (user is owner)
     const sharedByMe = await query(
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = authResult.user.id;
+    const userId = authResult.user.userId;
     const body = await request.json();
 
     const {
@@ -135,3 +135,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

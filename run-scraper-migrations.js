@@ -1,8 +1,9 @@
 /**
- * Scraper Enhancement Migrations Runner
- * Runs Phase 3 and Phase 4 database migrations
+ * Database Migrations Runner
+ * Runs database migrations including calendar events system
  * 
- * Usage: node run-scraper-migrations.js
+ * Usage: node run-scraper-migrations.js [migration-file]
+ * Example: node run-scraper-migrations.js 010_calendar_events_system.sql
  */
 
 const { Pool } = require('pg');
@@ -41,26 +42,33 @@ async function runMigration(pool, migrationFile, migrationName) {
   }
 }
 
-async function verifyTables(pool) {
+async function verifyTables(pool, expectedTables) {
   try {
     log('\n🔍 Verifying tables...', 'cyan');
     
+    const tableList = expectedTables.map(t => `'${t}'`).join(', ');
     const result = await pool.query(`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
-      AND table_name IN ('provider_lookup_cache', 'scraping_templates')
+      AND table_name IN (${tableList})
       ORDER BY table_name
     `);
     
-    if (result.rows.length === 2) {
+    if (result.rows.length === expectedTables.length) {
       log('✅ All tables created successfully:', 'green');
       result.rows.forEach(row => {
         log(`   - ${row.table_name}`, 'green');
       });
       return true;
     } else {
-      log(`⚠️  Warning: Expected 2 tables, found ${result.rows.length}`, 'yellow');
+      log(`⚠️  Warning: Expected ${expectedTables.length} tables, found ${result.rows.length}`, 'yellow');
+      if (result.rows.length > 0) {
+        log('Found tables:', 'yellow');
+        result.rows.forEach(row => {
+          log(`   - ${row.table_name}`, 'yellow');
+        });
+      }
       return false;
     }
   } catch (error) {
@@ -71,7 +79,14 @@ async function verifyTables(pool) {
 }
 
 async function main() {
-  log('🚀 Running Scraper Enhancement Migrations...', 'blue');
+  // Get migration file from command line argument
+  const migrationFile = process.argv[2];
+  
+  if (migrationFile) {
+    log(`🚀 Running Single Migration: ${migrationFile}...`, 'blue');
+  } else {
+    log('🚀 Running Scraper Enhancement Migrations...', 'blue');
+  }
   log('', 'reset');
   
   // Check for DATABASE_URL
@@ -117,7 +132,35 @@ async function main() {
   }
 
   try {
-    // Run migrations
+    // If specific migration file provided, run only that
+    if (migrationFile) {
+      const migrationName = migrationFile.replace('.sql', '').replace(/_/g, ' ');
+      const success = await runMigration(pool, migrationFile, `Migration: ${migrationName}`);
+      
+      if (!success) {
+        log(`\n❌ Migration ${migrationFile} failed.`, 'red');
+        process.exit(1);
+      }
+      
+      // Verify tables based on migration
+      let expectedTables = [];
+      if (migrationFile.includes('calendar_events')) {
+        expectedTables = ['calendar_events', 'calendar_shares'];
+      } else if (migrationFile.includes('provider_cache')) {
+        expectedTables = ['provider_lookup_cache'];
+      } else if (migrationFile.includes('scraping_templates')) {
+        expectedTables = ['scraping_templates'];
+      }
+      
+      if (expectedTables.length > 0) {
+        await verifyTables(pool, expectedTables);
+      }
+      
+      log('\n🎉 Migration completed successfully!', 'green');
+      process.exit(0);
+    }
+    
+    // Otherwise run default migrations
     const migration015Success = await runMigration(
       pool,
       '015_add_provider_cache.sql',
@@ -141,7 +184,7 @@ async function main() {
     }
     
     // Verify tables
-    const verifySuccess = await verifyTables(pool);
+    const verifySuccess = await verifyTables(pool, ['provider_lookup_cache', 'scraping_templates']);
     
     if (verifySuccess) {
       log('\n🎉 All migrations completed successfully!', 'green');

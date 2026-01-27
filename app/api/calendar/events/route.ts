@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = authResult.user.id;
+    const userId = authResult.user.userId;
     const { searchParams } = new URL(request.url);
     const viewUserId = searchParams.get('viewUserId'); // Optional: view another user's calendar if shared
 
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = authResult.user.id;
+    const userId = authResult.user.userId;
     const body = await request.json();
 
     const {
@@ -146,3 +146,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

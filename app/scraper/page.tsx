@@ -7,7 +7,7 @@ import { useAuthStore } from '@/lib/store/auth-simple';
 import { useScraperSSE } from '@/hooks/useScraperSSE';
 import { useAutoExport } from '@/hooks/useAutoExport';
 import { useToast } from '@/components/ui/Toast/useToast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FolderOpen, Gamepad2, Download, Play } from 'lucide-react';
 import TownInput from '@/components/scraper/TownInput';
 import IndustrySelector from '@/components/scraper/IndustrySelector';
 import ConcurrencyControls from '@/components/scraper/ConcurrencyControls';
@@ -26,6 +26,10 @@ import SessionSelector from '@/components/scraper/SessionSelector';
 import ProviderLookupProgress from '@/components/scraper/ProviderLookupProgress';
 import DuplicateWarningModal from '@/components/scraper/DuplicateWarningModal';
 import ActiveSessionBanner from '@/components/scraper/ActiveSessionBanner';
+import TemplateManager from '@/components/scraper/TemplateManager';
+import ScrapingAnalytics from '@/components/scraper/ScrapingAnalytics';
+import RetryFailedModal from '@/components/scraper/RetryFailedModal';
+import BatchExportModal from '@/components/scraper/BatchExportModal';
 
 function getDefaultIndustries(): string[] {
   return [
@@ -143,6 +147,12 @@ export default function ScraperPage() {
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [duplicates, setDuplicates] = useState<any[]>([]);
   const [leadListName, setLeadListName] = useState('Scraped Leads');
+  
+  // New Phase 3 & 4 modals
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showRetryFailed, setShowRetryFailed] = useState(false);
+  const [showBatchExport, setShowBatchExport] = useState(false);
   
   // Loading states for async operations
   const [isSaving, setIsSaving] = useState(false);
@@ -897,6 +907,52 @@ export default function ScraperPage() {
           </div>
         )}
 
+        {/* Phase 3 & 4: Advanced Features */}
+        {(hasData || status === 'completed') && (
+          <div className="glass-card p-4 lg:p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Advanced Features</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Templates Button */}
+              <button
+                onClick={() => setShowTemplateManager(true)}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg transition-all shadow-lg hover:shadow-purple-500/50"
+              >
+                <FolderOpen className="w-5 h-5" />
+                <span className="font-medium">Templates</span>
+              </button>
+
+              {/* Analytics Button */}
+              <button
+                onClick={() => setShowAnalytics(true)}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all shadow-lg hover:shadow-blue-500/50"
+              >
+                <Gamepad2 className="w-5 h-5" />
+                <span className="font-medium">Analytics</span>
+              </button>
+
+              {/* Batch Export Button */}
+              <button
+                onClick={() => setShowBatchExport(true)}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg transition-all shadow-lg hover:shadow-green-500/50"
+              >
+                <Download className="w-5 h-5" />
+                <span className="font-medium">Batch Export</span>
+              </button>
+
+              {/* Retry Failed Button (only if there are failures) */}
+              {progress.failedTowns && progress.failedTowns.length > 0 && (
+                <button
+                  onClick={() => setShowRetryFailed(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg transition-all shadow-lg hover:shadow-orange-500/50"
+                >
+                  <Play className="w-5 h-5" />
+                  <span className="font-medium">Retry Failed ({progress.failedTowns.length})</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Session Manager Modal */}
         <SessionManager
           isOpen={sessionManagerOpen}
@@ -940,6 +996,121 @@ export default function ScraperPage() {
           onConfirm={handleConfirmExportToLeads}
           businessCount={businesses.length}
           initialListName={leadListName}
+        />
+
+        {/* Template Manager Modal (Phase 3) */}
+        <TemplateManager
+          isOpen={showTemplateManager}
+          onClose={() => setShowTemplateManager(false)}
+          currentTowns={towns}
+          currentIndustries={industries}
+          onLoadTemplate={(template) => {
+            setTowns(template.towns);
+            setIndustries(template.industries);
+            setTownInput(template.towns.join('\n'));
+            setSelectedIndustries(template.industries);
+            setShowTemplateManager(false);
+            toast.success('Template loaded', {
+              message: `Loaded template: ${template.name}`,
+              section: 'scraper'
+            });
+          }}
+        />
+
+        {/* Analytics Modal (Phase 4) */}
+        <ScrapingAnalytics
+          isOpen={showAnalytics}
+          onClose={() => setShowAnalytics(false)}
+          businesses={businesses}
+          progress={progress}
+          elapsedTime={elapsedTime}
+        />
+
+        {/* Retry Failed Modal (Phase 4) */}
+        <RetryFailedModal
+          isOpen={showRetryFailed}
+          onClose={() => setShowRetryFailed(false)}
+          failedTowns={progress.failedTowns || []}
+          onRetry={async (townsToRetry) => {
+            setShowRetryFailed(false);
+            // TODO: Implement retry logic
+            toast.info('Retry feature', {
+              message: 'Retry functionality will be implemented',
+              section: 'scraper'
+            });
+          }}
+        />
+
+        {/* Batch Export Modal (Phase 4) */}
+        <BatchExportModal
+          isOpen={showBatchExport}
+          onClose={() => setShowBatchExport(false)}
+          businesses={businesses}
+          onExport={async (selectedBusinesses, listName) => {
+            setShowBatchExport(false);
+            // Use same export logic as handleConfirmExportToLeads
+            setIsExporting(true);
+            try {
+              const authStorage = localStorage.getItem('auth-storage');
+              if (!authStorage) {
+                toast.error('Authentication required', {
+                  message: 'Please log in to export to leads',
+                  section: 'scraper'
+                });
+                return;
+              }
+
+              const authData = JSON.parse(authStorage);
+              const token = authData.token;
+              
+              if (!token) {
+                toast.error('Authentication required', {
+                  message: 'Please log in to export to leads',
+                  section: 'scraper'
+                });
+                return;
+              }
+
+              const response = await fetch('/api/leads/import/scraper-direct', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  businesses: selectedBusinesses.map(b => ({
+                    name: b.name,
+                    phone: b.phone,
+                    address: b.address || '',
+                    town: b.town,
+                    typeOfBusiness: b.industry,
+                    mapsUrl: '',
+                    provider: b.provider,
+                  })),
+                  listName: listName.trim(),
+                }),
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to export to leads');
+              }
+
+              const result = await response.json();
+              toast.success('Batch export successful', {
+                message: `Exported ${result.importedCount} businesses to list: ${listName}`,
+                section: 'scraper'
+              });
+            } catch (error: any) {
+              console.error('Error exporting to leads:', error);
+              toast.error('Batch export failed', {
+                message: error.message || 'An error occurred',
+                section: 'scraper'
+              });
+            } finally {
+              setIsExporting(false);
+            }
+          }}
         />
       </div>
     </div>

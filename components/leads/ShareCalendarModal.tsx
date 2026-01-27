@@ -32,7 +32,7 @@ interface ShareCalendarModalProps {
   onSuccess?: () => void; // Callback after successful share
 }
 
-export default function ShareCalendarModal({ isOpen, onClose }: ShareCalendarModalProps) {
+export default function ShareCalendarModal({ isOpen, onClose, onSuccess }: ShareCalendarModalProps) {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingShares, setLoadingShares] = useState(false);

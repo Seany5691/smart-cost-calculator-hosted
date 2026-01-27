@@ -54,6 +54,8 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/database ./database
 COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/run-scraper-migrations.js ./run-scraper-migrations.js
+COPY --from=builder /app/run-scraper-migrations.sh ./run-scraper-migrations.sh
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app

@@ -532,7 +532,7 @@ export default function ScraperPage() {
             address: b.address || '',
             town: b.town,
             typeOfBusiness: b.industry,
-            mapsUrl: '',
+            mapsUrl: b.website || '',
             provider: b.provider,
           })),
           listName: leadListName.trim(),

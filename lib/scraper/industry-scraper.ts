@@ -179,7 +179,12 @@ export class IndustryScraper {
               continue;
             }
 
-            const spanText = await span.evaluate((el: Element) => el.textContent?.trim() || '');
+            let spanText = await span.evaluate((el: Element) => el.textContent?.trim() || '');
+
+            // Remove leading separator character if present
+            if (spanText.startsWith('·')) {
+              spanText = spanText.substring(1).trim();
+            }
 
             // Skip empty spans, separator characters, opening hours, ratings, and icons
             if (!spanText ||

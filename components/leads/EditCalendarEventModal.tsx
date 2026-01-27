@@ -1,29 +1,40 @@
 'use client';
 
 /**
- * AddCalendarEventModal Component
+ * EditCalendarEventModal Component
  * 
- * Modal for creating calendar events (not tied to leads)
- * Supports single-day, all-day, and multi-day events
+ * Modal for editing existing calendar events
  */
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar as CalendarIcon, Clock, MapPin, AlertCircle, Loader2, Plus } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Clock, MapPin, AlertCircle, Loader2, Save } from 'lucide-react';
 
-interface AddCalendarEventModalProps {
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  event_date: string;
+  event_time: string | null;
+  is_all_day: boolean;
+  event_type: string;
+  priority: string;
+  location: string | null;
+}
+
+interface EditCalendarEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  preselectedDate?: Date;
+  event: CalendarEvent | null;
 }
 
-export default function AddCalendarEventModal({
+export default function EditCalendarEventModal({
   isOpen,
   onClose,
   onSuccess,
-  preselectedDate
-}: AddCalendarEventModalProps) {
+  event
+}: EditCalendarEventModalProps) {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,11 +43,8 @@ export default function AddCalendarEventModal({
     title: '',
     description: '',
     event_date: '',
-    end_date: '',
     event_time: '09:00',
-    end_time: '10:00',
     is_all_day: false,
-    is_multi_day: false,
     event_type: 'event' as 'event' | 'appointment' | 'meeting' | 'deadline' | 'reminder' | 'other',
     priority: 'medium' as 'low' | 'medium' | 'high',
     location: ''
@@ -48,60 +56,32 @@ export default function AddCalendarEventModal({
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      // Reset form
-      let dateStr: string;
-      if (preselectedDate) {
-        // Format date as YYYY-MM-DD in local timezone (no UTC conversion)
-        const year = preselectedDate.getFullYear();
-        const month = String(preselectedDate.getMonth() + 1).padStart(2, '0');
-        const day = String(preselectedDate.getDate()).padStart(2, '0');
-        dateStr = `${year}-${month}-${day}`;
-      } else {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        dateStr = `${year}-${month}-${day}`;
-      }
+    if (isOpen && event) {
+      // Format date properly (no timezone conversion)
+      const eventDateStr = event.event_date.split('T')[0];
       
       setFormData({
-        title: '',
-        description: '',
-        event_date: dateStr,
-        end_date: dateStr,
-        event_time: '09:00',
-        end_time: '10:00',
-        is_all_day: false,
-        is_multi_day: false,
-        event_type: 'event',
-        priority: 'medium',
-        location: ''
+        title: event.title || '',
+        description: event.description || '',
+        event_date: eventDateStr,
+        event_time: event.event_time || '09:00',
+        is_all_day: event.is_all_day || false,
+        event_type: (event.event_type as any) || 'event',
+        priority: (event.priority as any) || 'medium',
+        location: event.location || ''
       });
       setError('');
     }
-  }, [isOpen, preselectedDate]);
+  }, [isOpen, event]);
 
   const handleChange = (field: string, value: any) => {
-    setFormData(prev => {
-      const updated = { ...prev, [field]: value };
-      
-      // If toggling multi-day off, reset end_date to match event_date
-      if (field === 'is_multi_day' && !value) {
-        updated.end_date = updated.event_date;
-      }
-      
-      // If changing event_date and not multi-day, update end_date too
-      if (field === 'event_date' && !updated.is_multi_day) {
-        updated.end_date = value;
-      }
-      
-      return updated;
-    });
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!event) return;
 
     // Validation
     if (!formData.title.trim()) {
@@ -110,17 +90,7 @@ export default function AddCalendarEventModal({
     }
 
     if (!formData.event_date) {
-      setError('Please select a start date');
-      return;
-    }
-
-    if (formData.is_multi_day && !formData.end_date) {
-      setError('Please select an end date for multi-day event');
-      return;
-    }
-
-    if (formData.is_multi_day && formData.end_date < formData.event_date) {
-      setError('End date must be after start date');
+      setError('Please select a date');
       return;
     }
 
@@ -139,8 +109,8 @@ export default function AddCalendarEventModal({
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch('/api/calendar/events', {
-        method: 'POST',
+      const response = await fetch(`/api/calendar/events/${event.id}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
@@ -149,11 +119,8 @@ export default function AddCalendarEventModal({
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           event_date: formData.event_date,
-          end_date: formData.is_multi_day ? formData.end_date : formData.event_date,
           event_time: formData.is_all_day ? null : formData.event_time,
-          end_time: formData.is_all_day ? null : formData.end_time,
           is_all_day: formData.is_all_day,
-          is_multi_day: formData.is_multi_day,
           event_type: formData.event_type,
           priority: formData.priority,
           location: formData.location.trim() || null
@@ -162,20 +129,20 @@ export default function AddCalendarEventModal({
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to create event');
+        throw new Error(data.error || 'Failed to update event');
       }
 
       onSuccess?.();
       onClose();
     } catch (err) {
-      console.error('Error creating event:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create event');
+      console.error('Error updating event:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update event');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !event) return null;
   if (!mounted) return null;
 
   const eventTypeIcons = {
@@ -203,11 +170,11 @@ export default function AddCalendarEventModal({
         <div className="flex items-center justify-between p-6 border-b border-emerald-500/20">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-500/20 rounded-lg">
-              <Plus className="w-5 h-5 text-emerald-400" />
+              <Save className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white">Add Calendar Event</h2>
-              <p className="text-sm text-emerald-200">Create a new event on your calendar</p>
+              <h2 className="text-2xl font-bold text-white">Edit Calendar Event</h2>
+              <p className="text-sm text-emerald-200">Update event details</p>
             </div>
           </div>
           <button
@@ -301,29 +268,14 @@ export default function AddCalendarEventModal({
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
-              id="all-day"
+              id="all-day-edit"
               checked={formData.is_all_day}
               onChange={(e) => handleChange('is_all_day', e.target.checked)}
               disabled={loading}
               className="w-5 h-5 rounded border-emerald-500/30 bg-white/5 text-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-0"
             />
-            <label htmlFor="all-day" className="text-sm text-white cursor-pointer">
+            <label htmlFor="all-day-edit" className="text-sm text-white cursor-pointer">
               All-day event
-            </label>
-          </div>
-
-          {/* Multi-Day Toggle */}
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="multi-day"
-              checked={formData.is_multi_day}
-              onChange={(e) => handleChange('is_multi_day', e.target.checked)}
-              disabled={loading}
-              className="w-5 h-5 rounded border-emerald-500/30 bg-white/5 text-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-0"
-            />
-            <label htmlFor="multi-day" className="text-sm text-white cursor-pointer">
-              Multi-day event
             </label>
           </div>
 
@@ -331,7 +283,7 @@ export default function AddCalendarEventModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-white font-medium mb-2">
-                {formData.is_multi_day ? 'Start Date' : 'Date'} <span className="text-red-400">*</span>
+                Date <span className="text-red-400">*</span>
               </label>
               <div className="relative">
                 <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400 pointer-events-none" />
@@ -345,32 +297,10 @@ export default function AddCalendarEventModal({
               </div>
             </div>
 
-            {formData.is_multi_day && (
+            {!formData.is_all_day && (
               <div>
                 <label className="block text-white font-medium mb-2">
-                  End Date <span className="text-red-400">*</span>
-                </label>
-                <div className="relative">
-                  <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400 pointer-events-none" />
-                  <input
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => handleChange('end_date', e.target.value)}
-                    min={formData.event_date}
-                    disabled={loading}
-                    className="w-full pl-10 pr-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Time Range (only if not all-day) */}
-          {!formData.is_all_day && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-white font-medium mb-2">
-                  Start Time
+                  Time
                 </label>
                 <div className="relative">
                   <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400 pointer-events-none z-10" />
@@ -402,43 +332,8 @@ export default function AddCalendarEventModal({
                   </select>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-white font-medium mb-2">
-                  End Time
-                </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400 pointer-events-none z-10" />
-                  <select
-                    value={formData.end_time}
-                    onChange={(e) => handleChange('end_time', e.target.value)}
-                    disabled={loading}
-                    className="w-full pl-10 pr-10 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'right 0.5rem center',
-                      backgroundSize: '1.5em 1.5em'
-                    }}
-                  >
-                    {Array.from({ length: 96 }, (_, i) => {
-                      const hours = Math.floor(i / 4);
-                      const minutes = (i % 4) * 15;
-                      const time24 = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                      const isPM = hours >= 12;
-                      const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                      const time12 = `${hours12}:${minutes.toString().padStart(2, '0')} ${isPM ? 'PM' : 'AM'}`;
-                      return (
-                        <option key={time24} value={time24}>
-                          {time12}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Location */}
           <div>
@@ -491,12 +386,12 @@ export default function AddCalendarEventModal({
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Creating...</span>
+                  <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4" />
-                  <span>Create Event</span>
+                  <Save className="w-4 h-4" />
+                  <span>Save Changes</span>
                 </>
               )}
             </button>

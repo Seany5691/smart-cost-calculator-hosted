@@ -284,24 +284,33 @@ export class BusinessLookupScraper {
         for (const line of lines) {
           if (line === name) continue;
 
+          // Remove leading separator character if present
+          let cleanLine = line;
+          if (cleanLine.startsWith('·')) {
+            cleanLine = cleanLine.substring(1).trim();
+          }
+
+          // Skip empty lines after cleaning
+          if (!cleanLine) continue;
+
           // Skip opening hours
-          if (/^(Open|Closed|Opens|Closes)/i.test(line)) continue;
-          if (/\d{1,2}:\d{2}\s*(AM|PM|am|pm)/i.test(line)) continue;
+          if (/^(Open|Closed|Opens|Closes)/i.test(cleanLine)) continue;
+          if (/\d{1,2}:\d{2}\s*(AM|PM|am|pm)/i.test(cleanLine)) continue;
 
           // Skip ratings
-          if (/^\d+(\.\d+)?\s*\([\d,]+\)/.test(line)) continue;
+          if (/^\d+(\.\d+)?\s*\([\d,]+\)/.test(cleanLine)) continue;
 
           // Check for phone
-          if (/\d{3}.*\d{3}.*\d{4}/.test(line) || /\+?\d{10,}/.test(line)) {
-            if (!/^\d+(\.\d+)?\s*\(/.test(line)) {
-              phone = line;
+          if (/\d{3}.*\d{3}.*\d{4}/.test(cleanLine) || /\+?\d{10,}/.test(cleanLine)) {
+            if (!/^\d+(\.\d+)?\s*\(/.test(cleanLine)) {
+              phone = cleanLine;
               continue;
             }
           }
 
           // Everything else is address
-          if (!address && line.length > 5) {
-            address = line;
+          if (!address && cleanLine.length > 5) {
+            address = cleanLine;
           }
         }
 

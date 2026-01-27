@@ -64,6 +64,7 @@ const ViewAllResults = React.memo(({ businesses }: ViewAllResultsProps) => {
                     <th className="px-4 py-3 text-left font-semibold text-gray-300">Industry</th>
                     <th className="px-4 py-3 text-left font-semibold text-gray-300">Town</th>
                     <th className="px-4 py-3 text-left font-semibold text-gray-300">Address</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-300">Maps URL</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
@@ -97,6 +98,21 @@ const ViewAllResults = React.memo(({ businesses }: ViewAllResultsProps) => {
                       </td>
                       <td className="px-4 py-3 text-gray-400 max-w-xs truncate">
                         {business.address || 'N/A'}
+                      </td>
+                      <td className="px-4 py-3 max-w-xs">
+                        {business.website ? (
+                          <a
+                            href={business.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 underline flex items-center gap-1 truncate"
+                          >
+                            <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">View on Maps</span>
+                          </a>
+                        ) : (
+                          <span className="text-gray-500">N/A</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -151,6 +167,20 @@ const ViewAllResults = React.memo(({ businesses }: ViewAllResultsProps) => {
                     <div className="pt-1.5">
                       <span className="text-gray-400 font-medium block mb-1">Address:</span>
                       <span className="text-gray-300 text-xs leading-relaxed block">{business.address}</span>
+                    </div>
+                  )}
+
+                  {business.website && (
+                    <div className="pt-1.5">
+                      <a
+                        href={business.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 underline flex items-center gap-1 text-sm"
+                      >
+                        <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                        <span>View on Google Maps</span>
+                      </a>
                     </div>
                   )}
                 </div>

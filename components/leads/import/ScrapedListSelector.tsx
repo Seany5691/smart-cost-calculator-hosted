@@ -99,7 +99,8 @@ export default function ScrapedListSelector({ onImportComplete, onCancel }: Scra
         headers['Authorization'] = `Bearer ${token}`;
       }
       
-      const response = await fetch(`/api/scraper/sessions/${session.id}`, { headers });
+      // Use the businesses endpoint instead of the session endpoint
+      const response = await fetch(`/api/scraper/sessions/${session.id}/businesses`, { headers });
       
       if (!response.ok) {
         throw new Error('Failed to fetch session data');
@@ -117,8 +118,8 @@ export default function ScrapedListSelector({ onImportComplete, onCancel }: Scra
         phone: business.phone,
         provider: business.provider,
         address: business.address,
-        typeOfBusiness: business.type_of_business,
-        mapsUrl: business.maps_address
+        typeOfBusiness: business.industry,
+        mapsUrl: business.website
       }));
       
       // Show preview (first 5 items)

@@ -495,8 +495,8 @@ export default function ScraperPage() {
     setShowExportToLeadsPrompt(true);
   };
 
-  const handleConfirmExportToLeads = async () => {
-    if (!leadListName || leadListName.trim() === '') {
+  const handleConfirmExportToLeads = async (listName: string) => {
+    if (!listName || listName.trim() === '') {
       toast.warning('List name required. Please enter a name for the lead list.');
       return;
     }
@@ -535,7 +535,7 @@ export default function ScraperPage() {
             mapsUrl: b.website || '',
             provider: b.provider,
           })),
-          listName: leadListName.trim(),
+          listName: listName.trim(),
         }),
       });
 
@@ -545,7 +545,7 @@ export default function ScraperPage() {
       }
 
       const result = await response.json();
-      toast.success(`Exported ${result.importedCount} businesses to list: ${leadListName}`);
+      toast.success(`Exported ${result.importedCount} businesses to list: ${listName}`);
       setLeadListName('Scraped Leads'); // Reset for next time
     } catch (error: any) {
       console.error('Error exporting to leads:', error);

@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
     // Fetch scraper session data for all selected sessions
     let allResults: any[] = [];
     for (const sessionId of sessionIds) {
-      const sessionResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scraper/sessions/${sessionId}`, {
+      // Use the businesses endpoint to fetch session data
+      const sessionResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scraper/sessions/${sessionId}/businesses`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -80,9 +81,9 @@ export async function POST(request: NextRequest) {
           name: result.name,
           phone: result.phone,
           provider: result.provider,
-          mapsAddress: result.maps_address,
+          mapsAddress: result.website, // Changed from maps_address to website
           address: result.address,
-          typeOfBusiness: result.type_of_business,
+          typeOfBusiness: result.industry, // Changed from type_of_business to industry
           notes: null
         };
 

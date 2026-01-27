@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { query } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
 
 /**
  * GET /api/calendar/events/[eventId]
@@ -32,7 +27,7 @@ export async function GET(
     const { eventId } = params;
 
     // Get event and verify access
-    const result = await pool.query(
+    const result = await query(
       `SELECT ce.*, u.username as creator_username
        FROM calendar_events ce
        JOIN users u ON ce.created_by = u.id
@@ -95,7 +90,7 @@ export async function PATCH(
     console.log('[CALENDAR EVENT UPDATE] Request:', { eventId, userId, body });
 
     // Check if user owns the event or has edit permission
-    const eventCheck = await pool.query(
+    const eventCheck = await query(
       `SELECT ce.user_id, ce.created_by
        FROM calendar_events ce
        WHERE ce.id = $1`,
@@ -115,7 +110,7 @@ export async function PATCH(
 
     // If not owner or creator, check for edit permission
     if (!isOwner && !isCreator) {
-      const permissionCheck = await pool.query(
+      const permissionCheck = await query(
         `SELECT can_edit_events 
          FROM calendar_shares 
          WHERE owner_user_id = $1 AND shared_with_user_id = $2`,
@@ -167,7 +162,7 @@ export async function PATCH(
 
     console.log('[CALENDAR EVENT UPDATE] Query:', { queryText, values });
 
-    const result = await pool.query(queryText, values);
+    const result = await query(queryText, values);
 
     console.log('[CALENDAR EVENT UPDATE] Success:', result.rows[0]);
 
@@ -211,7 +206,7 @@ export async function DELETE(
     console.log('[CALENDAR EVENT DELETE] Request:', { eventId, userId });
 
     // Check if user owns the event or created it
-    const eventCheck = await pool.query(
+    const eventCheck = await query(
       `SELECT user_id, created_by
        FROM calendar_events
        WHERE id = $1`,
@@ -237,7 +232,7 @@ export async function DELETE(
     }
 
     // Delete the event
-    await pool.query(
+    await query(
       `DELETE FROM calendar_events WHERE id = $1`,
       [eventId]
     );

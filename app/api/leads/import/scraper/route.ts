@@ -39,8 +39,9 @@ export async function POST(request: NextRequest) {
     for (const sessionId of sessionIds) {
       console.log('[SCRAPER IMPORT] Fetching session:', sessionId);
       
-      // Use the businesses endpoint to fetch session data
-      const sessionResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scraper/sessions/${sessionId}/businesses`, {
+      // Use internal API call instead of external fetch
+      // This avoids ECONNREFUSED errors on VPS
+      const sessionResponse = await fetch(`${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/scraper/sessions/${sessionId}/businesses`, {
         headers: {
           Authorization: `Bearer ${token}`
         }

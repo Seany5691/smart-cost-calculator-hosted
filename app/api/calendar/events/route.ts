@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Pool } from 'pg';
-import { verifyToken } from '@/lib/auth';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+import { query } from '@/lib/db';
+import { verifyAuth } from '@/lib/middleware';
 
 /**
  * GET /api/calendar/events
@@ -15,25 +10,19 @@ const pool = new Pool({
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-    if (!decoded || !decoded.userId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const userId = decoded.userId;
+    const userId = authResult.user.userId;
 
     // Get query parameters for filtering
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');
 
-    let query = `
+    let sql = `
       SELECT 
         ce.*,
         u.username as creator_username,
@@ -57,20 +46,20 @@ export async function GET(request: NextRequest) {
     let paramIndex = 2;
 
     if (startDate) {
-      query += ` AND ce.event_date >= $${paramIndex}`;
+      sql += ` AND ce.event_date >= $${paramIndex}`;
       params.push(startDate);
       paramIndex++;
     }
 
     if (endDate) {
-      query += ` AND ce.event_date <= $${paramIndex}`;
+      sql += ` AND ce.event_date <= $${paramIndex}`;
       params.push(endDate);
       paramIndex++;
     }
 
-    query += ` ORDER BY ce.event_date, ce.event_time NULLS LAST`;
+    sql += ` ORDER BY ce.event_date, ce.event_time NULLS LAST`;
 
-    const result = await pool.query(query, params);
+    const result = await query(sql, params);
 
     return NextResponse.json({
       events: result.rows
@@ -91,18 +80,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-    if (!decoded || !decoded.userId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const userId = decoded.userId;
+    const userId = authResult.user.userId;
     const body = await request.json();
     const {
       title,
@@ -132,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     // If creating on someone else's calendar, verify permission
     if (user_id && user_id !== userId) {
-      const permissionCheck = await pool.query(
+      const permissionCheck = await query(
         `SELECT can_add_events 
          FROM calendar_shares 
          WHERE owner_user_id = $1 AND shared_with_user_id = $2`,
@@ -148,7 +131,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the event
-    const result = await pool.query(
+    const result = await query(
       `INSERT INTO calendar_events (
         user_id,
         title,
@@ -186,7 +169,7 @@ export async function POST(request: NextRequest) {
       while (currentDate <= endDateObj) {
         const dateStr = currentDate.toISOString().split('T')[0];
         
-        await pool.query(
+        await query(
           `INSERT INTO calendar_events (
             user_id,
             title,

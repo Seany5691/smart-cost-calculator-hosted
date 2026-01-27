@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Pool } from 'pg';
-import { verifyToken } from '@/lib/auth';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+import { query } from '@/lib/db';
+import { verifyAuth } from '@/lib/middleware';
 
 /**
  * PATCH /api/calendar/shares/[shareId]
@@ -17,24 +12,18 @@ export async function PATCH(
 ) {
   try {
     // Verify authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-    if (!decoded || !decoded.userId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const userId = decoded.userId;
+    const userId = authResult.user.userId;
     const { shareId } = params;
     const body = await request.json();
     const { can_add_events, can_edit_events } = body;
 
     // Verify the share belongs to the current user
-    const shareCheck = await pool.query(
+    const shareCheck = await query(
       `SELECT id FROM calendar_shares 
        WHERE id = $1 AND owner_user_id = $2`,
       [shareId, userId]
@@ -48,7 +37,7 @@ export async function PATCH(
     }
 
     // Update the share
-    const result = await pool.query(
+    const result = await query(
       `UPDATE calendar_shares 
        SET can_add_events = $1,
            can_edit_events = $2,
@@ -81,22 +70,16 @@ export async function DELETE(
 ) {
   try {
     // Verify authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-    if (!decoded || !decoded.userId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const userId = decoded.userId;
+    const userId = authResult.user.userId;
     const { shareId } = params;
 
     // Verify the share belongs to the current user
-    const shareCheck = await pool.query(
+    const shareCheck = await query(
       `SELECT id FROM calendar_shares 
        WHERE id = $1 AND owner_user_id = $2`,
       [shareId, userId]
@@ -110,7 +93,7 @@ export async function DELETE(
     }
 
     // Delete the share
-    await pool.query(
+    await query(
       `DELETE FROM calendar_shares WHERE id = $1`,
       [shareId]
     );

@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Pool } from 'pg';
-import { verifyToken } from '@/lib/auth';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+import { query } from '@/lib/db';
+import { verifyAuth } from '@/lib/middleware';
 
 /**
  * GET /api/calendar/shares
@@ -14,21 +9,15 @@ const pool = new Pool({
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-    if (!decoded || !decoded.userId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const userId = decoded.userId;
+    const userId = authResult.user.userId;
 
     // Get all shares where current user is the owner
-    const result = await pool.query(
+    const result = await query(
       `SELECT 
         cs.id,
         cs.shared_with_user_id,
@@ -63,18 +52,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const authResult = await verifyAuth(request);
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-    if (!decoded || !decoded.userId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const userId = decoded.userId;
+    const userId = authResult.user.userId;
     const body = await request.json();
     const { shared_with_user_id, can_add_events, can_edit_events } = body;
 
@@ -95,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if share already exists
-    const existingShare = await pool.query(
+    const existingShare = await query(
       `SELECT id FROM calendar_shares 
        WHERE owner_user_id = $1 AND shared_with_user_id = $2`,
       [userId, shared_with_user_id]
@@ -109,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the share
-    const result = await pool.query(
+    const result = await query(
       `INSERT INTO calendar_shares (
         owner_user_id,
         shared_with_user_id,

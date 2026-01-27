@@ -29,6 +29,7 @@ interface CalendarShare {
 interface ShareCalendarModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void; // Callback after successful share
 }
 
 export default function ShareCalendarModal({ isOpen, onClose }: ShareCalendarModalProps) {
@@ -150,6 +151,9 @@ export default function ShareCalendarModal({ isOpen, onClose }: ShareCalendarMod
       
       // Refresh shares list
       await fetchCurrentShares();
+      
+      // Call onSuccess callback
+      onSuccess?.();
       
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {

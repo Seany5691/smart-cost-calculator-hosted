@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');
+    const filterUserId = searchParams.get('user_id'); // Optional: filter by specific user's calendar
 
     let sql = `
       SELECT 
@@ -44,6 +45,13 @@ export async function GET(request: NextRequest) {
 
     const params: any[] = [userId];
     let paramIndex = 2;
+
+    // If filtering by specific user's calendar (viewing shared calendar)
+    if (filterUserId) {
+      sql += ` AND ce.user_id = $${paramIndex}`;
+      params.push(filterUserId);
+      paramIndex++;
+    }
 
     if (startDate) {
       sql += ` AND ce.event_date >= $${paramIndex}`;

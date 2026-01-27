@@ -55,16 +55,46 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
   const [selectedDateForEvent, setSelectedDateForEvent] = useState<Date | undefined>();
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [sharedCalendars, setSharedCalendars] = useState<any[]>([]);
+  const [selectedCalendarUserId, setSelectedCalendarUserId] = useState<string | null>(null); // null = my calendar
 
   useEffect(() => {
     setMounted(true);
+    fetchSharedCalendars();
     return () => setMounted(false);
   }, []);
+
+  // Fetch calendars shared with me
+  const fetchSharedCalendars = async () => {
+    try {
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) return;
+
+      const response = await fetch('/api/calendar/shared-with-me', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSharedCalendars(data.shared_calendars || []);
+      }
+    } catch (err) {
+      console.error('Error fetching shared calendars:', err);
+    }
+  };
 
   // Fetch calendar events
   useEffect(() => {
     fetchCalendarEvents();
-  }, [currentMonth]);
+  }, [currentMonth, selectedCalendarUserId]); // Re-fetch when calendar selection changes
 
   const fetchCalendarEvents = async () => {
     setLoadingEvents(true);
@@ -87,14 +117,17 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
       const startDate = firstDay.toISOString().split('T')[0];
       const endDate = lastDay.toISOString().split('T')[0];
 
-      const response = await fetch(
-        `/api/calendar/events?start_date=${startDate}&end_date=${endDate}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${authToken}`
-          }
+      // Build URL with optional user_id filter for viewing shared calendars
+      let url = `/api/calendar/events?start_date=${startDate}&end_date=${endDate}`;
+      if (selectedCalendarUserId) {
+        url += `&user_id=${selectedCalendarUserId}`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
         }
-      );
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -279,10 +312,26 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
           <ChevronLeft className="w-5 h-5 text-emerald-300" />
         </button>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-center gap-2">
           <h3 className="text-lg font-semibold text-white">
             {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </h3>
+          
+          {/* Calendar Selector Dropdown */}
+          {sharedCalendars.length > 0 && (
+            <select
+              value={selectedCalendarUserId || ''}
+              onChange={(e) => setSelectedCalendarUserId(e.target.value || null)}
+              className="px-3 py-1.5 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-white/20 transition-colors"
+            >
+              <option value="">My Calendar</option>
+              {sharedCalendars.map(cal => (
+                <option key={cal.id} value={cal.owner_user_id}>
+                  {cal.owner_name || cal.owner_username}'s Calendar
+                </option>
+              ))}
+            </select>
+          )}
           
           <div className="flex items-center gap-2">
             <button
@@ -615,6 +664,10 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
       <ShareCalendarModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
+        onSuccess={() => {
+          // Refresh shared calendars list
+          fetchSharedCalendars();
+        }}
       />
 
       {/* Add Calendar Event Modal */}

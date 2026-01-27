@@ -66,7 +66,7 @@ export function useScraperSSE(sessionId: string | null, enabled: boolean = true)
               console.log('[SSE] Town completed:', message.data);
               addLog({
                 timestamp: new Date().toISOString(),
-                message: `✅ ${message.data.town} completed: ${message.data.businessCount} businesses (${Math.round(message.data.duration / 1000)}s)`,
+                message: `✅ ${message.data.town} complete! Found ${message.data.businessCount} businesses (${Math.round(message.data.duration / 1000)}s)`,
                 level: 'success',
               });
               break;
@@ -84,7 +84,7 @@ export function useScraperSSE(sessionId: string | null, enabled: boolean = true)
               });
               addLog({
                 timestamp: new Date().toISOString(),
-                message: `🔍 Provider lookups: ${message.data.completed}/${message.data.total} (${message.data.percentage}%)`,
+                message: `📞 Looking up phone providers... ${message.data.completed}/${message.data.total} (${message.data.percentage}%)`,
                 level: 'info',
               });
               break;
@@ -122,7 +122,7 @@ export function useScraperSSE(sessionId: string | null, enabled: boolean = true)
               
               addLog({
                 timestamp: new Date().toISOString(),
-                message: `Scraping completed! Collected ${message.data.businesses?.length || 0} businesses`,
+                message: `🎉 All done! Collected ${message.data.businesses?.length || 0} businesses total`,
                 level: 'success',
               });
               

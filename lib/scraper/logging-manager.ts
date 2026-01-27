@@ -48,7 +48,8 @@ export class LoggingManager {
 
     this.townLogs.set(town, townLog);
 
-    const message = `Started scraping: ${town}`;
+    // User-friendly message
+    const message = `🔍 Searching ${town} for businesses...`;
     this.addLog('info', message);
   }
 
@@ -72,8 +73,9 @@ export class LoggingManager {
       townLog.status = 'completed';
     }
 
-    const durationSeconds = (duration / 1000).toFixed(2);
-    const message = `Completed: ${town} - ${leadCount} businesses in ${durationSeconds}s`;
+    const durationSeconds = (duration / 1000).toFixed(0);
+    // User-friendly message
+    const message = `✅ ${town} complete! Found ${leadCount} businesses (${durationSeconds}s)`;
     this.addLog('success', message);
   }
 
@@ -94,7 +96,8 @@ export class LoggingManager {
       townLog.industryProgress[industry] = status;
     }
 
-    const message = `${town} - ${industry}: ${status}`;
+    // User-friendly message
+    const message = `📍 ${town} - ${industry}`;
     this.addLog('info', message);
   }
 

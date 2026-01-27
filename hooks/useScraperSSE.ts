@@ -10,7 +10,7 @@ export function useScraperSSE(sessionId: string | null, enabled: boolean = true)
   const eventSourceRef = useRef<EventSource | null>(null);
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { setStatus, updateProgress, addBusinesses, addLog } = useScraperStore();
+  const { setStatus, updateProgress, updateLookupProgress, addBusinesses, addLog } = useScraperStore();
 
   useEffect(() => {
     if (!enabled || !sessionId) {
@@ -55,11 +55,48 @@ export function useScraperSSE(sessionId: string | null, enabled: boolean = true)
               });
               break;
 
+            case 'business':
+              // NEW - Phase 2: Real-time business display
+              console.log('[SSE] New business scraped:', message.data);
+              addBusinesses([message.data]);
+              break;
+
+            case 'town-complete':
+              // NEW - Phase 2: Town completion notification
+              console.log('[SSE] Town completed:', message.data);
+              addLog({
+                timestamp: new Date().toISOString(),
+                message: `✅ ${message.data.town} completed: ${message.data.businessCount} businesses (${Math.round(message.data.duration / 1000)}s)`,
+                level: 'success',
+              });
+              break;
+
+            case 'lookup-progress':
+              // NEW - Phase 2: Provider lookup progress
+              console.log('[SSE] Lookup progress:', message.data);
+              updateLookupProgress({
+                isActive: true,
+                completed: message.data.completed,
+                total: message.data.total,
+                percentage: message.data.percentage,
+                currentBatch: message.data.currentBatch,
+                totalBatches: message.data.totalBatches,
+              });
+              addLog({
+                timestamp: new Date().toISOString(),
+                message: `🔍 Provider lookups: ${message.data.completed}/${message.data.total} (${message.data.percentage}%)`,
+                level: 'info',
+              });
+              break;
+
             case 'complete':
               console.log('[SSE] Scraping complete:', message.data);
               setStatus('completed');
               
-              // Add businesses to store
+              // Deactivate lookup progress
+              updateLookupProgress({ isActive: false });
+              
+              // Add businesses to store (if not already added via real-time updates)
               if (message.data.businesses && Array.isArray(message.data.businesses)) {
                 addBusinesses(message.data.businesses);
               }

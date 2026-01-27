@@ -51,6 +51,15 @@ export interface ProgressState {
   townCompletionTimes: number[];
 }
 
+export interface LookupProgressState {
+  isActive: boolean;
+  completed: number;
+  total: number;
+  percentage: number;
+  currentBatch: number;
+  totalBatches: number;
+}
+
 export interface LogEntry {
   timestamp: string;
   message: string;
@@ -71,6 +80,7 @@ interface ScraperState {
   
   // Progress tracking
   progress: ProgressState;
+  lookupProgress: LookupProgressState;
   
   // Data
   businesses: Business[];
@@ -83,6 +93,7 @@ interface ScraperState {
   setTowns: (towns: string[]) => void;
   setIndustries: (industries: string[]) => void;
   updateProgress: (progress: Partial<ProgressState>) => void;
+  updateLookupProgress: (progress: Partial<LookupProgressState>) => void;
   addBusinesses: (businesses: Business[]) => void;
   addLog: (log: LogEntry) => void;
   clearAll: () => void;
@@ -114,6 +125,15 @@ const defaultProgress: ProgressState = {
   townCompletionTimes: [],
 };
 
+const defaultLookupProgress: LookupProgressState = {
+  isActive: false,
+  completed: 0,
+  total: 0,
+  percentage: 0,
+  currentBatch: 0,
+  totalBatches: 0,
+};
+
 export const useScraperStore = create<ScraperState>()(
   persist(
     (set, get) => ({
@@ -124,6 +144,7 @@ export const useScraperStore = create<ScraperState>()(
       towns: [],
       industries: [],
       progress: defaultProgress,
+      lookupProgress: defaultLookupProgress,
       businesses: [],
       logs: [],
 
@@ -144,6 +165,11 @@ export const useScraperStore = create<ScraperState>()(
       updateProgress: (progressUpdate) =>
         set((state) => ({
           progress: { ...state.progress, ...progressUpdate },
+        })),
+      
+      updateLookupProgress: (lookupProgressUpdate) =>
+        set((state) => ({
+          lookupProgress: { ...state.lookupProgress, ...lookupProgressUpdate },
         })),
       
       addBusinesses: (newBusinesses) =>
@@ -167,6 +193,7 @@ export const useScraperStore = create<ScraperState>()(
           businesses: [],
           logs: [],
           progress: defaultProgress,
+          lookupProgress: defaultLookupProgress,
           status: 'idle',
           sessionId: null,
         });
@@ -180,6 +207,7 @@ export const useScraperStore = create<ScraperState>()(
           towns: [],
           industries: [],
           progress: defaultProgress,
+          lookupProgress: defaultLookupProgress,
           businesses: [],
           logs: [],
         });

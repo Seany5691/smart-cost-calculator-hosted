@@ -22,6 +22,9 @@ import SessionManager from '@/components/scraper/SessionManager';
 import SummaryStats from '@/components/scraper/SummaryStats';
 import ClearConfirmModal from '@/components/scraper/ClearConfirmModal';
 import ExportToLeadsModal from '@/components/scraper/ExportToLeadsModal';
+import SessionSelector from '@/components/scraper/SessionSelector';
+import ProviderLookupProgress from '@/components/scraper/ProviderLookupProgress';
+import DuplicateWarningModal from '@/components/scraper/DuplicateWarningModal';
 
 function getDefaultIndustries(): string[] {
   return [
@@ -108,6 +111,7 @@ export default function ScraperPage() {
     towns,
     industries,
     progress,
+    lookupProgress,
     businesses,
     logs,
     setConfig,
@@ -116,6 +120,7 @@ export default function ScraperPage() {
     startScraping,
     stopScraping,
     clearAll,
+    addBusinesses, // Phase 1: For loading from database
   } = useScraperStore();
 
   // Connect to SSE for real-time updates
@@ -130,9 +135,12 @@ export default function ScraperPage() {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [sessionManagerOpen, setSessionManagerOpen] = useState(false);
   const [sessionManagerMode, setSessionManagerMode] = useState<'save' | 'load'>('save');
+  const [sessionSelectorOpen, setSessionSelectorOpen] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showExportToLeadsPrompt, setShowExportToLeadsPrompt] = useState(false);
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [duplicates, setDuplicates] = useState<any[]>([]);
   const [leadListName, setLeadListName] = useState('Scraped Leads');
   
   // Loading states for async operations
@@ -167,6 +175,75 @@ export default function ScraperPage() {
       }
     }
   }, [setIndustries]);
+
+  // Load most recent session from database on mount (CROSS-DEVICE SYNC)
+  useEffect(() => {
+    const loadMostRecentSession = async () => {
+      try {
+        const authStorage = localStorage.getItem('auth-storage');
+        if (!authStorage) return;
+
+        const authData = JSON.parse(authStorage);
+        const token = authData.token;
+        if (!token) return;
+
+        // Fetch sessions from database
+        const response = await fetch('/api/scraper/sessions', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const sessions = data.sessions || [];
+
+        // Find most recent completed session with businesses
+        const recentSession = sessions.find(
+          (s: any) => s.status === 'completed' && s.businessCount > 0
+        );
+
+        if (recentSession) {
+          console.log('[Scraper] Loading most recent session from database:', recentSession.name);
+          
+          // Load businesses from this session
+          const businessesResponse = await fetch(
+            `/api/scraper/sessions/${recentSession.id}/businesses`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (businessesResponse.ok) {
+            const businessesData = await businessesResponse.json();
+            
+            // Update store with businesses from database
+            if (businessesData.businesses && businessesData.businesses.length > 0) {
+              // Clear existing businesses first
+              clearAll();
+              // Add businesses from database
+              addBusinesses(businessesData.businesses);
+              
+              console.log(
+                `[Scraper] Loaded ${businessesData.businesses.length} businesses from session: ${businessesData.sessionName}`
+              );
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[Scraper] Error loading recent session:', error);
+        // Fail silently - not critical
+      }
+    };
+
+    // Only load if authenticated and hydrated
+    if (isHydrated && isAuthenticated) {
+      loadMostRecentSession();
+    }
+  }, [isHydrated, isAuthenticated, addBusinesses, clearAll]);
 
   // Sync industries from store
   useEffect(() => {
@@ -237,8 +314,60 @@ export default function ScraperPage() {
     localStorage.setItem('smart-scrape-selected-industries', JSON.stringify(updatedSelected));
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
+    // Phase 2: Check for duplicates before starting
+    try {
+      const authStorage = localStorage.getItem('auth-storage');
+      if (authStorage) {
+        const authData = JSON.parse(authStorage);
+        const token = authData.token;
+
+        if (token) {
+          const response = await fetch('/api/scraper/check-duplicates', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              towns,
+              industries,
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            
+            if (data.hasDuplicates && data.duplicates.length > 0) {
+              // Show duplicate warning modal
+              setDuplicates(data.duplicates);
+              setShowDuplicateWarning(true);
+              return; // Don't start scraping yet
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking duplicates:', error);
+      // Continue with scraping even if duplicate check fails
+    }
+
+    // No duplicates or user chose to continue
     startScraping();
+  };
+
+  const handleContinueWithDuplicates = () => {
+    setShowDuplicateWarning(false);
+    startScraping();
+  };
+
+  const handleLoadDuplicateSession = async (sessionId: string) => {
+    setShowDuplicateWarning(false);
+    // Find the session name from duplicates
+    const duplicate = duplicates.find(d => d.sessionId === sessionId);
+    if (duplicate) {
+      await handleLoadSession(sessionId, duplicate.sessionName);
+    }
   };
 
   const handleStop = () => {
@@ -251,8 +380,7 @@ export default function ScraperPage() {
   };
 
   const handleLoad = () => {
-    setSessionManagerMode('load');
-    setSessionManagerOpen(true);
+    setSessionSelectorOpen(true);
   };
 
   const handleClear = () => {
@@ -467,32 +595,57 @@ export default function ScraperPage() {
     }
   };
 
-  const handleLoadSession = async (sessionId: string) => {
+  const handleLoadSession = async (sessionId: string, sessionName: string) => {
     setIsLoading(true);
     try {
-      const stored = localStorage.getItem('smart-scrape-sessions');
-      if (!stored) {
-        throw new Error('No saved sessions found');
+      const authStorage = localStorage.getItem('auth-storage');
+      if (!authStorage) {
+        toast.error('Authentication required', {
+          message: 'Please log in to load sessions',
+          section: 'scraper'
+        });
+        return;
       }
 
-      const sessions = JSON.parse(stored);
-      const session = sessions.find((s: any) => s.id === sessionId);
-      if (!session) {
-        throw new Error('Session not found');
-      }
-
-      setTowns(session.currentTowns);
-      setIndustries(session.currentIndustries);
+      const authData = JSON.parse(authStorage);
+      const token = authData.token;
       
-      setSessionManagerOpen(false);
+      if (!token) {
+        toast.error('Authentication required', {
+          message: 'Please log in to load sessions',
+          section: 'scraper'
+        });
+        return;
+      }
+
+      // Fetch businesses from database
+      const response = await fetch(`/api/scraper/sessions/${sessionId}/businesses`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to load session');
+      }
+
+      const data = await response.json();
+      
+      // Clear existing data and load from database
+      clearAll();
+      addBusinesses(data.businesses);
+      
       toast.success('Session loaded', {
-        message: 'Session data has been restored',
+        message: `Loaded ${data.businesses.length} businesses from "${sessionName}"`,
         section: 'scraper'
       });
-    } catch (error) {
+      
+      setSessionSelectorOpen(false);
+    } catch (error: any) {
       console.error('Error loading session:', error);
       toast.error('Failed to load session', {
-        message: 'Please try again',
+        message: error.message || 'Please try again',
         section: 'scraper'
       });
     } finally {
@@ -576,6 +729,18 @@ export default function ScraperPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Provider Lookup Progress (Phase 2) */}
+        {lookupProgress.isActive && (
+          <ProviderLookupProgress
+            completed={lookupProgress.completed}
+            total={lookupProgress.total}
+            percentage={lookupProgress.percentage}
+            currentBatch={lookupProgress.currentBatch}
+            totalBatches={lookupProgress.totalBatches}
+            isActive={lookupProgress.isActive}
+          />
         )}
 
         {/* Configuration Section - Stacked vertically on mobile, paired on desktop */}
@@ -662,7 +827,14 @@ export default function ScraperPage() {
           sessions={[]}
           onClose={() => setSessionManagerOpen(false)}
           onSave={handleSaveSession}
-          onLoad={handleLoadSession}
+          onLoad={(sessionId) => handleLoadSession(sessionId, '')}
+        />
+
+        {/* Session Selector Modal (Database Sessions) */}
+        <SessionSelector
+          isOpen={sessionSelectorOpen}
+          onClose={() => setSessionSelectorOpen(false)}
+          onLoadSession={handleLoadSession}
         />
 
         {/* Clear Confirmation Modal */}
@@ -670,6 +842,15 @@ export default function ScraperPage() {
           isOpen={showClearConfirm}
           onClose={() => setShowClearConfirm(false)}
           onConfirm={handleConfirmClear}
+        />
+
+        {/* Duplicate Warning Modal (Phase 2) */}
+        <DuplicateWarningModal
+          isOpen={showDuplicateWarning}
+          duplicates={duplicates}
+          onClose={() => setShowDuplicateWarning(false)}
+          onContinue={handleContinueWithDuplicates}
+          onLoadExisting={handleLoadDuplicateSession}
         />
 
         {/* Export to Leads Prompt Modal */}

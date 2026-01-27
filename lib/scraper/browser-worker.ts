@@ -140,7 +140,7 @@ export class BrowserWorker {
       );
 
       // Create scraper and scrape
-      const scraper = new IndustryScraper(page, town, industry);
+      const scraper = new IndustryScraper(page, town, industry, this.eventEmitter);
       const businesses = await scraper.scrape();
 
       return businesses;

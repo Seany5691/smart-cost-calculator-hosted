@@ -6,18 +6,21 @@
 import { Page } from 'puppeteer';
 import { ScrapedBusiness } from './types';
 import { ErrorLogger } from './error-logger';
+import { EventEmitter } from 'events';
 
 export class IndustryScraper {
   private page: Page;
   private town: string;
   private industry: string;
   private errorLogger: ErrorLogger;
+  private eventEmitter?: EventEmitter;
 
-  constructor(page: Page, town: string, industry: string) {
+  constructor(page: Page, town: string, industry: string, eventEmitter?: EventEmitter) {
     this.page = page;
     this.town = town;
     this.industry = industry;
     this.errorLogger = ErrorLogger.getInstance();
+    this.eventEmitter = eventEmitter;
   }
 
   /**
@@ -90,6 +93,11 @@ export class IndustryScraper {
         const business = await this.parseBusinessCard(card);
         if (business) {
           businesses.push(business);
+          
+          // Emit individual business for real-time display (Phase 2)
+          if (this.eventEmitter) {
+            this.eventEmitter.emit('business', business);
+          }
         }
       } catch (error) {
         // Log error but continue with next card

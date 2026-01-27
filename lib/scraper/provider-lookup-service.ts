@@ -4,6 +4,11 @@
  * Performs batched lookups to identify telecommunications providers for phone numbers.
  * Handles captcha avoidance by creating new browser instances every 5 lookups.
  * 
+ * CACHING (Phase 3):
+ * - Checks cache before performing lookups
+ * - Caches results for 30 days
+ * - Significantly reduces redundant API calls
+ * 
  * Rate Limiting (Requirement 24.2):
  * - Waits 500ms between provider lookups within a batch (Req 24.2)
  * 
@@ -11,16 +16,19 @@
  */
 
 import type { Browser, Page } from 'puppeteer';
+import { ProviderCache } from './provider-cache';
 
 const MAX_LOOKUPS_PER_BROWSER = 5; // Captcha appears after 5 lookups
 
 export class ProviderLookupService {
   private maxConcurrentBrowsers: number;
   private activeBrowsers: number = 0;
+  private eventEmitter?: any;
 
-  constructor(config: { maxConcurrentBatches: number }) {
+  constructor(config: { maxConcurrentBatches: number; eventEmitter?: any }) {
     // maxConcurrentBatches means how many browser instances can run in parallel
     this.maxConcurrentBrowsers = config.maxConcurrentBatches;
+    this.eventEmitter = config.eventEmitter;
   }
 
   /**
@@ -43,26 +51,74 @@ export class ProviderLookupService {
     }
 
     console.log(`[ProviderLookup] Starting lookup for ${validPhones.length} phone numbers`);
+
+    // PHASE 3: Check cache first
+    const cachedResults = await ProviderCache.getMany(validPhones);
+    console.log(`[ProviderLookup] Found ${cachedResults.size} results in cache`);
+
+    // Add cached results to final results
+    for (const [phone, provider] of cachedResults.entries()) {
+      results.set(phone, provider);
+    }
+
+    // Filter out phones that were found in cache
+    const phonesToLookup = validPhones.filter(phone => !cachedResults.has(phone));
+
+    if (phonesToLookup.length === 0) {
+      console.log(`[ProviderLookup] All results found in cache, no lookups needed!`);
+      return results;
+    }
+
+    console.log(`[ProviderLookup] Need to lookup ${phonesToLookup.length} numbers (not in cache)`);
     console.log(`[ProviderLookup] Max concurrent browsers: ${this.maxConcurrentBrowsers}`);
 
     // Split into batches of 5 (max per browser before captcha)
-    const batches = this.createBatchesOfFive(validPhones);
+    const batches = this.createBatchesOfFive(phonesToLookup);
     console.log(`[ProviderLookup] Created ${batches.length} batches of up to 5 numbers each`);
 
     // Process batches with concurrency control (multiple browsers in parallel)
+    let completedLookups = cachedResults.size; // Start with cached count
+    const totalLookups = validPhones.length;
+    const newResults = new Map<string, string>();
+    
     for (let i = 0; i < batches.length; i += this.maxConcurrentBrowsers) {
       const batchGroup = batches.slice(i, i + this.maxConcurrentBrowsers);
       
       console.log(`[ProviderLookup] Processing batch group ${Math.floor(i / this.maxConcurrentBrowsers) + 1} with ${batchGroup.length} browser(s)`);
       
       const batchPromises = batchGroup.map((batch, index) => 
-        this.processBatchWithNewBrowser(batch, results, i + index + 1)
+        this.processBatchWithNewBrowser(batch, newResults, i + index + 1).then(() => {
+          completedLookups += batch.length;
+          
+          // Emit lookup progress (Phase 2)
+          if (this.eventEmitter) {
+            this.eventEmitter.emit('lookup-progress', {
+              completed: completedLookups,
+              total: totalLookups,
+              percentage: Math.round((completedLookups / totalLookups) * 100),
+              currentBatch: i + index + 1,
+              totalBatches: batches.length,
+              fromCache: cachedResults.size,
+            });
+          }
+        })
       );
 
       await Promise.all(batchPromises);
     }
 
-    console.log(`[ProviderLookup] Completed all lookups. Results: ${results.size}`);
+    // PHASE 3: Cache new results
+    if (newResults.size > 0) {
+      await ProviderCache.setMany(newResults);
+      console.log(`[ProviderLookup] Cached ${newResults.size} new provider lookups`);
+    }
+
+    // Merge new results with cached results
+    for (const [phone, provider] of newResults.entries()) {
+      results.set(phone, provider);
+    }
+
+    console.log(`[ProviderLookup] Completed all lookups. Total results: ${results.size} (${cachedResults.size} from cache, ${newResults.size} new)`);
     return results;
   }
 

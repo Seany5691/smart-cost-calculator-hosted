@@ -22,6 +22,8 @@ interface ProgressState {
   totalBusinesses: number;
   startTime: number;
   townCompletionTimes: number[];
+  failedTowns: string[]; // Phase 4: Track failed towns
+  successfulTowns: string[]; // Phase 4: Track successful towns
 }
 
 export class ScrapingOrchestrator {
@@ -49,6 +51,8 @@ export class ScrapingOrchestrator {
     totalBusinesses: 0,
     startTime: 0,
     townCompletionTimes: [],
+    failedTowns: [], // Phase 4
+    successfulTowns: [], // Phase 4
   };
 
   constructor(
@@ -184,9 +188,19 @@ export class ScrapingOrchestrator {
         this.progress.completedTowns++;
         this.progress.totalBusinesses += businesses.length;
         this.progress.townCompletionTimes.push(townDuration);
+        this.progress.successfulTowns.push(town); // Phase 4: Track success
 
         // Log town completion
         this.loggingManager.logTownComplete(town, businesses.length, townDuration);
+
+        // Emit town-complete event (Phase 2)
+        this.eventEmitter.emit('town-complete', {
+          town,
+          businessCount: businesses.length,
+          duration: townDuration,
+          completedTowns: this.progress.completedTowns,
+          totalTowns: this.progress.totalTowns,
+        });
 
         // Emit progress update
         this.emitProgress();
@@ -194,6 +208,9 @@ export class ScrapingOrchestrator {
       } catch (error) {
         this.errorLogger.logError(`Worker ${workerId} failed to process town: ${town}`, error);
         this.loggingManager.logError(town, 'all industries', error instanceof Error ? error.message : String(error));
+        
+        // Phase 4: Track failed town
+        this.progress.failedTowns.push(town);
         
         // Continue with next town despite error
         this.progress.completedTowns++;
@@ -245,6 +262,7 @@ export class ScrapingOrchestrator {
       // Create provider lookup service
       const providerService = new ProviderLookupService({
         maxConcurrentBatches: this.config.simultaneousLookups,
+        eventEmitter: this.eventEmitter,
       });
 
       // Perform lookups
@@ -395,5 +413,60 @@ export class ScrapingOrchestrator {
    */
   getLoggingManager(): LoggingManager {
     return this.loggingManager;
+  }
+
+  /**
+   * Phase 4: Retry failed towns
+   * Creates a new orchestrator to retry only the towns that failed
+   * 
+   * @returns Promise that resolves when retry is complete
+   */
+  async retryFailedTowns(): Promise<ScrapedBusiness[]> {
+    if (this.progress.failedTowns.length === 0) {
+      console.log('[Orchestrator] No failed towns to retry');
+      return [];
+    }
+
+    console.log(`[Orchestrator] Retrying ${this.progress.failedTowns.length} failed towns`);
+    this.loggingManager.logMessage(`Retrying ${this.progress.failedTowns.length} failed towns...`);
+
+    // Create new orchestrator for retry
+    const retryOrchestrator = new ScrapingOrchestrator(
+      this.progress.failedTowns,
+      this.industries,
+      this.config,
+      this.eventEmitter
+    );
+
+    try {
+      await retryOrchestrator.start();
+      const retryResults = retryOrchestrator.getResults();
+      
+      // Add retry results to main results
+      this.allBusinesses.push(...retryResults);
+      
+      // Update progress
+      const retryProgress = retryOrchestrator.getProgress();
+      this.progress.successfulTowns.push(...retryProgress.successfulTowns);
+      this.progress.failedTowns = retryProgress.failedTowns; // Update with any still-failed towns
+      this.progress.totalBusinesses += retryResults.length;
+
+      console.log(`[Orchestrator] Retry complete: ${retryResults.length} businesses from ${retryProgress.successfulTowns.length} towns`);
+      this.loggingManager.logMessage(`Retry complete: ${retryResults.length} businesses recovered`);
+
+      return retryResults;
+    } catch (error) {
+      this.errorLogger.logError('Failed to retry towns', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Phase 4: Get failed towns list
+   * 
+   * @returns Array of failed town names
+   */
+  getFailedTowns(): string[] {
+    return [...this.progress.failedTowns];
   }
 }

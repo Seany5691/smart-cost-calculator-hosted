@@ -199,7 +199,6 @@ export default function RemindersPage() {
         title: reminder.title || reminder.message || '',
         description: reminder.description || '',
         completed: reminder.completed || reminder.status === 'completed',
-        completed_at: reminder.completed_at,
         created_at: reminder.created_at,
         lead_name: reminder.lead_name,
         lead_phone: reminder.lead_phone

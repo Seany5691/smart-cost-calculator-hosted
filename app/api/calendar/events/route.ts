@@ -36,14 +36,7 @@ export async function GET(request: NextRequest) {
       FROM calendar_events ce
       JOIN users u ON ce.created_by = u.id
       LEFT JOIN calendar_shares cs ON cs.owner_user_id = ce.user_id AND cs.shared_with_user_id = $1
-      WHERE (
-        ce.user_id = $1
-        OR ce.user_id IN (
-          SELECT owner_user_id 
-          FROM calendar_shares 
-          WHERE shared_with_user_id = $1
-        )
-      )
+      WHERE 1=1
     `;
 
     const params: any[] = [userId];
@@ -51,9 +44,13 @@ export async function GET(request: NextRequest) {
 
     // If filtering by specific user's calendar (viewing shared calendar)
     if (filterUserId) {
+      // Viewing a specific user's calendar (either own or shared)
       sql += ` AND ce.user_id = $${paramIndex}`;
       params.push(filterUserId);
       paramIndex++;
+    } else {
+      // No user_id filter = only show current user's OWN events (not shared events from others)
+      sql += ` AND ce.user_id = $1`;
     }
 
     if (startDate) {

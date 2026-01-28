@@ -205,7 +205,7 @@ export async function DELETE(
 
     console.log('[CALENDAR EVENT DELETE] Request:', { eventId, userId });
 
-    // Check if user owns the event or created it
+    // Check if user owns the event or has edit permission
     const eventCheck = await query(
       `SELECT user_id, created_by
        FROM calendar_events
@@ -224,12 +224,30 @@ export async function DELETE(
     const isOwner = event.user_id === userId;
     const isCreator = event.created_by === userId;
 
+    // If not owner or creator, check for edit permission
     if (!isOwner && !isCreator) {
-      return NextResponse.json(
-        { error: 'You do not have permission to delete this event' },
-        { status: 403 }
+      const permissionCheck = await query(
+        `SELECT can_edit_events 
+         FROM calendar_shares 
+         WHERE owner_user_id = $1 AND shared_with_user_id = $2`,
+        [event.user_id, userId]
       );
+
+      console.log('[CALENDAR EVENT DELETE] Permission check:', {
+        hasPermission: permissionCheck.rows.length > 0,
+        canEdit: permissionCheck.rows[0]?.can_edit_events
+      });
+
+      if (permissionCheck.rows.length === 0 || !permissionCheck.rows[0].can_edit_events) {
+        console.log('[CALENDAR EVENT DELETE] Permission denied - no edit access');
+        return NextResponse.json(
+          { error: 'You do not have permission to delete this event' },
+          { status: 403 }
+        );
+      }
     }
+
+    console.log('[CALENDAR EVENT DELETE] Permission granted:', { isOwner, isCreator });
 
     // Delete the event
     await query(

@@ -658,23 +658,22 @@ export default function MainSheetPage() {
   // Render
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900">
-      {/* Mobile: Reduced padding, Desktop: Keep original */}
-      <div className="container mx-auto px-2 py-4 md:px-4 md:py-8">
-        {/* Header - Mobile Optimized */}
-        <div className="mb-4 md:mb-8">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-6">
           <Link
             href="/leads"
-            className="inline-flex items-center text-emerald-400 hover:text-emerald-300 mb-2 md:mb-4 transition-colors min-h-[44px]"
+            className="inline-flex items-center text-emerald-400 hover:text-emerald-300 mb-4 transition-colors min-h-[44px]"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
-            <span className="text-base md:text-sm">Back to Dashboard</span>
+            <span>Back to Dashboard</span>
           </Link>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-4xl font-bold text-white mb-1 md:mb-2">
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
                 Main Sheet
               </h1>
-              <p className="text-sm md:text-lg text-emerald-200">
+              <p className="text-gray-300">
                 Process new leads and generate routes
               </p>
             </div>
@@ -693,7 +692,7 @@ export default function MainSheetPage() {
 
         {/* Success Message */}
         {showSuccess && (
-          <div className="glass-card p-3 md:p-4 mb-4 md:mb-6 border-l-4 border-green-500 bg-green-50/10">
+          <div className="glass-card p-4 mb-6 border-l-4 border-green-500 bg-green-50/10">
             <div className="flex items-center">
               <CheckCircle className="w-5 h-5 text-green-400 mr-3" />
               <p className="text-sm text-green-200">{successMessage}</p>
@@ -703,7 +702,7 @@ export default function MainSheetPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="glass-card p-3 md:p-4 mb-4 md:mb-6 border-l-4 border-red-500 bg-red-50/10">
+          <div className="glass-card p-4 mb-6 border-l-4 border-red-500 bg-red-50/10">
             <div className="flex items-start">
               <AlertCircle className="w-5 h-5 text-red-400 mr-3 mt-0.5" />
               <div className="flex-1">
@@ -719,33 +718,33 @@ export default function MainSheetPage() {
           </div>
         )}
 
-        {/* Starting Point Input - Mobile: Simplified card */}
-        <div className="glass-card p-3 md:p-6 mb-4 md:mb-6">
-          <h2 className="text-base md:text-xl font-semibold text-white mb-2">Starting Point</h2>
-          <p className="text-xs md:text-sm text-emerald-200 mb-2 md:mb-4">
-            Enter your starting location (Google Maps URL or address)
+        {/* Starting Point Input */}
+        <div className="glass-card p-6 mb-6">
+          <h2 className="text-xl font-semibold text-white mb-3">Starting Point</h2>
+          <p className="text-sm text-gray-300 mb-4">
+            Enter your starting location (Google Maps URL or address) to begin your route
           </p>
           <input
             type="text"
             value={startingPoint}
             onChange={(e) => setStartingPoint(e.target.value)}
             placeholder="Paste Google Maps URL or enter address..."
-            className="w-full px-3 md:px-4 py-2.5 md:py-3 min-h-[48px] bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm md:text-base placeholder-emerald-300/50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full px-4 py-3 min-h-[48px] bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           />
-          <p className="text-xs text-emerald-300/70 mt-2">
-            Example: https://maps.google.com/?q=123+Main+St
+          <p className="text-xs text-gray-400 mt-2">
+            Example: https://maps.google.com/?q=123+Main+St or "123 Main Street, City"
           </p>
         </div>
 
-        {/* Working Area - Mobile: Simplified card */}
-        <div className="glass-card p-3 md:p-6 mb-4 md:mb-8">
-          <div className="flex flex-col gap-2 md:gap-3 mb-3 md:mb-6">
+        {/* Working Area */}
+        <div className="glass-card p-6 mb-8">
+          <div className="flex flex-col gap-3 mb-6">
             <div>
-              <h2 className="text-lg md:text-2xl font-semibold text-white">Working Area</h2>
-              <p className="text-xs md:text-sm text-emerald-200 mt-1">
+              <h2 className="text-2xl font-semibold text-white">Working Area</h2>
+              <p className="text-sm text-gray-300 mt-1">
                 {workingLeads.length} lead{workingLeads.length !== 1 ? 's' : ''} selected
                 {workingLeads.length > ROUTE_GENERATION_LIMIT && (
-                  <span className="block md:inline text-yellow-400 md:ml-2 mt-1 md:mt-0 text-xs md:text-sm">
+                  <span className="block md:inline text-yellow-400 md:ml-2 mt-1 md:mt-0">
                     (Route generation disabled - max {ROUTE_GENERATION_LIMIT} for routes)
                   </span>
                 )}
@@ -907,12 +906,12 @@ export default function MainSheetPage() {
           )}
         </div>
 
-        {/* Available Leads - Mobile: Simplified card */}
-        <div className="glass-card p-3 md:p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2 md:mb-4 gap-2">
+        {/* Available Leads */}
+        <div className="glass-card p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
             <div>
-              <h2 className="text-lg md:text-2xl font-semibold text-white">Available Leads</h2>
-              <p className="text-xs md:text-sm text-emerald-200 mt-1">
+              <h2 className="text-2xl font-semibold text-white">Available Leads</h2>
+              <p className="text-sm text-gray-300 mt-1">
                 {filteredAndSortedLeads.length} leads available
                 {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
                 {selectedAvailableLeads.length > 0 && ` • ${selectedAvailableLeads.length} selected`}
@@ -920,9 +919,9 @@ export default function MainSheetPage() {
             </div>
           </div>
 
-          {/* Filter and Sort Bar - Mobile: Simplified */}
+          {/* Filter and Sort Bar */}
           {leads.filter(l => l.status === 'new').length > 0 && (
-            <div className="mb-2 md:mb-4 p-2 md:p-3 bg-white/5 rounded-lg border border-emerald-500/20">
+            <div className="mb-4 p-3 bg-white/5 rounded-lg border border-emerald-500/20">
               {/* Mobile: Stack vertically */}
               <div className="flex flex-col gap-3 md:hidden">
                 {/* List Filter */}
@@ -1040,9 +1039,9 @@ export default function MainSheetPage() {
             </div>
           )}
 
-          {/* Bulk Actions Bar - Mobile: Simplified */}
+          {/* Bulk Actions Bar */}
           {availableLeads.length > 0 && (
-            <div className="mb-2 md:mb-4 p-2 md:p-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-xl border border-emerald-500/20">
+            <div className="mb-4 p-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-xl border border-emerald-500/20">
               {/* Mobile: Stack vertically */}
               <div className="flex flex-col gap-2 md:hidden">
                 <button

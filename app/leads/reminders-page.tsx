@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/lib/store/auth-simple';
 import { Bell, Calendar as CalendarIcon, Plus, Filter, Loader2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-import CallbackCalendar from '@/components/leads/dashboard/CallbackCalendar';
+import AdvancedCalendar from '@/components/leads/AdvancedCalendar';
 import type { LeadReminder, Lead } from '@/lib/leads/types';
 
 interface Reminder {
@@ -365,10 +365,10 @@ export default function RemindersPage() {
         </p>
       </div>
 
-      {/* Calendar Component */}
+      {/* Advanced Calendar Component */}
       <div className="glass-card p-6 mb-6">
         <h3 className="text-xl font-semibold text-white mb-4">Calendar View</h3>
-        <CallbackCalendar 
+        <AdvancedCalendar 
           reminders={allReminders}
           leads={leads}
           onLeadClick={(leadId) => {

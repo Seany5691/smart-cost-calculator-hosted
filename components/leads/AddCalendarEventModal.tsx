@@ -139,25 +139,30 @@ export default function AddCalendarEventModal({
         throw new Error('Not authenticated');
       }
 
+      const requestBody = {
+        title: formData.title.trim(),
+        description: formData.description.trim() || null,
+        event_date: formData.event_date,
+        end_date: formData.is_multi_day ? formData.end_date : formData.event_date,
+        event_time: formData.is_all_day ? null : formData.event_time,
+        end_time: formData.is_all_day ? null : formData.end_time,
+        is_all_day: formData.is_all_day,
+        is_multi_day: formData.is_multi_day,
+        event_type: formData.event_type,
+        priority: formData.priority,
+        location: formData.location.trim() || null
+      };
+
+      console.log('[FRONTEND] Creating event with date:', formData.event_date);
+      console.log('[FRONTEND] Full request body:', JSON.stringify(requestBody, null, 2));
+
       const response = await fetch('/api/calendar/events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
         },
-        body: JSON.stringify({
-          title: formData.title.trim(),
-          description: formData.description.trim() || null,
-          event_date: formData.event_date,
-          end_date: formData.is_multi_day ? formData.end_date : formData.event_date,
-          event_time: formData.is_all_day ? null : formData.event_time,
-          end_time: formData.is_all_day ? null : formData.end_time,
-          is_all_day: formData.is_all_day,
-          is_multi_day: formData.is_multi_day,
-          event_type: formData.event_type,
-          priority: formData.priority,
-          location: formData.location.trim() || null
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {

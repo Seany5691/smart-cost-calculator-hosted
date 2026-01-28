@@ -69,6 +69,12 @@ export async function GET(request: NextRequest) {
 
     const result = await query(sql, params);
 
+    console.log('[CALENDAR EVENT GET] Retrieved events count:', result.rows.length);
+    if (result.rows.length > 0) {
+      console.log('[CALENDAR EVENT GET] First event date from DB:', result.rows[0].event_date);
+      console.log('[CALENDAR EVENT GET] First event full row:', JSON.stringify(result.rows[0], null, 2));
+    }
+
     return NextResponse.json({
       events: result.rows
     });
@@ -110,9 +116,17 @@ export async function POST(request: NextRequest) {
       user_id // Optional: for creating events on shared calendars
     } = body;
 
+    // DEEP DEBUG: Log every step of date processing
+    console.log('[CALENDAR EVENT CREATE] Raw request body:', JSON.stringify(body, null, 2));
+    console.log('[CALENDAR EVENT CREATE] event_date received:', event_date);
+    console.log('[CALENDAR EVENT CREATE] event_date type:', typeof event_date);
+    
     // Extract just the date part to avoid timezone issues (same as reminders)
     const eventDateOnly = event_date.split('T')[0];
     const endDateOnly = end_date ? end_date.split('T')[0] : eventDateOnly;
+    
+    console.log('[CALENDAR EVENT CREATE] eventDateOnly after split:', eventDateOnly);
+    console.log('[CALENDAR EVENT CREATE] Will insert into database:', eventDateOnly);
 
     // Validate required fields
     if (!title || !eventDateOnly) {
@@ -144,6 +158,7 @@ export async function POST(request: NextRequest) {
 
     // Create the event
     // Use date-only string (no timezone conversion) - same approach as reminders
+    console.log('[CALENDAR EVENT CREATE] About to INSERT with date:', eventDateOnly);
     const result = await query(
       `INSERT INTO calendar_events (
         user_id,
@@ -171,6 +186,9 @@ export async function POST(request: NextRequest) {
         userId // The person who created it
       ]
     );
+
+    console.log('[CALENDAR EVENT CREATE] Database returned event_date:', result.rows[0].event_date);
+    console.log('[CALENDAR EVENT CREATE] Full returned row:', JSON.stringify(result.rows[0], null, 2));
 
     // If multi-day event, create additional entries for each day
     if (is_multi_day && endDateOnly && endDateOnly > eventDateOnly) {

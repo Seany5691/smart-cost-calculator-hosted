@@ -226,7 +226,8 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
     // Add current month's days
     for (let day = 1; day <= lastDate; day++) {
       const date = new Date(year, month, day);
-      const dateStr = date.toISOString().split('T')[0];
+      // FIX: Create date string without timezone conversion
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const isToday = date.getTime() === today.getTime();
       
       // FIX #6: Find reminders on this date - ensure proper date comparison
@@ -241,6 +242,7 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
       const dateEvents = calendarEvents.filter(event => {
         if (!event.event_date) return false;
         const eventDateStr = event.event_date.split('T')[0];
+        console.log('[CALENDAR DISPLAY] Comparing event date:', eventDateStr, 'with calendar date:', dateStr, 'match:', eventDateStr === dateStr);
         return eventDateStr === dateStr;
       });
       

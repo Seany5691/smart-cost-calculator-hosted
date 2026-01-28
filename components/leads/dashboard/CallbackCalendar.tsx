@@ -16,6 +16,8 @@ import { getReminderTypeIcon, getReminderTypeLabel, getReminderPriorityLabel, fo
 import ShareCalendarModal from '@/components/leads/ShareCalendarModal';
 import AddCalendarEventModal from '@/components/leads/AddCalendarEventModal';
 import EditCalendarEventModal from '@/components/leads/EditCalendarEventModal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import { useToast } from '@/components/ui/Toast/useToast';
 
 interface CallbackCalendarProps {
   reminders: LeadReminder[];
@@ -63,7 +65,10 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
   const [sharedCalendars, setSharedCalendars] = useState<any[]>([]);
   const [selectedCalendarUserId, setSelectedCalendarUserId] = useState<string | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const [canAddToSelectedCalendar, setCanAddToSelectedCalendar] = useState(true); // Default true for own calendar
+  const { toast } = useToast();
 
   useEffect(() => {
     setMounted(true);
@@ -161,9 +166,14 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
 
   // Delete calendar event
   const handleDeleteEvent = async (eventId: string) => {
-    if (!confirm('Are you sure you want to delete this event?')) return;
+    setEventToDelete(eventId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteEvent = async () => {
+    if (!eventToDelete) return;
     
-    setDeletingEventId(eventId);
+    setDeletingEventId(eventToDelete);
     try {
       const token = localStorage.getItem('auth-storage');
       let authToken = null;
@@ -176,7 +186,7 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/calendar/events/${eventId}`, {
+      const response = await fetch(`/api/calendar/events/${eventToDelete}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authToken}`
@@ -186,14 +196,22 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
       if (response.ok) {
         await fetchCalendarEvents(); // Refresh calendar
         handleClosePopover();
+        toast.success('Event deleted successfully', {
+          section: 'leads'
+        });
       } else {
         throw new Error('Failed to delete event');
       }
     } catch (err) {
       console.error('Error deleting event:', err);
-      alert('Failed to delete event. Please try again.');
+      toast.error('Failed to delete event', {
+        message: 'Please try again',
+        section: 'leads'
+      });
     } finally {
       setDeletingEventId(null);
+      setEventToDelete(null);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -800,6 +818,20 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
           fetchCalendarEvents();
           handleClosePopover();
         }}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setEventToDelete(null);
+        }}
+        onConfirm={confirmDeleteEvent}
+        title="Delete Calendar Event"
+        message="Are you sure you want to delete this event? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
       />
     </div>
   );

@@ -659,31 +659,31 @@ export default function MainSheetPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
+        {/* Header - Mobile Optimized */}
+        <div className="mb-6 md:mb-8">
           <Link
             href="/leads"
-            className="inline-flex items-center text-emerald-400 hover:text-emerald-300 mb-4 transition-colors"
+            className="inline-flex items-center text-emerald-400 hover:text-emerald-300 mb-3 md:mb-4 transition-colors min-h-[44px]"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            <span className="text-base md:text-sm">Back to Dashboard</span>
           </Link>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-white mb-2">
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
                 Main Sheet
               </h1>
-              <p className="text-lg text-emerald-200">
+              <p className="text-base md:text-lg text-emerald-200">
                 Process new leads and generate routes
               </p>
             </div>
-            <div className="mt-4 md:mt-0">
+            <div className="w-full md:w-auto">
               <button
                 data-import-button
                 onClick={() => setShowImportModal(true)}
-                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:shadow-lg transition-shadow"
+                className="w-full md:w-auto inline-flex items-center justify-center px-6 py-3 min-h-[48px] bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:shadow-lg transition-shadow font-medium"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-5 h-5 mr-2" />
                 Import Leads
               </button>
             </div>
@@ -718,10 +718,10 @@ export default function MainSheetPage() {
           </div>
         )}
 
-        {/* Starting Point Input */}
-        <div className="glass-card p-6 mb-6">
-          <h2 className="text-xl font-semibold text-white mb-3">Starting Point</h2>
-          <p className="text-sm text-emerald-200 mb-4">
+        {/* Starting Point Input - Mobile Optimized */}
+        <div className="glass-card p-4 md:p-6 mb-6">
+          <h2 className="text-lg md:text-xl font-semibold text-white mb-2 md:mb-3">Starting Point</h2>
+          <p className="text-sm text-emerald-200 mb-3 md:mb-4">
             Enter your starting location (Google Maps URL or address) to begin your route
           </p>
           <input
@@ -729,34 +729,36 @@ export default function MainSheetPage() {
             value={startingPoint}
             onChange={(e) => setStartingPoint(e.target.value)}
             placeholder="Paste Google Maps URL or enter address..."
-            className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="w-full px-4 py-3 min-h-[48px] bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           />
           <p className="text-xs text-emerald-300/70 mt-2">
             Example: https://maps.google.com/?q=123+Main+St or "123 Main Street, City"
           </p>
         </div>
 
-        {/* Working Area */}
-        <div className="glass-card p-6 mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        {/* Working Area - Mobile Optimized */}
+        <div className="glass-card p-4 md:p-6 mb-6 md:mb-8">
+          <div className="flex flex-col gap-3 mb-4 md:mb-6">
             <div>
-              <h2 className="text-2xl font-semibold text-white">Working Area</h2>
+              <h2 className="text-xl md:text-2xl font-semibold text-white">Working Area</h2>
               <p className="text-sm text-emerald-200 mt-1">
                 {workingLeads.length} lead{workingLeads.length !== 1 ? 's' : ''} selected
                 {workingLeads.length > ROUTE_GENERATION_LIMIT && (
-                  <span className="text-yellow-400 ml-2">
+                  <span className="block md:inline text-yellow-400 md:ml-2 mt-1 md:mt-0">
                     (Route generation disabled - max {ROUTE_GENERATION_LIMIT} for routes)
                   </span>
                 )}
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            
+            {/* Action Buttons - Mobile Optimized */}
+            <div className="flex flex-col gap-2 md:flex-row md:gap-3">
               {/* Move To Dropdown */}
-              <div className="relative w-full sm:w-auto">
+              <div className="relative w-full md:w-auto">
                 <button
                   onClick={() => setShowMoveToDropdown(!showMoveToDropdown)}
                   disabled={workingLeads.length === 0 || routeLoading}
-                  className={`w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-all ${
+                  className={`w-full md:w-auto inline-flex items-center justify-center px-6 py-3 min-h-[48px] rounded-lg font-semibold transition-all ${
                     workingLeads.length === 0 || routeLoading
                       ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                       : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:shadow-lg'
@@ -768,14 +770,14 @@ export default function MainSheetPage() {
                 </button>
                 
                 {showMoveToDropdown && workingLeads.length > 0 && (
-                  <div className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-full sm:w-56 bg-slate-800 border border-emerald-500/30 rounded-lg shadow-xl z-50">
+                  <div className="absolute left-0 right-0 md:right-0 md:left-auto mt-2 w-full md:w-56 bg-slate-800 border border-emerald-500/30 rounded-lg shadow-xl z-50">
                     <div className="py-1">
                       <button
                         onClick={() => {
                           handleMoveToStatus('leads');
                           setShowMoveToDropdown(false);
                         }}
-                        className="w-full text-left px-4 py-2 text-white hover:bg-emerald-500/20 transition-colors"
+                        className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
                       >
                         Leads (Active Pipeline)
                       </button>
@@ -784,7 +786,7 @@ export default function MainSheetPage() {
                           handleMoveToStatus('working');
                           setShowMoveToDropdown(false);
                         }}
-                        className="w-full text-left px-4 py-2 text-white hover:bg-emerald-500/20 transition-colors"
+                        className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
                       >
                         Working On
                       </button>
@@ -793,7 +795,7 @@ export default function MainSheetPage() {
                           handleMoveToStatus('later');
                           setShowMoveToDropdown(false);
                         }}
-                        className="w-full text-left px-4 py-2 text-white hover:bg-emerald-500/20 transition-colors"
+                        className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
                       >
                         Later Stage
                       </button>
@@ -802,7 +804,7 @@ export default function MainSheetPage() {
                           handleMoveToStatus('bad');
                           setShowMoveToDropdown(false);
                         }}
-                        className="w-full text-left px-4 py-2 text-white hover:bg-emerald-500/20 transition-colors"
+                        className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
                       >
                         Bad Leads
                       </button>
@@ -811,7 +813,7 @@ export default function MainSheetPage() {
                           handleMoveToStatus('signed');
                           setShowMoveToDropdown(false);
                         }}
-                        className="w-full text-left px-4 py-2 text-white hover:bg-emerald-500/20 transition-colors"
+                        className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
                       >
                         Signed
                       </button>
@@ -824,7 +826,7 @@ export default function MainSheetPage() {
               <button
                 onClick={handleGenerateRoute}
                 disabled={workingLeads.length === 0 || workingLeads.length > ROUTE_GENERATION_LIMIT || routeLoading}
-                className={`w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-all ${
+                className={`w-full md:w-auto inline-flex items-center justify-center px-6 py-3 min-h-[48px] rounded-lg font-semibold transition-all ${
                   workingLeads.length === 0 || workingLeads.length > ROUTE_GENERATION_LIMIT || routeLoading
                     ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:shadow-lg'
@@ -847,8 +849,8 @@ export default function MainSheetPage() {
           </div>
 
           {workingLeads.length > ROUTE_GENERATION_LIMIT && (
-            <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg flex items-start">
-              <AlertCircle className="w-5 h-5 text-yellow-400 mr-2 mt-0.5" />
+            <div className="mb-4 p-3 md:p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-yellow-200">
                 You have more than {ROUTE_GENERATION_LIMIT} leads selected. Route generation is disabled. Use "Move To" to move leads to another status, or remove some leads to enable route generation.
               </p>
@@ -856,25 +858,25 @@ export default function MainSheetPage() {
           )}
 
           {workingLeads.length === 0 ? (
-            <div className="text-center py-12 border-2 border-dashed border-emerald-500/30 rounded-lg">
-              <MapPin className="w-12 h-12 text-emerald-400/50 mx-auto mb-3" />
-              <p className="text-emerald-200 mb-2">No leads in working area</p>
+            <div className="text-center py-8 md:py-12 border-2 border-dashed border-emerald-500/30 rounded-lg">
+              <MapPin className="w-10 h-10 md:w-12 md:h-12 text-emerald-400/50 mx-auto mb-3" />
+              <p className="text-base md:text-lg text-emerald-200 mb-2">No leads in working area</p>
               <p className="text-sm text-emerald-300/70">Select leads from the list below to add them here</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 md:space-y-3">
               {workingLeads.map((lead, index) => (
                 <div
                   key={lead.id}
-                  className="flex items-center justify-between p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/30 transition-colors"
+                  className="flex items-center justify-between p-3 md:p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/30 transition-colors"
                 >
-                  <div className="flex items-center space-x-4 flex-1">
-                    <div className="flex-shrink-0 w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center font-semibold">
+                  <div className="flex items-center space-x-3 md:space-x-4 flex-1 min-w-0">
+                    <div className="flex-shrink-0 w-7 h-7 md:w-8 md:h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center font-semibold text-sm">
                       {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white truncate">{lead.name}</h4>
-                      <p className="text-sm text-emerald-200 truncate">{lead.provider || 'No provider'}</p>
+                      <h4 className="font-semibold text-white truncate text-sm md:text-base">{lead.name}</h4>
+                      <p className="text-xs md:text-sm text-emerald-200 truncate">{lead.provider || 'No provider'}</p>
                     </div>
                     {!isMobile && (
                       <div className="hidden md:block text-sm text-emerald-200">
@@ -884,7 +886,7 @@ export default function MainSheetPage() {
                   </div>
                   <button
                     onClick={() => handleRemoveFromWorking(lead.id)}
-                    className="ml-4 p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                    className="ml-3 md:ml-4 p-2 min-w-[40px] min-h-[40px] text-red-400 hover:bg-red-500/20 rounded-lg transition-colors flex items-center justify-center"
                     title="Remove from working area"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -895,8 +897,8 @@ export default function MainSheetPage() {
           )}
 
           {workingLeads.length > 10 && workingLeads.length <= 25 && (
-            <div className="mt-4 p-3 bg-orange-500/20 border border-orange-500/30 rounded-lg flex items-start">
-              <AlertCircle className="w-5 h-5 text-orange-400 mr-2 mt-0.5" />
+            <div className="mt-4 p-3 md:p-4 bg-orange-500/20 border border-orange-500/30 rounded-lg flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-orange-200">
                 Routes with more than 10 stops may be difficult to navigate. Consider using Google My Maps for better route optimization.
               </p>
@@ -904,11 +906,11 @@ export default function MainSheetPage() {
           )}
         </div>
 
-        {/* Available Leads */}
-        <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-4">
+        {/* Available Leads - Mobile Optimized */}
+        <div className="glass-card p-4 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
             <div>
-              <h2 className="text-2xl font-semibold text-white">Available Leads</h2>
+              <h2 className="text-xl md:text-2xl font-semibold text-white">Available Leads</h2>
               <p className="text-sm text-emerald-200 mt-1">
                 {filteredAndSortedLeads.length} leads available
                 {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
@@ -1141,9 +1143,9 @@ export default function MainSheetPage() {
             </div>
           ) : (
             <>
-              {/* Mobile View - Cards */}
+              {/* Mobile View - Cards - Optimized */}
               {isMobile ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {availableLeads.map((lead) => {
                     const isNoGood = lead.background_color === '#FF0000';
                     const isSelected = selectedAvailableLeads.includes(lead.id);
@@ -1162,21 +1164,21 @@ export default function MainSheetPage() {
                           <div className="flex items-start gap-3 mb-3">
                             <button
                               onClick={() => handleToggleSelectAvailable(lead.id)}
-                              className="mt-1"
+                              className="mt-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             >
                               {isSelected ? (
-                                <CheckSquare className="w-5 h-5 text-blue-400" />
+                                <CheckSquare className="w-6 h-6 text-blue-400" />
                               ) : (
-                                <Square className="w-5 h-5 text-emerald-400/50" />
+                                <Square className="w-6 h-6 text-emerald-400/50" />
                               )}
                             </button>
-                            <div className="flex-1">
-                              <h3 className={`font-semibold mb-1 ${isNoGood ? 'text-red-300' : 'text-white'}`}>
+                            <div className="flex-1 min-w-0">
+                              <h3 className={`font-semibold mb-1 text-base ${isNoGood ? 'text-red-300' : 'text-white'}`}>
                                 {lead.name}
                               </h3>
-                              <p className="text-sm text-emerald-200">{lead.address}</p>
+                              <p className="text-sm text-emerald-200 break-words">{lead.address}</p>
                               {lead.provider && (
-                                <span className={`inline-block mt-2 px-2 py-1 rounded text-xs ${
+                                <span className={`inline-block mt-2 px-3 py-1 rounded text-sm ${
                                   lead.provider.toLowerCase().includes('telkom')
                                     ? 'bg-blue-500/20 text-blue-200 border border-blue-500/30'
                                     : 'bg-emerald-500/20 text-emerald-200'
@@ -1186,29 +1188,31 @@ export default function MainSheetPage() {
                               )}
                             </div>
                           </div>
-                          <div className="flex gap-2">
+                          
+                          {/* Mobile Action Buttons - 3 Column Grid */}
+                          <div className="grid grid-cols-3 gap-2">
                             {lead.maps_address && (
                               <button
                                 onClick={() => handleOpenMaps(lead.maps_address!)}
-                                className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 rounded-lg text-sm font-medium transition-colors border border-blue-500/30"
+                                className="flex flex-col items-center justify-center px-2 py-3 min-h-[60px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 rounded-lg text-xs font-medium transition-colors border border-blue-500/30"
                               >
-                                <ExternalLink className="w-4 h-4 mr-2" />
-                                Maps
+                                <ExternalLink className="w-5 h-5 mb-1" />
+                                <span>Maps</span>
                               </button>
                             )}
                             <button
                               onClick={() => handleSelectLead(lead.id)}
-                              className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-200 rounded-lg text-sm font-medium transition-colors border border-green-500/30"
+                              className="flex flex-col items-center justify-center px-2 py-3 min-h-[60px] bg-green-500/20 hover:bg-green-500/30 text-green-200 rounded-lg text-xs font-medium transition-colors border border-green-500/30"
                             >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Select
+                              <CheckCircle className="w-5 h-5 mb-1" />
+                              <span>Select</span>
                             </button>
                             <button
                               onClick={() => handleNoGood(lead.id)}
-                              className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg text-sm font-medium transition-colors border border-red-500/30"
+                              className="flex flex-col items-center justify-center px-2 py-3 min-h-[60px] bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg text-xs font-medium transition-colors border border-red-500/30"
                             >
-                              <XCircle className="w-4 h-4 mr-2" />
-                              Bad
+                              <XCircle className="w-5 h-5 mb-1" />
+                              <span>Bad</span>
                             </button>
                           </div>
                         </div>
@@ -1318,21 +1322,27 @@ export default function MainSheetPage() {
             </>
           )}
 
-          {/* Pagination Controls */}
+          {/* Pagination Controls - Mobile Optimized */}
           {!loading && filteredAndSortedLeads.length > 0 && totalPages > 1 && (
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-emerald-500/20 pt-4">
-              <div className="text-sm text-emerald-200">
+            <div className="mt-6 flex flex-col gap-4 border-t border-emerald-500/20 pt-4">
+              {/* Results Info */}
+              <div className="text-sm text-emerald-200 text-center md:text-left">
                 Showing {((currentPage - 1) * leadsPerPage) + 1} to {Math.min(currentPage * leadsPerPage, filteredAndSortedLeads.length)} of {filteredAndSortedLeads.length} leads
               </div>
-              <div className="flex items-center gap-2">
+              
+              {/* Pagination Buttons */}
+              <div className="flex flex-col md:flex-row items-center justify-center md:justify-between gap-3">
+                {/* Previous Button */}
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="px-4 py-2 border border-emerald-500/30 rounded-lg text-sm font-medium text-emerald-200 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full md:w-auto px-6 py-3 min-h-[48px] border border-emerald-500/30 rounded-lg text-sm font-medium text-emerald-200 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Previous
                 </button>
-                <div className="flex items-center gap-1">
+                
+                {/* Page Numbers */}
+                <div className="flex items-center gap-2 overflow-x-auto max-w-full px-2">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
                     if (totalPages <= 5) {
@@ -1348,7 +1358,7 @@ export default function MainSheetPage() {
                       <button
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                        className={`px-4 py-2 min-w-[44px] min-h-[44px] rounded-lg text-sm font-medium transition-colors ${
                           currentPage === pageNum
                             ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'
                             : 'text-emerald-200 hover:bg-white/5'
@@ -1359,10 +1369,12 @@ export default function MainSheetPage() {
                     );
                   })}
                 </div>
+                
+                {/* Next Button */}
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-4 py-2 border border-emerald-500/30 rounded-lg text-sm font-medium text-emerald-200 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full md:w-auto px-6 py-3 min-h-[48px] border border-emerald-500/30 rounded-lg text-sm font-medium text-emerald-200 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Next
                 </button>

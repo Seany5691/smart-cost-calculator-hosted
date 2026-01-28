@@ -962,6 +962,26 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
         onConfirm={confirmDeleteReminder}
         isDeleting={isDeletingReminder}
       />
+
+      {/* Later Stage Modal */}
+      {laterStageLead && (
+        <LaterStageModal
+          lead={laterStageLead}
+          isOpen={true}
+          onClose={() => setLaterStageLead(null)}
+          onConfirm={handleLaterStageConfirm}
+        />
+      )}
+
+      {/* Signed Modal */}
+      {signedLead && (
+        <SignedModal
+          lead={signedLead}
+          isOpen={true}
+          onClose={() => setSignedLead(null)}
+          onConfirm={handleSignedConfirm}
+        />
+      )}
     </>
   );
 }

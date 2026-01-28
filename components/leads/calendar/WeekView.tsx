@@ -14,8 +14,11 @@ interface CalendarEvent {
   event_type: string;
   priority: string;
   location: string | null;
+  created_by: string;
   creator_username: string;
   is_owner: boolean;
+  can_edit?: boolean;
+  can_add?: boolean;
 }
 
 interface WeekViewProps {

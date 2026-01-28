@@ -27,6 +27,8 @@ import EditCalendarEventModal from '@/components/leads/EditCalendarEventModal';
 import MonthView from '@/components/leads/calendar/MonthView';
 import WeekView from '@/components/leads/calendar/WeekView';
 import DayView from '@/components/leads/calendar/DayView';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import { useToast } from '@/components/ui/Toast/useToast';
 
 type ViewMode = 'month' | 'week' | 'day';
 
@@ -69,7 +71,10 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick }: Adva
   const [sharedCalendars, setSharedCalendars] = useState<any[]>([]);
   const [selectedCalendarUserId, setSelectedCalendarUserId] = useState<string | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const [canAddToSelectedCalendar, setCanAddToSelectedCalendar] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     setMounted(true);
@@ -166,9 +171,14 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick }: Adva
   };
 
   const handleDeleteEvent = async (eventId: string) => {
-    if (!confirm('Are you sure you want to delete this event?')) return;
+    setEventToDelete(eventId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteEvent = async () => {
+    if (!eventToDelete) return;
     
-    setDeletingEventId(eventId);
+    setDeletingEventId(eventToDelete);
     try {
       const token = localStorage.getItem('auth-storage');
       let authToken = null;
@@ -178,7 +188,7 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick }: Adva
       }
       if (!authToken) throw new Error('Not authenticated');
 
-      const response = await fetch(`/api/calendar/events/${eventId}`, {
+      const response = await fetch(`/api/calendar/events/${eventToDelete}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
@@ -186,14 +196,22 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick }: Adva
       if (response.ok) {
         await fetchCalendarEvents();
         setShowPopover(false);
+        toast.success('Event deleted successfully', {
+          section: 'leads'
+        });
       } else {
         throw new Error('Failed to delete event');
       }
     } catch (err) {
       console.error('Error deleting event:', err);
-      alert('Failed to delete event. Please try again.');
+      toast.error('Failed to delete event', {
+        message: 'Please try again',
+        section: 'leads'
+      });
     } finally {
       setDeletingEventId(null);
+      setEventToDelete(null);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -489,6 +507,20 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick }: Adva
           fetchCalendarEvents();
           setShowPopover(false);
         }}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setEventToDelete(null);
+        }}
+        onConfirm={confirmDeleteEvent}
+        title="Delete Calendar Event"
+        message="Are you sure you want to delete this event? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
       />
     </div>
   );

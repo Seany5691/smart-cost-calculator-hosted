@@ -219,7 +219,7 @@ export default function LeadsPage() {
           {/* Requirement: 1.7 - Glassmorphism tab bar */}
           <div className="sticky top-4 z-10 glass-card p-2">
             {/* Requirement: 1.8, 1.9, 1.10 - Responsive tabs with horizontal scroll on mobile */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide touch-pan-x">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
@@ -294,6 +294,7 @@ export default function LeadsPage() {
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
         }
         .scrollbar-hide::-webkit-scrollbar {
           display: none;

@@ -657,38 +657,37 @@ export default function MainSheetPage() {
 
   // Render
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-6">
-          <Link
-            href="/leads"
-            className="inline-flex items-center text-emerald-400 hover:text-emerald-300 mb-4 transition-colors min-h-[44px]"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            <span>Back to Dashboard</span>
-          </Link>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-                Main Sheet
-              </h1>
-              <p className="text-gray-300">
-                Process new leads and generate routes
-              </p>
-            </div>
-            <div className="w-full md:w-auto">
-              <button
-                data-import-button
-                onClick={() => setShowImportModal(true)}
-                className="w-full md:w-auto inline-flex items-center justify-center px-6 py-3 min-h-[48px] bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:shadow-lg transition-shadow font-medium"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Import Leads
-              </button>
-            </div>
+    <div>
+      {/* Header */}
+      <div className="mb-6">
+        <Link
+          href="/leads"
+          className="inline-flex items-center text-emerald-400 hover:text-emerald-300 mb-4 transition-colors min-h-[44px]"
+        >
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          <span>Back to Dashboard</span>
+        </Link>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+              Main Sheet
+            </h1>
+            <p className="text-gray-300">
+              Process new leads and generate routes
+            </p>
+          </div>
+          <div className="w-full md:w-auto">
+            <button
+              data-import-button
+              onClick={() => setShowImportModal(true)}
+              className="w-full md:w-auto inline-flex items-center justify-center px-6 py-3 min-h-[48px] bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:shadow-lg transition-shadow font-medium"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Import Leads
+            </button>
           </div>
         </div>
+      </div>
 
         {/* Success Message */}
         {showSuccess && (
@@ -1571,6 +1570,5 @@ export default function MainSheetPage() {
           variant="danger"
         />
       </div>
-    </div>
   );
 }

@@ -190,6 +190,7 @@ export default function RemindersPage() {
 
     allReminders.forEach(reminder => {
       // Convert to Reminder format for display
+      // Note: lead_name and lead_phone may be added by API when joining with leads table
       const displayReminder: Reminder = {
         id: reminder.id,
         lead_id: reminder.lead_id || '',
@@ -200,8 +201,8 @@ export default function RemindersPage() {
         description: reminder.description || '',
         completed: reminder.completed || reminder.status === 'completed',
         created_at: reminder.created_at,
-        lead_name: reminder.lead_name,
-        lead_phone: reminder.lead_phone
+        lead_name: (reminder as any).lead_name,
+        lead_phone: (reminder as any).lead_phone
       };
 
       if (displayReminder.completed) {

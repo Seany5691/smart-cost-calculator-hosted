@@ -30,9 +30,12 @@ export async function GET(request: NextRequest) {
         CASE 
           WHEN ce.user_id = $1 THEN true
           ELSE false
-        END as is_owner
+        END as is_owner,
+        COALESCE(cs.can_edit_events, false) as can_edit,
+        COALESCE(cs.can_add_events, false) as can_add
       FROM calendar_events ce
       JOIN users u ON ce.created_by = u.id
+      LEFT JOIN calendar_shares cs ON cs.owner_user_id = ce.user_id AND cs.shared_with_user_id = $1
       WHERE (
         ce.user_id = $1
         OR ce.user_id IN (

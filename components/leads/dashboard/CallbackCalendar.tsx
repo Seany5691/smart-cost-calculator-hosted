@@ -44,6 +44,8 @@ interface CalendarEvent {
   created_by: string;
   creator_username: string;
   is_owner: boolean;
+  can_edit?: boolean;
+  can_add?: boolean;
 }
 
 export default function CallbackCalendar({ reminders, leads, onLeadClick }: CallbackCalendarProps) {
@@ -61,12 +63,25 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
   const [sharedCalendars, setSharedCalendars] = useState<any[]>([]);
   const [selectedCalendarUserId, setSelectedCalendarUserId] = useState<string | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  const [canAddToSelectedCalendar, setCanAddToSelectedCalendar] = useState(true); // Default true for own calendar
 
   useEffect(() => {
     setMounted(true);
     fetchSharedCalendars();
     return () => setMounted(false);
   }, []);
+
+  // Update add permission when selected calendar changes
+  useEffect(() => {
+    if (!selectedCalendarUserId) {
+      // Viewing own calendar - can always add
+      setCanAddToSelectedCalendar(true);
+    } else {
+      // Viewing shared calendar - check permission
+      const sharedCal = sharedCalendars.find(cal => cal.owner_user_id === selectedCalendarUserId);
+      setCanAddToSelectedCalendar(sharedCal?.can_add_events || false);
+    }
+  }, [selectedCalendarUserId, sharedCalendars]);
 
   // Fetch calendars shared with me
   const fetchSharedCalendars = async () => {
@@ -407,8 +422,9 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
               setSelectedDateForEvent(undefined);
               setShowAddEventModal(true);
             }}
-            className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-emerald-500/30 rounded-lg text-white text-sm transition-colors flex items-center gap-2"
-            title="Add a calendar event"
+            disabled={!canAddToSelectedCalendar}
+            className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-emerald-500/30 rounded-lg text-white text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={canAddToSelectedCalendar ? "Add a calendar event" : "You don't have permission to add events to this calendar"}
           >
             <Plus className="w-4 h-4" />
             <span>Add Event</span>
@@ -416,8 +432,9 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
           
           <button
             onClick={() => setShowShareModal(true)}
-            className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-emerald-500/30 rounded-lg text-white text-sm transition-colors flex items-center gap-2"
-            title="Share your calendar with other users"
+            disabled={selectedCalendarUserId !== null}
+            className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-emerald-500/30 rounded-lg text-white text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={selectedCalendarUserId ? "Can only share your own calendar" : "Share your calendar with other users"}
           >
             <User className="w-4 h-4" />
             <span>Share</span>
@@ -591,8 +608,8 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
                             )}
                           </div>
 
-                          {/* Edit/Delete Buttons - Only show if user is owner */}
-                          {event.is_owner && (
+                          {/* Edit/Delete Buttons - Show if user is owner OR has edit permission */}
+                          {(event.is_owner || event.can_edit) && (
                             <div className="flex items-center gap-2 pt-2 border-t border-blue-500/20">
                               <button
                                 onClick={(e) => {

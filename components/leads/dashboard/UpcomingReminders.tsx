@@ -34,6 +34,8 @@ interface CalendarEvent {
   created_by: string;
   creator_username: string;
   is_owner: boolean;
+  can_edit?: boolean;
+  can_add?: boolean;
 }
 
 type TimeRange = 'all' | 'today' | 'tomorrow' | 'week' | 'next7';
@@ -112,8 +114,11 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
       }
     });
 
-    // Filter calendar events
+    // Filter calendar events - ONLY show events owned by current user
     let filteredEvents = calendarEvents.filter(event => {
+      // Only show events where user is the owner (not shared events from others)
+      if (!event.is_owner) return false;
+      
       if (selectedRange === 'all') return true;
       
       const eventDate = new Date(event.event_date);

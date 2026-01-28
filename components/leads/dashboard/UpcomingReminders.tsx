@@ -399,7 +399,7 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
           <p className="text-emerald-200">No reminders or events for this time range</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-emerald-500/50 scrollbar-track-white/10 hover:scrollbar-thumb-emerald-500/70">
           {filteredItems.map(item => {
             // Handle calendar events
             if (item.type === 'event') {

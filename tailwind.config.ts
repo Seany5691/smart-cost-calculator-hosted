@@ -85,6 +85,28 @@ const config: Config = {
           'border': '1px solid rgba(255, 255, 255, 0.1)',
           'box-shadow': '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
         },
+        '.scrollbar-thin': {
+          'scrollbar-width': 'thin',
+        },
+        '.scrollbar-thumb-emerald-500\\/50': {
+          'scrollbar-color': 'rgba(16, 185, 129, 0.5) rgba(255, 255, 255, 0.1)',
+        },
+        '.scrollbar-track-white\\/10': {
+          '&::-webkit-scrollbar': {
+            'width': '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            'background': 'rgba(255, 255, 255, 0.1)',
+            'border-radius': '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            'background': 'rgba(16, 185, 129, 0.5)',
+            'border-radius': '4px',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            'background': 'rgba(16, 185, 129, 0.7)',
+          },
+        },
       }
       addUtilities(newUtilities)
     },

@@ -303,46 +303,46 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick }: Adva
         )}
 
         {/* View Mode Selector and Navigation */}
-        <div className="flex items-center justify-between gap-4">
-          {/* View Mode Buttons */}
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:gap-4">
+          {/* View Mode Buttons - Mobile Optimized */}
+          <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto">
             <button
               onClick={() => setViewMode('month')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap ${
                 viewMode === 'month'
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
                   : 'bg-white/10 text-emerald-200 hover:bg-white/20'
               }`}
             >
-              <Grid3x3 className="w-4 h-4" />
-              Month
+              <Grid3x3 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span>Month</span>
             </button>
             <button
               onClick={() => setViewMode('week')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap ${
                 viewMode === 'week'
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
                   : 'bg-white/10 text-emerald-200 hover:bg-white/20'
               }`}
             >
-              <Columns className="w-4 h-4" />
-              Week
+              <Columns className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span>Week</span>
             </button>
             <button
               onClick={() => setViewMode('day')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap ${
                 viewMode === 'day'
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
                   : 'bg-white/10 text-emerald-200 hover:bg-white/20'
               }`}
             >
-              <List className="w-4 h-4" />
-              Day
+              <List className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span>Day</span>
             </button>
           </div>
 
           {/* Navigation */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center gap-2">
             <button
               onClick={handlePrev}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -370,20 +370,20 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick }: Adva
 
         {/* Date Range Display */}
         <div className="text-center">
-          <h3 className="text-xl font-semibold text-white">
+          <h3 className="text-lg md:text-xl font-semibold text-white">
             {getDateRangeText()}
           </h3>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-center gap-2">
+        {/* Action Buttons - Mobile Optimized */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2">
           <button
             onClick={() => {
               setSelectedDateForEvent(undefined);
               setShowAddEventModal(true);
             }}
             disabled={!canAddToSelectedCalendar}
-            className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-emerald-500/30 rounded-lg text-white text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-emerald-500/30 rounded-lg text-white text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             title={canAddToSelectedCalendar ? "Add a calendar event" : "You don't have permission to add events to this calendar"}
           >
             <Plus className="w-4 h-4" />
@@ -393,7 +393,7 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick }: Adva
           <button
             onClick={() => setShowShareModal(true)}
             disabled={selectedCalendarUserId !== null}
-            className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-emerald-500/30 rounded-lg text-white text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-emerald-500/30 rounded-lg text-white text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             title={selectedCalendarUserId ? "Can only share your own calendar" : "Share your calendar with other users"}
           >
             <User className="w-4 h-4" />

@@ -305,39 +305,39 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick }: Adva
         {/* View Mode Selector and Navigation */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:gap-4">
           {/* View Mode Buttons - Mobile Optimized */}
-          <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto">
+          <div className="flex items-center gap-1.5 md:gap-2">
             <button
               onClick={() => setViewMode('month')}
-              className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap ${
+              className={`flex-1 md:flex-none px-2 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 ${
                 viewMode === 'month'
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
                   : 'bg-white/10 text-emerald-200 hover:bg-white/20'
               }`}
             >
-              <Grid3x3 className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              <span>Month</span>
+              <Grid3x3 className="w-4 h-4" />
+              <span className="text-[10px] md:text-sm">Month</span>
             </button>
             <button
               onClick={() => setViewMode('week')}
-              className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap ${
+              className={`flex-1 md:flex-none px-2 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 ${
                 viewMode === 'week'
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
                   : 'bg-white/10 text-emerald-200 hover:bg-white/20'
               }`}
             >
-              <Columns className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              <span>Week</span>
+              <Columns className="w-4 h-4" />
+              <span className="text-[10px] md:text-sm">Week</span>
             </button>
             <button
               onClick={() => setViewMode('day')}
-              className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all flex items-center justify-center gap-1.5 md:gap-2 whitespace-nowrap ${
+              className={`flex-1 md:flex-none px-2 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 ${
                 viewMode === 'day'
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
                   : 'bg-white/10 text-emerald-200 hover:bg-white/20'
               }`}
             >
-              <List className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              <span>Day</span>
+              <List className="w-4 h-4" />
+              <span className="text-[10px] md:text-sm">Day</span>
             </button>
           </div>
 
@@ -481,6 +481,207 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick }: Adva
           </div>
         </div>
       </div>
+
+      {/* Date Details Popover (Month View Only) */}
+      {mounted && showPopover && selectedDate && createPortal(
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+          onClick={() => setShowPopover(false)}
+        >
+          <div 
+            className="bg-gradient-to-br from-slate-900 to-emerald-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-emerald-500/30"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-emerald-500/20">
+              <div>
+                <h3 className="text-xl font-bold text-white">
+                  {selectedDate.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    month: 'long', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })}
+                </h3>
+                <p className="text-sm text-emerald-200 mt-1">
+                  {getItemsForDate(selectedDate).reminders.length} reminder(s), {getItemsForDate(selectedDate).events.length} event(s)
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPopover(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-emerald-200" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)] custom-scrollbar">
+              <style jsx>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                  width: 8px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                  background: rgba(255, 255, 255, 0.05);
+                  border-radius: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                  background: rgba(16, 185, 129, 0.3);
+                  border-radius: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                  background: rgba(16, 185, 129, 0.5);
+                }
+              `}</style>
+
+              {/* Calendar Events */}
+              {getItemsForDate(selectedDate).events.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                    <CalendarIcon className="w-5 h-5 text-blue-400" />
+                    Calendar Events
+                  </h4>
+                  <div className="space-y-3">
+                    {getItemsForDate(selectedDate).events.map((event) => (
+                      <div
+                        key={event.id}
+                        className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg hover:bg-blue-500/20 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h5 className="font-semibold text-white mb-1">{event.title}</h5>
+                            {event.description && (
+                              <p className="text-sm text-blue-200 mb-2">{event.description}</p>
+                            )}
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-blue-300">
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {event.is_all_day ? 'All Day' : event.event_time || 'No time'}
+                              </span>
+                              {event.location && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {event.location}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <User className="w-3 h-3" />
+                                {event.creator_username}
+                              </span>
+                            </div>
+                          </div>
+                          {event.can_edit && (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => {
+                                  setSelectedEvent(event);
+                                  setShowEditEventModal(true);
+                                }}
+                                className="p-2 text-blue-300 hover:bg-blue-500/20 rounded-lg transition-colors"
+                                title="Edit event"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteEvent(event.id)}
+                                disabled={deletingEventId === event.id}
+                                className="p-2 text-red-300 hover:bg-red-500/20 rounded-lg transition-colors disabled:opacity-50"
+                                title="Delete event"
+                              >
+                                {deletingEventId === event.id ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-300 border-t-transparent" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Reminders */}
+              {getItemsForDate(selectedDate).reminders.length > 0 && (
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-yellow-400" />
+                    Reminders
+                  </h4>
+                  <div className="space-y-3">
+                    {getItemsForDate(selectedDate).reminders.map((reminder) => {
+                      const lead = getLeadData(reminder.lead_id);
+                      const ReminderIcon = getReminderTypeIcon(reminder.reminder_type);
+                      const priorityColor = getReminderPriorityColor(reminder.priority);
+                      
+                      return (
+                        <div
+                          key={reminder.id}
+                          className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/20 transition-colors cursor-pointer"
+                          onClick={() => onLeadClick(reminder.lead_id)}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-lg ${priorityColor.replace('text-', 'bg-')}/20`}>
+                              <ReminderIcon className={`w-4 h-4 ${priorityColor}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h5 className="font-semibold text-white mb-1">{reminder.title}</h5>
+                              {lead && (
+                                <p className="text-sm text-yellow-200 mb-2 flex items-center gap-2">
+                                  <User className="w-3 h-3" />
+                                  {lead.name}
+                                </p>
+                              )}
+                              {reminder.description && (
+                                <p className="text-sm text-yellow-200 mb-2">{reminder.description}</p>
+                              )}
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-yellow-300">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {formatReminderTime(reminder)}
+                                </span>
+                                <span className="px-2 py-0.5 bg-yellow-500/20 rounded">
+                                  {getReminderTypeLabel(reminder.reminder_type)}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded ${priorityColor.replace('text-', 'bg-')}/20 ${priorityColor}`}>
+                                  {getReminderPriorityLabel(reminder.priority)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {getItemsForDate(selectedDate).reminders.length === 0 && 
+               getItemsForDate(selectedDate).events.length === 0 && (
+                <div className="text-center py-12">
+                  <CalendarIcon className="w-12 h-12 text-emerald-400/50 mx-auto mb-3" />
+                  <p className="text-emerald-200">No reminders or events for this date</p>
+                  <button
+                    onClick={() => {
+                      setSelectedDateForEvent(selectedDate);
+                      setShowPopover(false);
+                      setShowAddEventModal(true);
+                    }}
+                    className="mt-4 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors inline-flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Event
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Modals */}
       <ShareCalendarModal

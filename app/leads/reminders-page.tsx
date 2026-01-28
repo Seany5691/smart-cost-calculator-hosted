@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/lib/store/auth-simple';
+import { useRemindersStore } from '@/lib/store/reminders';
 import { Bell, Calendar as CalendarIcon, Plus, Filter, Loader2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import AdvancedCalendar from '@/components/leads/AdvancedCalendar';
 import type { LeadReminder, Lead } from '@/lib/leads/types';
@@ -56,6 +57,7 @@ interface CategorizedEvents {
 
 export default function RemindersPage() {
   const { token } = useAuthStore();
+  const { reminders: storeReminders, fetchAllReminders, loading: storeLoading } = useRemindersStore();
   const [reminders, setReminders] = useState<CategorizedReminders | null>(null);
   const [calendarEvents, setCalendarEvents] = useState<CategorizedEvents | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,7 +66,6 @@ export default function RemindersPage() {
   const [filterStatus, setFilterStatus] = useState<'active' | 'completed' | 'all'>('active');
   const [showType, setShowType] = useState<'all' | 'reminders' | 'events'>('all');
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [allReminders, setAllReminders] = useState<LeadReminder[]>([]);
 
   useEffect(() => {
     if (token) {
@@ -73,6 +74,14 @@ export default function RemindersPage() {
       fetchLeads();
     }
   }, [token]);
+
+  // Update local reminders when store reminders change
+  useEffect(() => {
+    if (storeReminders.length > 0) {
+      const categorized = categorizeReminders(storeReminders);
+      setReminders(categorized);
+    }
+  }, [storeReminders]);
 
   const fetchLeads = async () => {
     try {
@@ -151,18 +160,67 @@ export default function RemindersPage() {
     return categorized;
   };
 
+  const categorizeReminders = (allReminders: LeadReminder[]): CategorizedReminders => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    const categorized: CategorizedReminders = {
+      overdue: [],
+      today: [],
+      tomorrow: [],
+      upcoming: [],
+      future: [],
+      completed: []
+    };
+
+    allReminders.forEach(reminder => {
+      // Convert to Reminder format for display
+      const displayReminder: Reminder = {
+        id: reminder.id,
+        lead_id: reminder.lead_id || '',
+        reminder_type: reminder.reminder_type,
+        priority: reminder.priority,
+        due_date: reminder.reminder_date,
+        title: reminder.title || reminder.message || '',
+        description: reminder.description || '',
+        completed: reminder.completed || reminder.status === 'completed',
+        completed_at: reminder.completed_at,
+        created_at: reminder.created_at,
+        lead_name: reminder.lead_name,
+        lead_phone: reminder.lead_phone
+      };
+
+      if (displayReminder.completed) {
+        categorized.completed.push(displayReminder);
+        return;
+      }
+
+      const reminderDate = new Date(reminder.reminder_date);
+      reminderDate.setHours(0, 0, 0, 0);
+
+      if (reminderDate < today) {
+        categorized.overdue.push(displayReminder);
+      } else if (reminderDate.getTime() === today.getTime()) {
+        categorized.today.push(displayReminder);
+      } else if (reminderDate.getTime() === tomorrow.getTime()) {
+        categorized.tomorrow.push(displayReminder);
+      } else if (reminderDate < nextWeek) {
+        categorized.upcoming.push(displayReminder);
+      } else {
+        categorized.future.push(displayReminder);
+      }
+    });
+
+    return categorized;
+  };
+
   const fetchReminders = async () => {
     try {
-      const response = await fetch('/api/reminders', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setReminders(data.categorized);
-        // Convert to LeadReminder format for calendar
-        const allRems: LeadReminder[] = data.reminders || [];
-        setAllReminders(allRems);
-      }
+      await fetchAllReminders();
     } catch (error) {
       console.error('Error fetching reminders:', error);
     } finally {
@@ -369,11 +427,16 @@ export default function RemindersPage() {
       <div className="glass-card p-6 mb-6">
         <h3 className="text-xl font-semibold text-white mb-4">Calendar View</h3>
         <AdvancedCalendar 
-          reminders={allReminders}
+          reminders={storeReminders}
           leads={leads}
           onLeadClick={(leadId) => {
             // Navigate to lead details or open modal
             window.location.href = `/leads?leadId=${leadId}`;
+          }}
+          onReminderUpdate={() => {
+            // Refresh reminders when one is updated
+            fetchReminders();
+            fetchCalendarEvents();
           }}
         />
       </div>

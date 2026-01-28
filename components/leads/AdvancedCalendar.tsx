@@ -36,6 +36,7 @@ interface AdvancedCalendarProps {
   reminders: LeadReminder[];
   leads: Lead[];
   onLeadClick: (leadId: string) => void;
+  onReminderUpdate?: () => void;
 }
 
 interface CalendarEvent {
@@ -55,7 +56,7 @@ interface CalendarEvent {
   can_add?: boolean;
 }
 
-export default function AdvancedCalendar({ reminders, leads, onLeadClick }: AdvancedCalendarProps) {
+export default function AdvancedCalendar({ reminders, leads, onLeadClick, onReminderUpdate }: AdvancedCalendarProps) {
   const [mounted, setMounted] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());

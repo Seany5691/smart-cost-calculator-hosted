@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/lib/store/auth-simple';
 import { Bell, Calendar as CalendarIcon, Plus, Filter, Loader2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import CallbackCalendar from '@/components/leads/dashboard/CallbackCalendar';
+import type { LeadReminder, Lead } from '@/lib/leads/types';
 
 interface Reminder {
   id: string;
@@ -61,13 +63,30 @@ export default function RemindersPage() {
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<'active' | 'completed' | 'all'>('active');
   const [showType, setShowType] = useState<'all' | 'reminders' | 'events'>('all');
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [allReminders, setAllReminders] = useState<LeadReminder[]>([]);
 
   useEffect(() => {
     if (token) {
       fetchReminders();
       fetchCalendarEvents();
+      fetchLeads();
     }
   }, [token]);
+
+  const fetchLeads = async () => {
+    try {
+      const response = await fetch('/api/leads', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setLeads(data.leads || []);
+      }
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+    }
+  };
 
   const fetchCalendarEvents = async () => {
     try {
@@ -140,6 +159,9 @@ export default function RemindersPage() {
       if (response.ok) {
         const data = await response.json();
         setReminders(data.categorized);
+        // Convert to LeadReminder format for calendar
+        const allRems: LeadReminder[] = data.reminders || [];
+        setAllReminders(allRems);
       }
     } catch (error) {
       console.error('Error fetching reminders:', error);
@@ -337,10 +359,23 @@ export default function RemindersPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-white mb-2">Reminders</h2>
+        <h2 className="text-2xl font-bold text-white mb-2">Reminders & Events</h2>
         <p className="text-gray-300">
-          Manage all your lead reminders and callbacks
+          Manage all your lead reminders and calendar events
         </p>
+      </div>
+
+      {/* Calendar Component */}
+      <div className="glass-card p-6 mb-6">
+        <h3 className="text-xl font-semibold text-white mb-4">Calendar View</h3>
+        <CallbackCalendar 
+          reminders={allReminders}
+          leads={leads}
+          onLeadClick={(leadId) => {
+            // Navigate to lead details or open modal
+            window.location.href = `/leads?leadId=${leadId}`;
+          }}
+        />
       </div>
 
       {/* Stats */}

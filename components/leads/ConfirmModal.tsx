@@ -75,7 +75,7 @@ export default function ConfirmModal({
 
   return createPortal(
     <div 
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99999] flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[999999] flex items-center justify-center p-4"
       onClick={(e) => {
         // Click outside to close (only if not loading)
         if (e.target === e.currentTarget && !loading) {

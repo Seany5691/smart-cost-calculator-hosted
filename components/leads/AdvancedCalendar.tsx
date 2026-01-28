@@ -612,19 +612,19 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick }: Adva
                   </h4>
                   <div className="space-y-3">
                     {getItemsForDate(selectedDate).reminders.map((reminder) => {
-                      const lead = getLeadData(reminder.lead_id);
-                      const ReminderIcon = getReminderTypeIcon(reminder.reminder_type);
+                      const lead = reminder.lead_id ? getLeadData(reminder.lead_id) : null;
+                      const reminderIcon = getReminderTypeIcon(reminder.reminder_type);
                       const priorityColor = getReminderPriorityColor(reminder.priority);
                       
                       return (
                         <div
                           key={reminder.id}
                           className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/20 transition-colors cursor-pointer"
-                          onClick={() => onLeadClick(reminder.lead_id)}
+                          onClick={() => reminder.lead_id && onLeadClick(reminder.lead_id)}
                         >
                           <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-lg ${priorityColor.replace('text-', 'bg-')}/20`}>
-                              <ReminderIcon className={`w-4 h-4 ${priorityColor}`} />
+                            <div className={`p-2 rounded-lg ${priorityColor.replace('text-', 'bg-')}/20 text-xl`}>
+                              {reminderIcon}
                             </div>
                             <div className="flex-1 min-w-0">
                               <h5 className="font-semibold text-white mb-1">{reminder.title}</h5>
@@ -640,7 +640,7 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick }: Adva
                               <div className="flex flex-wrap items-center gap-3 text-xs text-yellow-300">
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
-                                  {formatReminderTime(reminder)}
+                                  {formatReminderTime(reminder.reminder_time, reminder.is_all_day)}
                                 </span>
                                 <span className="px-2 py-0.5 bg-yellow-500/20 rounded">
                                   {getReminderTypeLabel(reminder.reminder_type)}

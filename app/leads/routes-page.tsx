@@ -36,38 +36,39 @@ export default function RoutesPage() {
 
   useEffect(() => {
     if (token) {
-      fetchRoutes();
-      fetchLeads();
+      fetchRoutesAndLeads();
     }
   }, [token]);
 
-  const fetchRoutes = async () => {
+  const fetchRoutesAndLeads = async () => {
     try {
-      const response = await fetch('/api/leads/routes', {
+      // Fetch all routes
+      const routesResponse = await fetch('/api/leads/routes', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (response.ok) {
-        const data = await response.json();
-        setRoutes(data.routes || []);
+      
+      if (!routesResponse.ok) {
+        throw new Error('Failed to fetch routes');
+      }
+      
+      const routesData = await routesResponse.json();
+      const fetchedRoutes = routesData.routes || [];
+      setRoutes(fetchedRoutes);
+
+      // Fetch ALL leads without pagination (limit=10000 to get all)
+      // This ensures we have all leads that might be in any route
+      const leadsResponse = await fetch('/api/leads?limit=10000', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (leadsResponse.ok) {
+        const leadsData = await leadsResponse.json();
+        setLeads(leadsData.leads || []);
       }
     } catch (error) {
-      console.error('Error fetching routes:', error);
+      console.error('Error fetching routes and leads:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchLeads = async () => {
-    try {
-      const response = await fetch('/api/leads', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setLeads(data.leads || []);
-      }
-    } catch (error) {
-      console.error('Error fetching leads:', error);
     }
   };
 
@@ -93,6 +94,10 @@ export default function RoutesPage() {
     } catch (error) {
       console.error('Error renaming route:', error);
     }
+  };
+
+  const refreshData = async () => {
+    await fetchRoutesAndLeads();
   };
 
   const startEditing = (route: Route) => {

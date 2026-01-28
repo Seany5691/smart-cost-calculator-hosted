@@ -142,8 +142,15 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
       const response = await fetch(`/api/reminders?${params.toString()}`, { headers });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch reminders');
+        // Check if response is JSON or HTML
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch reminders');
+        } else {
+          // HTML error page (404, 500, etc.)
+          throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        }
       }
 
       const data = await response.json();
@@ -156,7 +163,10 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch reminders';
       set({ error: errorMessage, loading: false });
-      console.error('Error fetching reminders:', error);
+      // Only log once, not repeatedly
+      if (!errorMessage.includes('Server error')) {
+        console.error('Error fetching reminders:', error);
+      }
     }
   },
 

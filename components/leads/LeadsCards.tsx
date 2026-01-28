@@ -6,6 +6,8 @@ import type { Lead } from '@/lib/leads/types';
 import { Eye, Edit, Trash2, Phone, MapPin, Mail, Calendar, ChevronDown, ChevronUp, StickyNote, Bell, Clock, Plus, X, FileText, Share2 } from 'lucide-react';
 import LeadDetailsModal from './LeadDetailsModal';
 import EditLeadModal from './EditLeadModal';
+import LaterStageModal from './LaterStageModal';
+import SignedModal from './SignedModal';
 import AddNoteModal from './AddNoteModal';
 import AddReminderModal from './AddReminderModal';
 import ShareLeadModal from './ShareLeadModal';
@@ -71,6 +73,8 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
   const [deleteReminderModal, setDeleteReminderModal] = useState<{ leadId: string; reminderId: string } | null>(null);
   const [isDeletingNote, setIsDeletingNote] = useState(false);
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
+  const [laterStageLead, setLaterStageLead] = useState<Lead | null>(null);
+  const [signedLead, setSignedLead] = useState<Lead | null>(null);
 
   const handleCreateProposal = (lead: Lead) => {
     // Store lead ID in localStorage for the calculator to attach the proposal
@@ -322,6 +326,153 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
     }
   };
 
+  const handleStatusChange = async (lead: Lead, newStatus: string) => {
+    // Show modal for later or signed status
+    if (newStatus === 'later') {
+      setLaterStageLead(lead);
+      return;
+    }
+    
+    if (newStatus === 'signed') {
+      setSignedLead(lead);
+      return;
+    }
+    
+    // For other statuses, update immediately
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error('Not authenticated', {
+          message: 'Please log in to continue',
+          section: 'leads'
+        });
+        return;
+      }
+      
+      const response = await fetch(`/api/leads/${lead.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update lead status');
+      }
+
+      // Refresh the leads list to show updated data
+      onUpdate();
+      
+      toast.success('Lead status updated', {
+        message: `Lead moved to ${newStatus}`,
+        section: 'leads'
+      });
+    } catch (error) {
+      console.error('Error updating lead status:', error);
+      toast.error('Failed to move lead', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        section: 'leads'
+      });
+    }
+  };
+
+  const handleLaterStageConfirm = async (data: { date_to_call_back: string; notes: string }) => {
+    if (!laterStageLead) return;
+    
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error('Not authenticated', {
+          message: 'Please log in to continue',
+          section: 'leads'
+        });
+        return;
+      }
+      
+      const response = await fetch(`/api/leads/${laterStageLead.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: 'later',
+          date_to_call_back: data.date_to_call_back,
+          notes: data.notes
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update lead');
+      }
+
+      setLaterStageLead(null);
+      onUpdate();
+      
+      toast.success('Lead moved to Later Stage', {
+        message: 'Callback date has been set',
+        section: 'leads'
+      });
+    } catch (error) {
+      console.error('Error updating lead:', error);
+      toast.error('Failed to move lead', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        section: 'leads'
+      });
+    }
+  };
+
+  const handleSignedConfirm = async (data: { date_signed: string; notes: string }) => {
+    if (!signedLead) return;
+    
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error('Not authenticated', {
+          message: 'Please log in to continue',
+          section: 'leads'
+        });
+        return;
+      }
+      
+      const response = await fetch(`/api/leads/${signedLead.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: 'signed',
+          date_signed: data.date_signed,
+          notes: data.notes
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update lead');
+      }
+
+      setSignedLead(null);
+      onUpdate();
+      
+      toast.success('Lead marked as Signed', {
+        message: 'Congratulations on the win!',
+        section: 'leads'
+      });
+    } catch (error) {
+      console.error('Error updating lead:', error);
+      toast.error('Failed to mark lead as signed', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        section: 'leads'
+      });
+    }
+  };
+
   return (
     <>
       <div className="block lg:hidden space-y-4">
@@ -338,8 +489,8 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
             >
               {/* Card Header */}
               <div className="p-4 border-b border-white/10">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3 flex-1">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
                     <input
                       type="checkbox"
                       checked={selectedLeads.includes(lead.id)}
@@ -347,12 +498,7 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
                       className="mt-1 rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-emerald-500"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full border ${getStatusColor(lead.status)}`}>
-                          {lead.status}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-semibold text-white truncate">
+                      <h3 className="text-lg font-semibold text-white truncate mb-1">
                         {lead.name}
                       </h3>
                       {lead.type_of_business && (
@@ -362,6 +508,23 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
                       )}
                     </div>
                   </div>
+                </div>
+                
+                {/* Status Dropdown - Full width on mobile */}
+                <div className="mt-2">
+                  <label className="block text-xs text-gray-400 mb-1">Status</label>
+                  <select
+                    value={lead.status}
+                    onChange={(e) => handleStatusChange(lead, e.target.value)}
+                    className={`w-full px-3 py-2 min-h-[44px] text-sm font-semibold rounded-lg border-0 focus:ring-2 focus:ring-emerald-500 ${getStatusColor(lead.status)}`}
+                  >
+                    <option value="new">New (Main Sheet)</option>
+                    <option value="leads">Leads (Active Pipeline)</option>
+                    <option value="working">Working On</option>
+                    <option value="later">Later Stage</option>
+                    <option value="bad">Bad Lead</option>
+                    <option value="signed">Signed</option>
+                  </select>
                 </div>
               </div>
 
@@ -607,56 +770,67 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
                 </div>
               </div>
 
-              {/* Card Footer */}
-              <div className="px-4 py-3 bg-white/5 border-t border-white/10 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleCreateProposal(lead)}
-                    className="p-2 min-w-[44px] min-h-[44px] text-purple-400 hover:bg-purple-500/20 rounded-lg transition-colors flex items-center justify-center"
-                    title="Create Proposal"
-                  >
-                    <FileText className="w-5 h-5" />
-                  </button>
+              {/* Card Footer - Mobile Optimized Buttons */}
+              <div className="px-4 py-3 bg-white/5 border-t border-white/10">
+                {/* Primary Actions Row */}
+                <div className="grid grid-cols-3 gap-2 mb-2">
                   <button
                     onClick={() => setDetailsLead(lead)}
-                    className="p-2 min-w-[44px] min-h-[44px] text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors flex items-center justify-center"
+                    className="flex flex-col items-center justify-center p-3 min-h-[60px] text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors"
                     title="View Details"
                   >
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-5 h-5 mb-1" />
+                    <span className="text-xs">View</span>
                   </button>
                   <button
                     onClick={() => setEditLead(lead)}
-                    className="p-2 min-w-[44px] min-h-[44px] text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors flex items-center justify-center"
+                    className="flex flex-col items-center justify-center p-3 min-h-[60px] text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors"
                     title="Edit"
                   >
-                    <Edit className="w-5 h-5" />
+                    <Edit className="w-5 h-5 mb-1" />
+                    <span className="text-xs">Edit</span>
                   </button>
                   <button
+                    onClick={() => handleCreateProposal(lead)}
+                    className="flex flex-col items-center justify-center p-3 min-h-[60px] text-purple-400 hover:bg-purple-500/20 rounded-lg transition-colors"
+                    title="Create Proposal"
+                  >
+                    <FileText className="w-5 h-5 mb-1" />
+                    <span className="text-xs">Proposal</span>
+                  </button>
+                </div>
+                
+                {/* Secondary Actions Row */}
+                <div className="grid grid-cols-3 gap-2">
+                  <button
                     onClick={() => setShareModalLead(lead)}
-                    className="p-2 min-w-[44px] min-h-[44px] text-cyan-400 hover:bg-cyan-500/20 rounded-lg transition-colors flex items-center justify-center"
+                    className="flex flex-col items-center justify-center p-3 min-h-[60px] text-cyan-400 hover:bg-cyan-500/20 rounded-lg transition-colors"
                     title="Share Lead"
                   >
-                    <Share2 className="w-5 h-5" />
+                    <Share2 className="w-5 h-5 mb-1" />
+                    <span className="text-xs">Share</span>
                   </button>
                   {lead.maps_address && (
                     <a
                       href={lead.maps_address}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-2 min-w-[44px] min-h-[44px] text-purple-400 hover:bg-purple-500/20 rounded-lg transition-colors flex items-center justify-center"
+                      className="flex flex-col items-center justify-center p-3 min-h-[60px] text-indigo-400 hover:bg-indigo-500/20 rounded-lg transition-colors"
                       title="Open in Maps"
                     >
-                      <MapPin className="w-5 h-5" />
+                      <MapPin className="w-5 h-5 mb-1" />
+                      <span className="text-xs">Maps</span>
                     </a>
                   )}
+                  <button
+                    onClick={() => setDeleteConfirm(lead.id)}
+                    className="flex flex-col items-center justify-center p-3 min-h-[60px] text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-5 h-5 mb-1" />
+                    <span className="text-xs">Delete</span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => setDeleteConfirm(lead.id)}
-                  className="p-2 min-w-[44px] min-h-[44px] text-red-400 hover:bg-red-500/20 rounded-lg transition-colors flex items-center justify-center"
-                  title="Delete"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
               </div>
             </div>
           );

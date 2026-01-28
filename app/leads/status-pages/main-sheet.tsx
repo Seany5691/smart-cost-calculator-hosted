@@ -917,103 +917,208 @@ export default function MainSheetPage() {
             </div>
           </div>
 
-          {/* Filter and Sort Bar */}
+          {/* Filter and Sort Bar - Mobile Optimized */}
           {leads.filter(l => l.status === 'new').length > 0 && (
-            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 mb-4 p-3 bg-white/5 rounded-lg border border-emerald-500/20">
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">List:</label>
-                <select
-                  value={filterListName}
-                  onChange={(e) => setFilterListName(e.target.value)}
-                  className="flex-1 sm:flex-initial px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                >
-                  <option value="all">All Lists</option>
-                  {allListNames.map(listName => (
-                    <option key={listName} value={listName}>{listName}</option>
-                  ))}
-                </select>
-                {filterListName !== 'all' && (
-                  <button
-                    onClick={() => setDeleteListConfirm(filterListName)}
-                    className="p-1.5 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors flex-shrink-0"
-                    title={`Delete "${filterListName}" list`}
+            <div className="mb-4 p-3 bg-white/5 rounded-lg border border-emerald-500/20">
+              {/* Mobile: Stack vertically */}
+              <div className="flex flex-col gap-3 md:hidden">
+                {/* List Filter */}
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <label className="text-sm font-medium text-emerald-200 min-w-[60px]">List:</label>
+                  <select
+                    value={filterListName}
+                    onChange={(e) => setFilterListName(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+                    <option value="all">All Lists</option>
+                    {allListNames.map(listName => (
+                      <option key={listName} value={listName}>{listName}</option>
+                    ))}
+                  </select>
+                  {filterListName !== 'all' && (
+                    <button
+                      onClick={() => setDeleteListConfirm(filterListName)}
+                      className="p-2 min-w-[40px] min-h-[40px] text-red-400 hover:bg-red-500/20 rounded-lg transition-colors flex-shrink-0"
+                      title={`Delete "${filterListName}" list`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                
+                {/* Provider Filter */}
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <label className="text-sm font-medium text-emerald-200 min-w-[60px]">Provider:</label>
+                  <select
+                    value={filterProvider}
+                    onChange={(e) => setFilterProvider(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  >
+                    <option value="all">All Providers</option>
+                    {uniqueProviders.map(provider => (
+                      <option key={provider} value={provider}>{provider}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Sort By */}
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <label className="text-sm font-medium text-emerald-200 min-w-[60px]">Sort:</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'number' | 'name' | 'provider')}
+                    className="flex-1 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  >
+                    <option value="number">Number</option>
+                    <option value="name">Name</option>
+                    <option value="provider">Provider</option>
+                  </select>
+                </div>
               </div>
               
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Provider:</label>
-                <select
-                  value={filterProvider}
-                  onChange={(e) => setFilterProvider(e.target.value)}
-                  className="flex-1 sm:flex-initial px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                >
-                  <option value="all">All Providers</option>
-                  {uniqueProviders.map(provider => (
-                    <option key={provider} value={provider}>{provider}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <ArrowUpDown className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Sort by:</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'number' | 'name' | 'provider')}
-                  className="flex-1 sm:flex-initial px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                >
-                  <option value="number">Number</option>
-                  <option value="name">Name</option>
-                  <option value="provider">Provider</option>
-                </select>
+              {/* Desktop: Horizontal layout */}
+              <div className="hidden md:flex md:flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">List:</label>
+                  <select
+                    value={filterListName}
+                    onChange={(e) => setFilterListName(e.target.value)}
+                    className="px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  >
+                    <option value="all">All Lists</option>
+                    {allListNames.map(listName => (
+                      <option key={listName} value={listName}>{listName}</option>
+                    ))}
+                  </select>
+                  {filterListName !== 'all' && (
+                    <button
+                      onClick={() => setDeleteListConfirm(filterListName)}
+                      className="p-1.5 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors flex-shrink-0"
+                      title={`Delete "${filterListName}" list`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Provider:</label>
+                  <select
+                    value={filterProvider}
+                    onChange={(e) => setFilterProvider(e.target.value)}
+                    className="px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  >
+                    <option value="all">All Providers</option>
+                    {uniqueProviders.map(provider => (
+                      <option key={provider} value={provider}>{provider}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Sort by:</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'number' | 'name' | 'provider')}
+                    className="px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  >
+                    <option value="number">Number</option>
+                    <option value="name">Name</option>
+                    <option value="provider">Provider</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Bulk Actions Bar */}
+          {/* Bulk Actions Bar - Mobile Optimized */}
           {availableLeads.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 mb-4 p-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-xl border border-emerald-500/20">
-              <button
-                onClick={handleSelectAllAvailable}
-                className="inline-flex items-center px-3 py-1.5 bg-white/10 hover:bg-white/20 text-emerald-200 rounded-lg text-sm font-medium transition-colors"
-              >
-                {selectedAvailableLeads.length === availableLeads.length ? (
+            <div className="mb-4 p-3 md:p-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-xl border border-emerald-500/20">
+              {/* Mobile: Stack vertically */}
+              <div className="flex flex-col gap-2 md:hidden">
+                <button
+                  onClick={handleSelectAllAvailable}
+                  className="inline-flex items-center justify-center px-4 py-2.5 min-h-[44px] bg-white/10 hover:bg-white/20 text-emerald-200 rounded-lg text-sm font-medium transition-colors"
+                >
+                  {selectedAvailableLeads.length === availableLeads.length ? (
+                    <>
+                      <CheckSquare className="w-4 h-4 mr-2" />
+                      Deselect All
+                    </>
+                  ) : (
+                    <>
+                      <Square className="w-4 h-4 mr-2" />
+                      Select All
+                    </>
+                  )}
+                </button>
+                
+                {selectedAvailableLeads.length > 0 && (
                   <>
-                    <CheckSquare className="w-4 h-4 mr-2" />
-                    Deselect All
-                  </>
-                ) : (
-                  <>
-                    <Square className="w-4 h-4 mr-2" />
-                    Select All
+                    <button
+                      onClick={handleBulkSelectToWorking}
+                      className="inline-flex items-center justify-center px-4 py-2.5 min-h-[44px] bg-green-500/20 hover:bg-green-500/30 text-green-200 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Add {selectedAvailableLeads.length} to Working
+                    </button>
+                    
+                    <button
+                      onClick={handleBulkDelete}
+                      className="inline-flex items-center justify-center px-4 py-2.5 min-h-[44px] bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete {selectedAvailableLeads.length}
+                    </button>
                   </>
                 )}
-              </button>
+              </div>
               
-              {selectedAvailableLeads.length > 0 && (
-                <>
-                  <button
-                    onClick={handleBulkSelectToWorking}
-                    className="inline-flex items-center px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-200 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Add {selectedAvailableLeads.length} to Working Area
-                  </button>
-                  
-                  <button
-                    onClick={handleBulkDelete}
-                    className="inline-flex items-center px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete {selectedAvailableLeads.length}
-                  </button>
-                </>
-              )}
+              {/* Desktop: Horizontal layout */}
+              <div className="hidden md:flex md:flex-wrap items-center gap-3">
+                <button
+                  onClick={handleSelectAllAvailable}
+                  className="inline-flex items-center px-3 py-1.5 bg-white/10 hover:bg-white/20 text-emerald-200 rounded-lg text-sm font-medium transition-colors"
+                >
+                  {selectedAvailableLeads.length === availableLeads.length ? (
+                    <>
+                      <CheckSquare className="w-4 h-4 mr-2" />
+                      Deselect All
+                    </>
+                  ) : (
+                    <>
+                      <Square className="w-4 h-4 mr-2" />
+                      Select All
+                    </>
+                  )}
+                </button>
+                
+                {selectedAvailableLeads.length > 0 && (
+                  <>
+                    <button
+                      onClick={handleBulkSelectToWorking}
+                      className="inline-flex items-center px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-200 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Add {selectedAvailableLeads.length} to Working Area
+                    </button>
+                    
+                    <button
+                      onClick={handleBulkDelete}
+                      className="inline-flex items-center px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete {selectedAvailableLeads.length}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           )}
 

@@ -38,6 +38,11 @@ interface CalendarEvent {
   can_add?: boolean;
 }
 
+interface GroupedCalendarEvent extends CalendarEvent {
+  end_date?: string; // For multi-day events
+  event_ids?: string[]; // IDs of all events in the group
+}
+
 type TimeRange = 'all' | 'today' | 'tomorrow' | 'week' | 'next7';
 
 export default function UpcomingReminders({ reminders, leads, onLeadClick, onReminderUpdate, calendarEvents = [] }: UpcomingRemindersProps) {
@@ -89,7 +94,7 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
     const next7DaysEnd = new Date(today);
     next7DaysEnd.setDate(next7DaysEnd.getDate() + 7);
     
-    // Filter reminders
+    // Filter reminders (keep all logic as is)
     let filteredReminders = reminders.filter(reminder => {
       if (selectedRange === 'all') return true;
       
@@ -114,11 +119,61 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
       }
     });
 
-    // Filter calendar events - ONLY show events owned by current user
-    let filteredEvents = calendarEvents.filter(event => {
+    // Group multi-day events and filter out past events
+    const groupedEvents = new Map<string, GroupedCalendarEvent>();
+    
+    calendarEvents.forEach(event => {
       // Only show events where user is the owner (not shared events from others)
-      if (!event.is_owner) return false;
+      if (!event.is_owner) return;
       
+      // Filter out past events (events where the date has passed)
+      const eventDate = new Date(event.event_date);
+      const eventDateTime = new Date(
+        eventDate.getFullYear(),
+        eventDate.getMonth(),
+        eventDate.getDate()
+      );
+      
+      // Skip events that are in the past
+      if (eventDateTime < today) return;
+      
+      // Create a unique key for grouping multi-day events
+      // Events with same title, description, time, type, priority, location, and creator are considered part of same multi-day event
+      const groupKey = `${event.title}|${event.description}|${event.event_time}|${event.event_type}|${event.priority}|${event.location}|${event.created_by}`;
+      
+      if (groupedEvents.has(groupKey)) {
+        const existing = groupedEvents.get(groupKey)!;
+        const existingDate = new Date(existing.event_date);
+        const currentDate = new Date(event.event_date);
+        
+        // Update start date if this event is earlier
+        if (currentDate < existingDate) {
+          existing.event_date = event.event_date;
+          existing.id = event.id; // Use the earliest event's ID as primary
+        }
+        
+        // Update end date if this event is later
+        const existingEndDate = existing.end_date ? new Date(existing.end_date) : existingDate;
+        if (currentDate > existingEndDate) {
+          existing.end_date = event.event_date;
+        }
+        
+        // Add event ID to the group
+        if (!existing.event_ids) {
+          existing.event_ids = [existing.id];
+        }
+        existing.event_ids.push(event.id);
+      } else {
+        // First occurrence of this event
+        groupedEvents.set(groupKey, {
+          ...event,
+          event_ids: [event.id]
+        });
+      }
+    });
+
+    // Convert grouped events to array and apply time range filter
+    let filteredEvents = Array.from(groupedEvents.values()).filter(event => {
       if (selectedRange === 'all') return true;
       
       const eventDate = new Date(event.event_date);
@@ -128,6 +183,30 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
         eventDate.getDate()
       );
       
+      // For multi-day events, check if the range overlaps with the selected range
+      if (event.end_date) {
+        const endDate = new Date(event.end_date);
+        const endDateTime = new Date(
+          endDate.getFullYear(),
+          endDate.getMonth(),
+          endDate.getDate()
+        );
+        
+        switch (selectedRange) {
+          case 'today':
+            return eventDateTime <= today && endDateTime >= today;
+          case 'tomorrow':
+            return eventDateTime <= tomorrow && endDateTime >= tomorrow;
+          case 'week':
+            return eventDateTime < thisWeekEnd && endDateTime >= today;
+          case 'next7':
+            return eventDateTime < next7DaysEnd && endDateTime >= today;
+          default:
+            return true;
+        }
+      }
+      
+      // Single-day event filtering
       switch (selectedRange) {
         case 'today':
           return eventDateTime.getTime() === today.getTime();
@@ -143,7 +222,7 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
     });
     
     // Combine and sort by date/time (earliest first)
-    const combined: Array<{type: 'reminder' | 'event', data: LeadReminder | CalendarEvent}> = [
+    const combined: Array<{type: 'reminder' | 'event', data: LeadReminder | GroupedCalendarEvent}> = [
       ...filteredReminders.map(r => ({ type: 'reminder' as const, data: r })),
       ...filteredEvents.map(e => ({ type: 'event' as const, data: e }))
     ];
@@ -151,10 +230,10 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
     combined.sort((a, b) => {
       const dateA = a.type === 'reminder' 
         ? new Date(`${(a.data as LeadReminder).reminder_date}T${(a.data as LeadReminder).reminder_time}`)
-        : new Date(`${(a.data as CalendarEvent).event_date}T${(a.data as CalendarEvent).event_time || '00:00'}`);
+        : new Date(`${(a.data as GroupedCalendarEvent).event_date}T${(a.data as GroupedCalendarEvent).event_time || '00:00'}`);
       const dateB = b.type === 'reminder'
         ? new Date(`${(b.data as LeadReminder).reminder_date}T${(b.data as LeadReminder).reminder_time}`)
-        : new Date(`${(b.data as CalendarEvent).event_date}T${(b.data as CalendarEvent).event_time || '00:00'}`);
+        : new Date(`${(b.data as GroupedCalendarEvent).event_date}T${(b.data as GroupedCalendarEvent).event_time || '00:00'}`);
       return dateA.getTime() - dateB.getTime();
     });
     
@@ -403,7 +482,7 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
           {filteredItems.map(item => {
             // Handle calendar events
             if (item.type === 'event') {
-              const event = item.data as CalendarEvent;
+              const event = item.data as GroupedCalendarEvent;
               const eventTypeIcons: Record<string, string> = {
                 event: '📅',
                 appointment: '🗓️',
@@ -411,6 +490,33 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
                 deadline: '⏰',
                 reminder: '🔔',
                 other: '📌'
+              };
+
+              // Format date display for single or multi-day events
+              const formatEventDate = () => {
+                const startDate = new Date(event.event_date);
+                
+                if (event.end_date && event.end_date !== event.event_date) {
+                  // Multi-day event
+                  const endDate = new Date(event.end_date);
+                  const startMonth = startDate.toLocaleDateString('en-US', { month: 'short' });
+                  const endMonth = endDate.toLocaleDateString('en-US', { month: 'short' });
+                  const startDay = startDate.getDate();
+                  const endDay = endDate.getDate();
+                  
+                  // Same month: "Jan 28 - 31"
+                  if (startMonth === endMonth) {
+                    return `${startMonth} ${startDay} - ${endDay}`;
+                  }
+                  // Different months: "Jan 28 - Feb 2"
+                  return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
+                } else {
+                  // Single-day event
+                  return startDate.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                  });
+                }
               };
 
               return (
@@ -457,10 +563,7 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
                       {/* Date and time */}
                       <div className="flex items-center gap-3 text-sm text-white/80 flex-wrap">
                         <span>
-                          {new Date(event.event_date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric'
-                          })}
+                          {formatEventDate()}
                         </span>
                         <span>
                           {event.is_all_day ? 'All day' : 

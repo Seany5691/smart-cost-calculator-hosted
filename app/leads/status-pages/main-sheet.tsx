@@ -907,8 +907,8 @@ export default function MainSheetPage() {
         </div>
 
         {/* Available Leads - Mobile Optimized */}
-        <div className="glass-card p-4 md:p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
+        <div className="glass-card p-3 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3 md:mb-4 gap-2">
             <div>
               <h2 className="text-xl md:text-2xl font-semibold text-white">Available Leads</h2>
               <p className="text-sm text-emerald-200 mt-1">
@@ -921,17 +921,17 @@ export default function MainSheetPage() {
 
           {/* Filter and Sort Bar - Mobile Optimized */}
           {leads.filter(l => l.status === 'new').length > 0 && (
-            <div className="mb-4 p-3 bg-white/5 rounded-lg border border-emerald-500/20">
+            <div className="mb-3 md:mb-4 p-2 md:p-3 bg-white/5 rounded-lg border border-emerald-500/20">
               {/* Mobile: Stack vertically */}
               <div className="flex flex-col gap-3 md:hidden">
                 {/* List Filter */}
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <label className="text-sm font-medium text-emerald-200 min-w-[60px]">List:</label>
+                  <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">List:</label>
                   <select
                     value={filterListName}
                     onChange={(e) => setFilterListName(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="all">All Lists</option>
                     {allListNames.map(listName => (
@@ -952,11 +952,11 @@ export default function MainSheetPage() {
                 {/* Provider Filter */}
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <label className="text-sm font-medium text-emerald-200 min-w-[60px]">Provider:</label>
+                  <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Provider:</label>
                   <select
                     value={filterProvider}
                     onChange={(e) => setFilterProvider(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="all">All Providers</option>
                     {uniqueProviders.map(provider => (
@@ -968,11 +968,11 @@ export default function MainSheetPage() {
                 {/* Sort By */}
                 <div className="flex items-center gap-2">
                   <ArrowUpDown className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <label className="text-sm font-medium text-emerald-200 min-w-[60px]">Sort:</label>
+                  <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Sort:</label>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as 'number' | 'name' | 'provider')}
-                    className="flex-1 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="number">Number</option>
                     <option value="name">Name</option>
@@ -1041,7 +1041,7 @@ export default function MainSheetPage() {
 
           {/* Bulk Actions Bar - Mobile Optimized */}
           {availableLeads.length > 0 && (
-            <div className="mb-4 p-3 md:p-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-xl border border-emerald-500/20">
+            <div className="mb-3 md:mb-4 p-2 md:p-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-xl border border-emerald-500/20">
               {/* Mobile: Stack vertically */}
               <div className="flex flex-col gap-2 md:hidden">
                 <button
@@ -1145,7 +1145,7 @@ export default function MainSheetPage() {
             <>
               {/* Mobile View - Cards - Optimized */}
               {isMobile ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {availableLeads.map((lead) => {
                     const isNoGood = lead.background_color === '#FF0000';
                     const isSelected = selectedAvailableLeads.includes(lead.id);
@@ -1153,7 +1153,7 @@ export default function MainSheetPage() {
                     return (
                       <div key={lead.id} className="relative">
                         <div 
-                          className={`p-4 rounded-lg border transition-colors ${
+                          className={`p-3 rounded-lg border transition-colors ${
                             isSelected
                               ? 'bg-blue-500/20 border-blue-500/50'
                               : isNoGood 
@@ -1161,24 +1161,24 @@ export default function MainSheetPage() {
                                 : 'bg-white/5 border-emerald-500/20'
                           }`}
                         >
-                          <div className="flex items-start gap-3 mb-3">
+                          <div className="flex items-start gap-2 mb-2">
                             <button
                               onClick={() => handleToggleSelectAvailable(lead.id)}
-                              className="mt-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                              className="mt-0.5 min-w-[40px] min-h-[40px] flex items-center justify-center"
                             >
                               {isSelected ? (
-                                <CheckSquare className="w-6 h-6 text-blue-400" />
+                                <CheckSquare className="w-5 h-5 text-blue-400" />
                               ) : (
-                                <Square className="w-6 h-6 text-emerald-400/50" />
+                                <Square className="w-5 h-5 text-emerald-400/50" />
                               )}
                             </button>
                             <div className="flex-1 min-w-0">
-                              <h3 className={`font-semibold mb-1 text-base ${isNoGood ? 'text-red-300' : 'text-white'}`}>
+                              <h3 className={`font-semibold mb-0.5 text-sm ${isNoGood ? 'text-red-300' : 'text-white'}`}>
                                 {lead.name}
                               </h3>
-                              <p className="text-sm text-emerald-200 break-words">{lead.address}</p>
+                              <p className="text-xs text-emerald-200 break-words line-clamp-1">{lead.address}</p>
                               {lead.provider && (
-                                <span className={`inline-block mt-2 px-3 py-1 rounded text-sm ${
+                                <span className={`inline-block mt-1.5 px-2 py-0.5 rounded text-xs ${
                                   lead.provider.toLowerCase().includes('telkom')
                                     ? 'bg-blue-500/20 text-blue-200 border border-blue-500/30'
                                     : 'bg-emerald-500/20 text-emerald-200'
@@ -1190,28 +1190,28 @@ export default function MainSheetPage() {
                           </div>
                           
                           {/* Mobile Action Buttons - 3 Column Grid */}
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-3 gap-1.5">
                             {lead.maps_address && (
                               <button
                                 onClick={() => handleOpenMaps(lead.maps_address!)}
-                                className="flex flex-col items-center justify-center px-2 py-3 min-h-[60px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 rounded-lg text-xs font-medium transition-colors border border-blue-500/30"
+                                className="flex flex-col items-center justify-center px-1 py-2 min-h-[56px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 rounded-lg text-xs font-medium transition-colors border border-blue-500/30"
                               >
-                                <ExternalLink className="w-5 h-5 mb-1" />
+                                <ExternalLink className="w-4 h-4 mb-0.5" />
                                 <span>Maps</span>
                               </button>
                             )}
                             <button
                               onClick={() => handleSelectLead(lead.id)}
-                              className="flex flex-col items-center justify-center px-2 py-3 min-h-[60px] bg-green-500/20 hover:bg-green-500/30 text-green-200 rounded-lg text-xs font-medium transition-colors border border-green-500/30"
+                              className="flex flex-col items-center justify-center px-1 py-2 min-h-[56px] bg-green-500/20 hover:bg-green-500/30 text-green-200 rounded-lg text-xs font-medium transition-colors border border-green-500/30"
                             >
-                              <CheckCircle className="w-5 h-5 mb-1" />
+                              <CheckCircle className="w-4 h-4 mb-0.5" />
                               <span>Select</span>
                             </button>
                             <button
                               onClick={() => handleNoGood(lead.id)}
-                              className="flex flex-col items-center justify-center px-2 py-3 min-h-[60px] bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg text-xs font-medium transition-colors border border-red-500/30"
+                              className="flex flex-col items-center justify-center px-1 py-2 min-h-[56px] bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg text-xs font-medium transition-colors border border-red-500/30"
                             >
-                              <XCircle className="w-5 h-5 mb-1" />
+                              <XCircle className="w-4 h-4 mb-0.5" />
                               <span>Bad</span>
                             </button>
                           </div>

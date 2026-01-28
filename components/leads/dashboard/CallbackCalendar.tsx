@@ -298,21 +298,32 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
   // Get reminders for selected date
   const selectedDateReminders = useMemo(() => {
     if (!selectedDate) return [];
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    // FIX: Create date string without timezone conversion
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
+    const day = selectedDate.getDate();
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    
     return reminders.filter(reminder => {
       if (!reminder.reminder_date) return false;
-      const reminderDate = new Date(reminder.reminder_date);
-      return reminderDate.toISOString().split('T')[0] === dateStr;
+      const reminderDateStr = reminder.reminder_date.split('T')[0];
+      return reminderDateStr === dateStr;
     });
   }, [selectedDate, reminders]);
 
   // Get events for selected date
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return [];
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    // FIX: Create date string without timezone conversion
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
+    const day = selectedDate.getDate();
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    
     return calendarEvents.filter(event => {
       if (!event.event_date) return false;
-      return event.event_date.split('T')[0] === dateStr;
+      const eventDateStr = event.event_date.split('T')[0];
+      return eventDateStr === dateStr;
     });
   }, [selectedDate, calendarEvents]);
 

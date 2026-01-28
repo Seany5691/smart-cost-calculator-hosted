@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuthStore } from '@/lib/store/auth-simple';
 import { useRemindersStore } from '@/lib/store/reminders';
 import { Bell, Calendar as CalendarIcon, Plus, Filter, Loader2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
@@ -67,23 +67,7 @@ export default function RemindersPage() {
   const [showType, setShowType] = useState<'all' | 'reminders' | 'events'>('all');
   const [leads, setLeads] = useState<Lead[]>([]);
 
-  useEffect(() => {
-    if (token) {
-      fetchReminders();
-      fetchCalendarEvents();
-      fetchLeads();
-    }
-  }, [token]);
-
-  // Update local reminders when store reminders change
-  useEffect(() => {
-    if (storeReminders.length > 0) {
-      const categorized = categorizeReminders(storeReminders);
-      setReminders(categorized);
-    }
-  }, [storeReminders]);
-
-  const fetchLeads = async () => {
+  const fetchLeads = useCallback(async () => {
     try {
       const response = await fetch('/api/leads', {
         headers: { Authorization: `Bearer ${token}` }
@@ -95,9 +79,19 @@ export default function RemindersPage() {
     } catch (error) {
       console.error('Error fetching leads:', error);
     }
-  };
+  }, [token]);
 
-  const fetchCalendarEvents = async () => {
+  const fetchReminders = useCallback(async () => {
+    try {
+      await fetchAllReminders();
+    } catch (error) {
+      console.error('Error fetching reminders:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchAllReminders]);
+
+  const fetchCalendarEventsData = useCallback(async () => {
     try {
       // Fetch events for the next 90 days
       const today = new Date();
@@ -122,7 +116,24 @@ export default function RemindersPage() {
     } catch (error) {
       console.error('Error fetching calendar events:', error);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      fetchReminders();
+      fetchCalendarEventsData();
+      fetchLeads();
+    }
+  }, [token, fetchReminders, fetchCalendarEventsData, fetchLeads]);
+
+  // Update local reminders when store reminders change
+  // Use useMemo to prevent unnecessary recalculations
+  useEffect(() => {
+    if (storeReminders.length >= 0) { // Changed from > 0 to >= 0 to handle empty state
+      const categorized = categorizeReminders(storeReminders);
+      setReminders(categorized);
+    }
+  }, [storeReminders]);
 
   const categorizeEvents = (events: CalendarEvent[]): CategorizedEvents => {
     const today = new Date();
@@ -216,16 +227,6 @@ export default function RemindersPage() {
     });
 
     return categorized;
-  };
-
-  const fetchReminders = async () => {
-    try {
-      await fetchAllReminders();
-    } catch (error) {
-      console.error('Error fetching reminders:', error);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleCompleteReminder = async (reminderId: string, leadId: string) => {
@@ -436,7 +437,7 @@ export default function RemindersPage() {
           onReminderUpdate={() => {
             // Refresh reminders when one is updated
             fetchReminders();
-            fetchCalendarEvents();
+            fetchCalendarEventsData();
           }}
         />
       </div>

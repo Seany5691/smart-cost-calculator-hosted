@@ -63,21 +63,9 @@ export default function RemindersContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount
 
-  // Auto-refresh every 30 seconds - but pause when modal is open or user is typing
-  useEffect(() => {
-    // Don't auto-refresh if modal is open or user is typing to prevent interrupting user input
-    if (showCreateModal || isTyping) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      // Call refreshReminders without causing re-renders
-      refreshReminders();
-    }, 30000);
-
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCreateModal, isTyping]); // Re-run when modal state or typing state changes
+  // REMOVED: Auto-refresh that was causing modals to close
+  // Users can manually refresh using the refresh button if needed
+  // This prevents interrupting user input when editing reminders
 
   // Handle filter changes - wrapped in useCallback for stability
   const handleFilterChange = useCallback((newFilters: FilterState) => {

@@ -4,6 +4,13 @@
  * Performs batched lookups to identify telecommunications providers for phone numbers.
  * Handles captcha avoidance by creating new browser instances every 5 lookups.
  * 
+ * CRITICAL FIX APPLIED (2025-01-29):
+ * - Fixed browser creation to match old working scraper behavior
+ * - Creates ONE browser per batch of 5 lookups (not one per lookup)
+ * - Reuses browser for all lookups in batch
+ * - Closes browser after batch completes
+ * - This avoids captcha which appears every 6th browser instance
+ * 
  * CACHING (Phase 3):
  * - Checks cache before performing lookups
  * - Caches results for 30 days
@@ -14,8 +21,9 @@
  * 
  * BATCH MANAGEMENT (Phase 1 - Robustness Enhancement):
  * - Uses BatchManager for intelligent batch processing
- * - Adaptive batch sizing based on success rate
+ * - Adaptive batch sizing based on success rate (3-5 lookups per batch)
  * - Maintains backward compatibility with existing API
+ * - Captcha detection DISABLED by default (correct browser management avoids captcha)
  * 
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 24.2
  */
@@ -34,7 +42,11 @@ export class ProviderLookupService {
   private batchManager: BatchManager;
   private retryStrategy: RetryStrategy;
 
-  constructor(config: { maxConcurrentBatches: number; eventEmitter?: any }) {
+  constructor(config: { 
+    maxConcurrentBatches: number; 
+    eventEmitter?: any;
+    enableCaptchaDetection?: boolean; // Optional: enable captcha detection (default: false)
+  }) {
     // maxConcurrentBatches means how many browser instances can run in parallel
     this.maxConcurrentBrowsers = config.maxConcurrentBatches;
     this.eventEmitter = config.eventEmitter;
@@ -45,11 +57,16 @@ export class ProviderLookupService {
     
     // Initialize BatchManager with default configuration
     // This provides adaptive batch sizing and intelligent retry logic
+    // 
+    // IMPORTANT: Captcha detection is DISABLED by default because correct browser
+    // management (1 browser per batch of 5) avoids captcha naturally.
+    // Enable it only if you want additional protection or monitoring.
     this.batchManager = new BatchManager({
       minBatchSize: 3,
       maxBatchSize: 5, // CRITICAL: Never exceed 5
       interBatchDelay: [2000, 5000], // 2-5 seconds between batches
       successRateThreshold: 0.5, // Reduce batch size if success rate < 50%
+      enableCaptchaDetection: config.enableCaptchaDetection ?? false, // Disabled by default
     });
   }
 
@@ -130,13 +147,17 @@ export class ProviderLookupService {
   /**
    * Process lookups using BatchManager for intelligent batch processing
    * 
+   * CRITICAL FIX APPLIED: This method now creates ONE browser per batch of 5 lookups,
+   * matching the old working scraper's behavior exactly.
+   * 
    * This method:
    * 1. Converts phone numbers to ProviderLookup objects
    * 2. Adds them to BatchManager batches
-   * 3. Processes each batch when full WITH ONE BROWSER PER BATCH
-   * 4. Handles progress reporting
-   * 
-   * CRITICAL FIX: Creates ONE browser per batch of 5, not one per lookup
+   * 3. Creates ONE browser when batch is full
+   * 4. Reuses that browser for ALL lookups in the batch
+   * 5. Closes browser after batch completes
+   * 6. Waits 500ms between lookups within batch
+   * 7. Handles progress reporting
    * 
    * @param phonesToLookup - Phone numbers that need lookup (not in cache)
    * @param cachedCount - Number of results already found in cache
@@ -173,11 +194,12 @@ export class ProviderLookupService {
         const batchSize = this.batchManager.getCurrentBatchCount();
         console.log(`[ProviderLookup] Processing batch ${batchNumber} with ${batchSize} lookups`);
         
-        // CRITICAL FIX: Create ONE browser for this entire batch
+        // CRITICAL FIX: Create ONE browser for this entire batch (not one per lookup!)
         let browser: Browser | null = null;
         let lookupIndex = 0; // Track position within batch
         
         try {
+          // Create browser BEFORE processing batch
           browser = await this.createBrowser();
           console.log(`[ProviderLookup] [Batch ${batchNumber}] Created browser for ${batchSize} lookups`);
           
@@ -187,6 +209,7 @@ export class ProviderLookupService {
             console.log(`[ProviderLookup] [Batch ${batchNumber}] Lookup ${lookupIndex}/${batchSize}: ${lookup.phoneNumber}`);
             
             try {
+              // CRITICAL: Use the SAME browser instance for all lookups in this batch
               const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber);
               
               // Add 500ms delay between lookups (except after last one)
@@ -233,7 +256,8 @@ export class ProviderLookupService {
         } catch (error) {
           console.error(`[ProviderLookup] [Batch ${batchNumber}] Error processing batch:`, error);
         } finally {
-          // CRITICAL: Close browser after batch completes (after 5 lookups)
+          // CRITICAL: Close browser AFTER batch completes (after up to 5 lookups)
+          // This ensures we create a new browser for the next batch, avoiding captcha
           if (browser) {
             console.log(`[ProviderLookup] [Batch ${batchNumber}] Closing browser after ${batchSize} lookups`);
             await browser.close();

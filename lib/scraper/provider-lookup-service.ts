@@ -23,6 +23,7 @@
 import type { Browser, Page } from 'puppeteer';
 import { ProviderCache } from './provider-cache';
 import { BatchManager, ProviderLookup, BatchResult } from './BatchManager';
+import { RetryStrategy } from './RetryStrategy';
 
 const MAX_LOOKUPS_PER_BROWSER = 5; // Captcha appears after 5 lookups
 
@@ -31,11 +32,16 @@ export class ProviderLookupService {
   private activeBrowsers: number = 0;
   private eventEmitter?: any;
   private batchManager: BatchManager;
+  private retryStrategy: RetryStrategy;
 
   constructor(config: { maxConcurrentBatches: number; eventEmitter?: any }) {
     // maxConcurrentBatches means how many browser instances can run in parallel
     this.maxConcurrentBrowsers = config.maxConcurrentBatches;
     this.eventEmitter = config.eventEmitter;
+    
+    // Initialize RetryStrategy (copied from OLD working scraper)
+    // 3 attempts with 2 second base delay (exponential backoff: 2s, 4s, 8s)
+    this.retryStrategy = new RetryStrategy(3, 2000);
     
     // Initialize BatchManager with default configuration
     // This provides adaptive batch sizing and intelligent retry logic
@@ -179,14 +185,27 @@ export class ProviderLookupService {
           const batchResult = await this.batchManager.processBatch(async (lookup) => {
             lookupIndex++;
             console.log(`[ProviderLookup] [Batch ${batchNumber}] Lookup ${lookupIndex}/${batchSize}: ${lookup.phoneNumber}`);
-            const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber);
             
-            // Add 500ms delay between lookups (except after last one)
-            if (lookupIndex < batchSize) {
-              await this.sleep(500);
+            try {
+              const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber);
+              
+              // Add 500ms delay between lookups (except after last one)
+              if (lookupIndex < batchSize) {
+                await this.sleep(500);
+              }
+              
+              return provider === 'Unknown' ? null : provider;
+            } catch (error) {
+              // All retries exhausted, return null (failed lookup)
+              console.error(`[ProviderLookup] All retries exhausted for ${lookup.phoneNumber}:`, error);
+              
+              // Add 500ms delay between lookups (except after last one)
+              if (lookupIndex < batchSize) {
+                await this.sleep(500);
+              }
+              
+              return null;
             }
-            
-            return provider === 'Unknown' ? null : provider;
           });
 
           // Add batch results to final results
@@ -395,39 +414,44 @@ export class ProviderLookupService {
    * Requirement 3.1: Use porting.co.za lookup service
    * Requirement 3.7: Return "Unknown" when provider lookup fails
    * 
+   * CRITICAL FIX: Wrapped in RetryStrategy.execute() for automatic retry with exponential backoff
+   * This matches the OLD working scraper behavior exactly.
+   * 
    * @param browser - Browser instance to use
    * @param phoneNumber - Phone number to lookup
    * @returns Provider name or "Unknown"
    */
   async lookupSingleProvider(browser: Browser, phoneNumber: string): Promise<string> {
-    const page = await browser.newPage();
+    return this.retryStrategy.execute(async () => {
+      const page = await browser.newPage();
 
-    try {
-      // Clean phone number (remove spaces, dashes, etc.)
-      const cleanPhone = this.cleanPhoneNumber(phoneNumber);
-      
-      console.log(`[ProviderLookup] Looking up phone: ${phoneNumber} -> cleaned: ${cleanPhone}`);
+      try {
+        // Clean phone number (remove spaces, dashes, etc.)
+        const cleanPhone = this.cleanPhoneNumber(phoneNumber);
+        
+        console.log(`[ProviderLookup] Looking up phone: ${phoneNumber} -> cleaned: ${cleanPhone}`);
 
-      // Navigate directly to the lookup API URL
-      const url = `https://www.porting.co.za/PublicWebsite/crdb?msisdn=${cleanPhone}`;
-      await page.goto(url, { waitUntil: 'networkidle0', timeout: 15000 });
+        // Navigate directly to the lookup API URL
+        const url = `https://www.porting.co.za/PublicWebsite/crdb?msisdn=${cleanPhone}`;
+        await page.goto(url, { waitUntil: 'networkidle0', timeout: 15000 });
 
-      // Wait for the result span to appear
-      await page.waitForSelector('span.p1', { timeout: 5000 });
+        // Wait for the result span to appear
+        await page.waitForSelector('span.p1', { timeout: 5000 });
 
-      // Extract provider name from the span
-      const provider = await this.extractProviderFromPage(page);
-      
-      console.log(`[ProviderLookup] Result for ${phoneNumber}: ${provider}`);
+        // Extract provider name from the span
+        const provider = await this.extractProviderFromPage(page);
+        
+        console.log(`[ProviderLookup] Result for ${phoneNumber}: ${provider}`);
 
-      return provider;
+        return provider;
 
-    } catch (error) {
-      console.warn(`[ProviderLookup] Lookup failed for ${phoneNumber}:`, error);
-      return 'Unknown';
-    } finally {
-      await page.close();
-    }
+      } catch (error) {
+        console.warn(`[ProviderLookup] Lookup failed for ${phoneNumber}:`, error);
+        throw error; // Throw to trigger retry
+      } finally {
+        await page.close();
+      }
+    });
   }
 
   /**

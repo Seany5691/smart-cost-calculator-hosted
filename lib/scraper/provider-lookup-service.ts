@@ -127,8 +127,10 @@ export class ProviderLookupService {
    * This method:
    * 1. Converts phone numbers to ProviderLookup objects
    * 2. Adds them to BatchManager batches
-   * 3. Processes each batch when full
+   * 3. Processes each batch when full WITH ONE BROWSER PER BATCH
    * 4. Handles progress reporting
+   * 
+   * CRITICAL FIX: Creates ONE browser per batch of 5, not one per lookup
    * 
    * @param phonesToLookup - Phone numbers that need lookup (not in cache)
    * @param cachedCount - Number of results already found in cache
@@ -162,34 +164,62 @@ export class ProviderLookupService {
       if (this.batchManager.isBatchFull() || i === phonesToLookup.length - 1) {
         batchNumber++;
         
-        console.log(`[ProviderLookup] Processing batch ${batchNumber} with ${this.batchManager.getCurrentBatchCount()} lookups`);
+        const batchSize = this.batchManager.getCurrentBatchCount();
+        console.log(`[ProviderLookup] Processing batch ${batchNumber} with ${batchSize} lookups`);
         
-        // Process the batch using BatchManager
-        const batchResult = await this.batchManager.processBatch(async (lookup) => {
-          return await this.lookupSingleProviderWithBrowser(lookup.phoneNumber);
-        });
-
-        // Add batch results to final results
-        for (const [phone, provider] of batchResult.results.entries()) {
-          results.set(phone, provider);
-        }
-
-        completedLookups += batchResult.batchSize;
-
-        // Emit progress event
-        if (this.eventEmitter) {
-          this.eventEmitter.emit('lookup-progress', {
-            completed: completedLookups,
-            total: totalCount,
-            percentage: Math.round((completedLookups / totalCount) * 100),
-            currentBatch: batchNumber,
-            fromCache: cachedCount,
-            batchSuccessRate: batchResult.successRate,
-            batchSize: batchResult.batchSize,
+        // CRITICAL FIX: Create ONE browser for this entire batch
+        let browser: Browser | null = null;
+        let lookupIndex = 0; // Track position within batch
+        
+        try {
+          browser = await this.createBrowser();
+          console.log(`[ProviderLookup] [Batch ${batchNumber}] Created browser for ${batchSize} lookups`);
+          
+          // Process the batch using BatchManager with the SAME browser for all lookups
+          const batchResult = await this.batchManager.processBatch(async (lookup) => {
+            lookupIndex++;
+            console.log(`[ProviderLookup] [Batch ${batchNumber}] Lookup ${lookupIndex}/${batchSize}: ${lookup.phoneNumber}`);
+            const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber);
+            
+            // Add 500ms delay between lookups (except after last one)
+            if (lookupIndex < batchSize) {
+              await this.sleep(500);
+            }
+            
+            return provider === 'Unknown' ? null : provider;
           });
-        }
 
-        console.log(`[ProviderLookup] Batch ${batchNumber} complete: ${batchResult.successful} successful, ${batchResult.failed} failed (${Math.round(batchResult.successRate * 100)}% success rate)`);
+          // Add batch results to final results
+          for (const [phone, provider] of batchResult.results.entries()) {
+            results.set(phone, provider);
+          }
+
+          completedLookups += batchResult.batchSize;
+
+          // Emit progress event
+          if (this.eventEmitter) {
+            this.eventEmitter.emit('lookup-progress', {
+              completed: completedLookups,
+              total: totalCount,
+              percentage: Math.round((completedLookups / totalCount) * 100),
+              currentBatch: batchNumber,
+              fromCache: cachedCount,
+              batchSuccessRate: batchResult.successRate,
+              batchSize: batchResult.batchSize,
+            });
+          }
+
+          console.log(`[ProviderLookup] [Batch ${batchNumber}] Complete: ${batchResult.successful} successful, ${batchResult.failed} failed (${Math.round(batchResult.successRate * 100)}% success rate)`);
+          
+        } catch (error) {
+          console.error(`[ProviderLookup] [Batch ${batchNumber}] Error processing batch:`, error);
+        } finally {
+          // CRITICAL: Close browser after batch completes (after 5 lookups)
+          if (browser) {
+            console.log(`[ProviderLookup] [Batch ${batchNumber}] Closing browser after ${batchSize} lookups`);
+            await browser.close();
+          }
+        }
       }
     }
 
@@ -197,6 +227,10 @@ export class ProviderLookupService {
   }
 
   /**
+   * @deprecated This method is no longer used. The processLookupsWithBatchManager method
+   * now creates ONE browser per batch and reuses it for all lookups in that batch.
+   * This was the critical bug causing captcha on 6th lookup.
+   * 
    * Looks up a single provider by creating a temporary browser instance
    * This is used by BatchManager's processor function
    * 

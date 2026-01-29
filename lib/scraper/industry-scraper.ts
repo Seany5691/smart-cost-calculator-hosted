@@ -28,24 +28,48 @@ export class IndustryScraper {
    * Navigates to Google Maps and extracts businesses
    */
   async scrape(): Promise<ScrapedBusiness[]> {
-    try {
-      // Navigate to Google Maps search
-      const searchQuery = `${this.industry} in ${this.town}, South Africa`;
-      const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
+    const maxRetries = 2;
+    let lastError: any;
 
-      await this.page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Navigate to Google Maps search
+        const searchQuery = `${this.industry} in ${this.town}, South Africa`;
+        const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
 
-      // Wait for results feed to load
-      await this.page.waitForSelector('div[role="feed"]', { timeout: 10000 });
+        console.log(`[IndustryScraper] Attempt ${attempt}/${maxRetries} - Navigating to: ${searchQuery}`);
+        
+        await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-      // Extract businesses from list view
-      const businesses = await this.extractFromListView();
+        // Wait for results feed to load
+        await this.page.waitForSelector('div[role="feed"]', { timeout: 10000 });
 
-      return businesses;
-    } catch (error) {
-      this.errorLogger.logScrapingError(this.town, this.industry, error);
-      throw error;
+        // Extract businesses from list view
+        const businesses = await this.extractFromListView();
+
+        console.log(`[IndustryScraper] Successfully scraped ${businesses.length} businesses for ${searchQuery}`);
+        return businesses;
+        
+      } catch (error: any) {
+        lastError = error;
+        console.error(`[IndustryScraper] Attempt ${attempt}/${maxRetries} failed for ${this.industry} in ${this.town}:`, error.message);
+        
+        // If this is a timeout and we have retries left, wait and try again
+        if (attempt < maxRetries && (error.message?.includes('timeout') || error.message?.includes('Navigation'))) {
+          console.log(`[IndustryScraper] Waiting 3 seconds before retry...`);
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          continue;
+        }
+        
+        // If we're out of retries or it's not a timeout error, throw
+        this.errorLogger.logScrapingError(this.town, this.industry, error);
+        throw error;
+      }
     }
+
+    // If we get here, all retries failed
+    this.errorLogger.logScrapingError(this.town, this.industry, lastError);
+    throw lastError;
   }
 
   /**

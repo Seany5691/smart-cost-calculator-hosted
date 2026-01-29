@@ -325,8 +325,13 @@ export class ScrapingOrchestrator {
     this.isStopped = true;
     this.status = 'stopped';
     
-    // Workers will check isStopped flag and stop after current town
-    this.loggingManager.logMessage('Stopping scraping (waiting for active workers to finish)...');
+    // Force stop all workers immediately
+    this.loggingManager.logMessage('Stopping scraping (force closing all workers)...');
+    
+    const stopPromises = this.workers.map(worker => worker.forceStop());
+    await Promise.allSettled(stopPromises);
+    
+    console.log('[Orchestrator] All workers stopped');
   }
 
   /**

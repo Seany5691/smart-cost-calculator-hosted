@@ -24,6 +24,8 @@ export class BrowserWorker {
   private browser: Browser | null = null;
   private errorLogger: ErrorLogger;
   private activeScrapes: number = 0;
+  private isStopped: boolean = false;
+  private activePages: Set<Page> = new Set();
 
   constructor(
     workerId: number,
@@ -51,6 +53,12 @@ export class BrowserWorker {
     const allBusinesses: ScrapedBusiness[] = [];
 
     try {
+      // Check if stopped before starting
+      if (this.isStopped) {
+        console.log(`[Worker ${this.workerId}] Stopped before processing town: ${town}`);
+        return allBusinesses;
+      }
+
       // Initialize browser if not already initialized
       if (!this.browser) {
         await this.initBrowser();
@@ -62,6 +70,12 @@ export class BrowserWorker {
       const concurrency = this.config.simultaneousIndustries;
       
       for (let i = 0; i < industries.length; i += concurrency) {
+        // Check if stopped during processing
+        if (this.isStopped) {
+          console.log(`[Worker ${this.workerId}] Stopped during town processing: ${town}`);
+          break;
+        }
+
         const industryBatch = industries.slice(i, i + concurrency);
         
         console.log(`[Worker ${this.workerId}] Processing industry batch ${Math.floor(i / concurrency) + 1}: ${industryBatch.join(', ')}`);
@@ -91,7 +105,7 @@ export class BrowserWorker {
         }
 
         // Requirement 24.1: Wait 1 second between industry scrapes to avoid rate limiting
-        if (i + concurrency < industries.length) {
+        if (i + concurrency < industries.length && !this.isStopped) {
           await this.sleep(1000);
         }
       }
@@ -126,12 +140,19 @@ export class BrowserWorker {
       throw new Error(`Worker ${this.workerId}: Browser not initialized`);
     }
 
+    // Check if stopped
+    if (this.isStopped) {
+      console.log(`[Worker ${this.workerId}] Stopped, skipping ${town} - ${industry}`);
+      return [];
+    }
+
     this.activeScrapes++;
     let page: Page | null = null;
 
     try {
       // Create new page for this industry
       page = await this.browser.newPage();
+      this.activePages.add(page);
 
       // Set viewport and user agent
       await page.setViewport({ width: 1920, height: 1080 });
@@ -146,14 +167,22 @@ export class BrowserWorker {
       return businesses;
 
     } catch (error) {
-      this.errorLogger.logScrapingError(town, industry, error, {
-        workerId: this.workerId,
-      });
+      // Don't log errors if we're stopped (expected behavior)
+      if (!this.isStopped) {
+        this.errorLogger.logScrapingError(town, industry, error, {
+          workerId: this.workerId,
+        });
+      }
       throw error;
     } finally {
       // Always close the page
       if (page) {
-        await page.close();
+        this.activePages.delete(page);
+        try {
+          await page.close();
+        } catch (err) {
+          // Ignore errors when closing page (might already be closed)
+        }
       }
       this.activeScrapes--;
     }
@@ -215,6 +244,17 @@ export class BrowserWorker {
     if (this.browser) {
       try {
         console.log(`[Worker ${this.workerId}] Closing browser...`);
+        
+        // Close all active pages first
+        for (const page of this.activePages) {
+          try {
+            await page.close();
+          } catch (err) {
+            // Ignore errors when closing individual pages
+          }
+        }
+        this.activePages.clear();
+        
         await this.browser.close();
         this.browser = null;
         console.log(`[Worker ${this.workerId}] Browser closed successfully`);
@@ -226,6 +266,28 @@ export class BrowserWorker {
         console.error(`[Worker ${this.workerId}] Error closing browser:`, error);
       }
     }
+  }
+
+  /**
+   * Forcefully stops the worker and closes all resources
+   * Used when user clicks stop button
+   */
+  async forceStop(): Promise<void> {
+    console.log(`[Worker ${this.workerId}] Force stopping...`);
+    this.isStopped = true;
+    
+    // Close all active pages immediately to abort ongoing requests
+    for (const page of this.activePages) {
+      try {
+        await page.close();
+      } catch (err) {
+        // Ignore errors
+      }
+    }
+    this.activePages.clear();
+    
+    // Close browser
+    await this.cleanup();
   }
 
   /**

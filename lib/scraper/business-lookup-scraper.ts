@@ -27,7 +27,7 @@ export class BusinessLookupScraper {
     try {
       // Navigate to Google Maps search
       const url = `https://www.google.com/maps/search/${encodeURIComponent(this.businessQuery)}`;
-      await this.page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+      await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
       // Wait for page to load
       await new Promise(resolve => setTimeout(resolve, 2000));

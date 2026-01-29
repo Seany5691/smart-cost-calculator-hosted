@@ -12,11 +12,17 @@
  * Rate Limiting (Requirement 24.2):
  * - Waits 500ms between provider lookups within a batch (Req 24.2)
  * 
+ * BATCH MANAGEMENT (Phase 1 - Robustness Enhancement):
+ * - Uses BatchManager for intelligent batch processing
+ * - Adaptive batch sizing based on success rate
+ * - Maintains backward compatibility with existing API
+ * 
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 24.2
  */
 
 import type { Browser, Page } from 'puppeteer';
 import { ProviderCache } from './provider-cache';
+import { BatchManager, ProviderLookup, BatchResult } from './BatchManager';
 
 const MAX_LOOKUPS_PER_BROWSER = 5; // Captcha appears after 5 lookups
 
@@ -24,11 +30,21 @@ export class ProviderLookupService {
   private maxConcurrentBrowsers: number;
   private activeBrowsers: number = 0;
   private eventEmitter?: any;
+  private batchManager: BatchManager;
 
   constructor(config: { maxConcurrentBatches: number; eventEmitter?: any }) {
     // maxConcurrentBatches means how many browser instances can run in parallel
     this.maxConcurrentBrowsers = config.maxConcurrentBatches;
     this.eventEmitter = config.eventEmitter;
+    
+    // Initialize BatchManager with default configuration
+    // This provides adaptive batch sizing and intelligent retry logic
+    this.batchManager = new BatchManager({
+      minBatchSize: 3,
+      maxBatchSize: 5, // CRITICAL: Never exceed 5
+      interBatchDelay: [2000, 5000], // 2-5 seconds between batches
+      successRateThreshold: 0.5, // Reduce batch size if success rate < 50%
+    });
   }
 
   /**
@@ -36,6 +52,11 @@ export class ProviderLookupService {
    * Requirement 3.1: Use porting.co.za lookup service
    * Requirement 3.2: Create batches of exactly 5 numbers per browser instance
    * Requirement 3.4: Process up to maxConcurrentBrowsers batches in parallel
+   * 
+   * ENHANCED: Now uses BatchManager for intelligent batch processing with:
+   * - Adaptive batch sizing based on success rate
+   * - Automatic inter-batch delays
+   * - Success rate tracking
    * 
    * @param phoneNumbers - Array of phone numbers to lookup
    * @returns Map of phone number to provider name
@@ -72,40 +93,8 @@ export class ProviderLookupService {
     console.log(`[ProviderLookup] Need to lookup ${phonesToLookup.length} numbers (not in cache)`);
     console.log(`[ProviderLookup] Max concurrent browsers: ${this.maxConcurrentBrowsers}`);
 
-    // Split into batches of 5 (max per browser before captcha)
-    const batches = this.createBatchesOfFive(phonesToLookup);
-    console.log(`[ProviderLookup] Created ${batches.length} batches of up to 5 numbers each`);
-
-    // Process batches with concurrency control (multiple browsers in parallel)
-    let completedLookups = cachedResults.size; // Start with cached count
-    const totalLookups = validPhones.length;
-    const newResults = new Map<string, string>();
-    
-    for (let i = 0; i < batches.length; i += this.maxConcurrentBrowsers) {
-      const batchGroup = batches.slice(i, i + this.maxConcurrentBrowsers);
-      
-      console.log(`[ProviderLookup] Processing batch group ${Math.floor(i / this.maxConcurrentBrowsers) + 1} with ${batchGroup.length} browser(s)`);
-      
-      const batchPromises = batchGroup.map((batch, index) => 
-        this.processBatchWithNewBrowser(batch, newResults, i + index + 1).then(() => {
-          completedLookups += batch.length;
-          
-          // Emit lookup progress (Phase 2)
-          if (this.eventEmitter) {
-            this.eventEmitter.emit('lookup-progress', {
-              completed: completedLookups,
-              total: totalLookups,
-              percentage: Math.round((completedLookups / totalLookups) * 100),
-              currentBatch: i + index + 1,
-              totalBatches: batches.length,
-              fromCache: cachedResults.size,
-            });
-          }
-        })
-      );
-
-      await Promise.all(batchPromises);
-    }
+    // NEW: Use BatchManager for intelligent batch processing
+    const newResults = await this.processLookupsWithBatchManager(phonesToLookup, cachedResults.size, validPhones.length);
 
     // PHASE 3: Cache new results
     if (newResults.size > 0) {
@@ -119,13 +108,131 @@ export class ProviderLookupService {
     }
 
     console.log(`[ProviderLookup] Completed all lookups. Total results: ${results.size} (${cachedResults.size} from cache, ${newResults.size} new)`);
+    
+    // Log BatchManager statistics
+    const stats = this.batchManager.getStatistics();
+    console.log(`[ProviderLookup] BatchManager stats:`, {
+      totalBatchesProcessed: stats.totalBatchesProcessed,
+      totalLookupsProcessed: stats.totalLookupsProcessed,
+      currentBatchSize: stats.currentBatchSize,
+      rollingSuccessRate: stats.rollingSuccessRate,
+    });
+    
     return results;
+  }
+
+  /**
+   * Process lookups using BatchManager for intelligent batch processing
+   * 
+   * This method:
+   * 1. Converts phone numbers to ProviderLookup objects
+   * 2. Adds them to BatchManager batches
+   * 3. Processes each batch when full
+   * 4. Handles progress reporting
+   * 
+   * @param phonesToLookup - Phone numbers that need lookup (not in cache)
+   * @param cachedCount - Number of results already found in cache
+   * @param totalCount - Total number of phone numbers
+   * @returns Map of phone number to provider name
+   */
+  private async processLookupsWithBatchManager(
+    phonesToLookup: string[],
+    cachedCount: number,
+    totalCount: number
+  ): Promise<Map<string, string>> {
+    const results = new Map<string, string>();
+    let completedLookups = cachedCount;
+    let batchNumber = 0;
+
+    console.log(`[ProviderLookup] Using BatchManager for ${phonesToLookup.length} lookups`);
+
+    // Process all phone numbers through BatchManager
+    for (let i = 0; i < phonesToLookup.length; i++) {
+      const phoneNumber = phonesToLookup[i];
+      
+      // Add to current batch
+      const lookup: ProviderLookup = {
+        phoneNumber,
+        metadata: { index: i },
+      };
+      
+      this.batchManager.addToBatch(lookup);
+
+      // Process batch when full or at end of list
+      if (this.batchManager.isBatchFull() || i === phonesToLookup.length - 1) {
+        batchNumber++;
+        
+        console.log(`[ProviderLookup] Processing batch ${batchNumber} with ${this.batchManager.getCurrentBatchCount()} lookups`);
+        
+        // Process the batch using BatchManager
+        const batchResult = await this.batchManager.processBatch(async (lookup) => {
+          return await this.lookupSingleProviderWithBrowser(lookup.phoneNumber);
+        });
+
+        // Add batch results to final results
+        for (const [phone, provider] of batchResult.results.entries()) {
+          results.set(phone, provider);
+        }
+
+        completedLookups += batchResult.batchSize;
+
+        // Emit progress event
+        if (this.eventEmitter) {
+          this.eventEmitter.emit('lookup-progress', {
+            completed: completedLookups,
+            total: totalCount,
+            percentage: Math.round((completedLookups / totalCount) * 100),
+            currentBatch: batchNumber,
+            fromCache: cachedCount,
+            batchSuccessRate: batchResult.successRate,
+            batchSize: batchResult.batchSize,
+          });
+        }
+
+        console.log(`[ProviderLookup] Batch ${batchNumber} complete: ${batchResult.successful} successful, ${batchResult.failed} failed (${Math.round(batchResult.successRate * 100)}% success rate)`);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Looks up a single provider by creating a temporary browser instance
+   * This is used by BatchManager's processor function
+   * 
+   * @param phoneNumber - Phone number to lookup
+   * @returns Provider name or null on failure
+   */
+  private async lookupSingleProviderWithBrowser(phoneNumber: string): Promise<string | null> {
+    let browser: Browser | null = null;
+
+    try {
+      // Create a fresh browser instance for this lookup
+      browser = await this.createBrowser();
+      
+      const provider = await this.lookupSingleProvider(browser, phoneNumber);
+      
+      // Return null if lookup failed (provider is "Unknown")
+      return provider === 'Unknown' ? null : provider;
+      
+    } catch (error) {
+      console.error(`[ProviderLookup] Error looking up ${phoneNumber}:`, error);
+      return null;
+    } finally {
+      // Always close the browser
+      if (browser) {
+        await browser.close();
+      }
+    }
   }
 
   /**
    * Creates batches of exactly 5 phone numbers (or less for the last batch)
    * Each batch will use a separate browser instance to avoid captcha
    * Requirement 3.2: Create batches of exactly 5 numbers per browser instance
+   * 
+   * @deprecated This method is kept for backward compatibility but is no longer used internally.
+   * The BatchManager now handles batch creation automatically.
    * 
    * @param phoneNumbers - Array of phone numbers
    * @returns Array of batches, each with max 5 numbers
@@ -144,6 +251,9 @@ export class ProviderLookupService {
    * Processes a batch of up to 5 phone numbers with a dedicated browser instance
    * Browser is closed after processing to avoid captcha on next batch
    * Requirement 3.3: Close browser after batch is complete to avoid captcha
+   * 
+   * @deprecated This method is kept for backward compatibility but is no longer used internally.
+   * The BatchManager now handles batch processing with better error handling and adaptive sizing.
    * 
    * @param batch - Array of phone numbers (max 5)
    * @param results - Map to store results
@@ -189,6 +299,31 @@ export class ProviderLookupService {
       }
       this.activeBrowsers--;
     }
+  }
+
+  /**
+   * Get BatchManager statistics
+   * 
+   * Provides insights into batch processing performance:
+   * - Total batches and lookups processed
+   * - Current batch size (adaptive, 3-5)
+   * - Rolling success rate
+   * 
+   * @returns BatchManager statistics object
+   */
+  getBatchManagerStatistics() {
+    return this.batchManager.getStatistics();
+  }
+
+  /**
+   * Reset BatchManager state
+   * 
+   * Useful for starting a new scraping session or testing.
+   * Resets all counters and batch size back to maximum (5).
+   */
+  resetBatchManager(): void {
+    this.batchManager.reset();
+    console.log('[ProviderLookup] BatchManager reset');
   }
 
   /**

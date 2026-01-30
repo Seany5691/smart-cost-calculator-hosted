@@ -40,13 +40,18 @@ export class BrowserWorker {
 
   /**
    * Processes all industries for a town
+   * 
+   * UPDATED: If no industries provided, treats town as a business search query
+   * - With industries: Searches "industry in town" (e.g., "Restaurants in Cape Town")
+   * - Without industries: Searches exact business name (e.g., "REGAL VANDERBIJLPARK")
+   * 
    * Requirement 5.1: Initialize browser instance if not already initialized
    * Requirement 5.2: Process up to simultaneousIndustries in parallel
    * Requirement 5.3: Log errors and continue with remaining industries
    * Requirement 5.4: Close browser after town is complete to free resources
    * 
-   * @param town - Town name to scrape
-   * @param industries - Array of industries to scrape
+   * @param town - Town name to scrape OR business name if no industries
+   * @param industries - Array of industries to scrape (empty for business-only search)
    * @returns Array of all scraped businesses
    */
   async processTown(town: string, industries: string[]): Promise<ScrapedBusiness[]> {
@@ -62,6 +67,18 @@ export class BrowserWorker {
       // Initialize browser if not already initialized
       if (!this.browser) {
         await this.initBrowser();
+      }
+
+      // UPDATED: Handle business-only search (no industries selected)
+      if (!industries || industries.length === 0) {
+        console.log(`[Worker ${this.workerId}] Processing business search: ${town}`);
+        
+        // Search for the business name directly
+        const businesses = await this.scrapeBusinessDirect(town);
+        allBusinesses.push(...businesses);
+        
+        console.log(`[Worker ${this.workerId}] Completed business search: ${town} - Found ${businesses.length} businesses`);
+        return allBusinesses;
       }
 
       console.log(`[Worker ${this.workerId}] Processing town: ${town} with ${industries.length} industries`);
@@ -125,6 +142,69 @@ export class BrowserWorker {
     }
 
     return allBusinesses;
+  }
+
+  /**
+   * Scrapes a business directly by name (no industry filter)
+   * Used when no industries are selected - searches for exact business name
+   * 
+   * @param businessQuery - Business name to search (e.g., "REGAL VANDERBIJLPARK")
+   * @returns Array of scraped businesses
+   */
+  private async scrapeBusinessDirect(businessQuery: string): Promise<ScrapedBusiness[]> {
+    if (!this.browser) {
+      throw new Error(`Worker ${this.workerId}: Browser not initialized`);
+    }
+
+    // Check if stopped
+    if (this.isStopped) {
+      console.log(`[Worker ${this.workerId}] Stopped, skipping business search: ${businessQuery}`);
+      return [];
+    }
+
+    this.activeScrapes++;
+    let page: Page | null = null;
+
+    try {
+      // Create new page for this business search
+      page = await this.browser.newPage();
+      this.activePages.add(page);
+
+      // Set viewport and user agent
+      await page.setViewport({ width: 1920, height: 1080 });
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      );
+
+      // Use BusinessLookupScraper for direct business search
+      const { BusinessLookupScraper } = await import('./business-lookup-scraper');
+      const scraper = new BusinessLookupScraper(page, businessQuery);
+      const businesses = await scraper.scrape();
+
+      return businesses;
+
+    } catch (error) {
+      // Don't log errors if we're stopped (expected behavior)
+      if (!this.isStopped) {
+        this.errorLogger.logError(
+          `Worker ${this.workerId} failed to scrape business: ${businessQuery}`,
+          error,
+          { workerId: this.workerId, businessQuery }
+        );
+      }
+      throw error;
+    } finally {
+      // Always close the page
+      if (page) {
+        this.activePages.delete(page);
+        try {
+          await page.close();
+        } catch (err) {
+          // Ignore errors when closing page (might already be closed)
+        }
+      }
+      this.activeScrapes--;
+    }
   }
 
   /**

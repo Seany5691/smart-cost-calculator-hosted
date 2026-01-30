@@ -21,10 +21,10 @@ export default function TownInput({ value, onChange, disabled }: TownInputProps)
         </div>
         <div>
           <h3 className="text-lg font-bold text-white">
-            Towns to Scrape
+            Towns/Businesses to Scrape
           </h3>
           <p className="text-xs text-gray-400">
-            {townCount} town{townCount !== 1 ? 's' : ''} • One per line
+            {townCount} {townCount !== 1 ? 'entries' : 'entry'} • One per line
           </p>
         </div>
       </div>
@@ -35,13 +35,16 @@ export default function TownInput({ value, onChange, disabled }: TownInputProps)
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        placeholder="e.g.&#10;Johannesburg, Gauteng&#10;Cape Town, Western Cape&#10;Durban, KwaZulu-Natal"
+        placeholder="e.g.&#10;Johannesburg, Gauteng&#10;Cape Town, Western Cape&#10;REGAL VANDERBIJLPARK&#10;REGAL XAVIER (JHB SOUTH)"
         className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none h-80"
       />
       
       {/* Help text */}
       <p className="text-sm text-gray-400 font-medium">
         💡 Enter each town on a new line. Include province for better accuracy.
+      </p>
+      <p className="text-sm text-amber-400 font-medium mt-2">
+        ℹ️ To search for specific businesses: Unselect all industries and enter business names above (e.g., "REGAL VANDERBIJLPARK")
       </p>
     </div>
   );

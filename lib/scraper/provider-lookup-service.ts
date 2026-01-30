@@ -511,8 +511,8 @@ export class ProviderLookupService {
         
         console.log(`[ProviderLookup] Looking up phone: ${phoneNumber} -> cleaned: ${cleanPhone}`);
 
-        // Navigate to the porting.co.za homepage
-        await page.goto('https://www.porting.co.za/', { waitUntil: 'networkidle0', timeout: 15000 });
+        // Navigate to the porting.co.za number inquiry page
+        await page.goto('https://www.porting.co.za/PublicWebsiteApp/#/number-inquiry', { waitUntil: 'networkidle0', timeout: 15000 });
 
         // Check for captcha BEFORE entering number
         const hasCaptcha = await this.detectCaptchaOnPage(page);

@@ -3,10 +3,13 @@
  * 
  * MAJOR UPDATE (2025-01-30):
  * - porting.co.za changed their website - direct URL access no longer works
- * - Now uses form interaction: navigate to page, fill input field, submit, extract result
- * - Input element: <input id="numberTextInput" formcontrolname="number" />
- * - Result format: "has not been ported and is still serviced by TELKOM/TELKOM"
- * - Extracts provider name after the "/" (e.g., "TELKOM")
+ * - Now uses form interaction with these steps:
+ *   1. Navigate to /PublicWebsiteApp/#/number-inquiry
+ *   2. Fill input field: <input id="numberTextInput" />
+ *   3. Click Query button: <button id="retrieveBtn">
+ *   4. Wait for result element: <label id="dataMsg">
+ *   5. Extract last word from dataMsg text (e.g., "MTN/MTN" → "MTN")
+ * - Result format: "The number 0686128512 has not been ported and is still serviced by MTN/MTN."
  * - Captcha is now RANDOMIZED (not every 5th lookup)
  * - When captcha detected: closes browser, creates new one, continues
  * - Captcha detection happens BEFORE entering number
@@ -492,7 +495,13 @@ export class ProviderLookupService {
    * 
    * NEW APPROACH (2025-01-30):
    * - porting.co.za changed their site - direct URL access no longer works
-   * - Now uses form interaction: navigate to page, fill input, submit, extract result
+   * - Now uses form interaction:
+   *   1. Navigate to /PublicWebsiteApp/#/number-inquiry
+   *   2. Check for captcha BEFORE entering number
+   *   3. Fill input field #numberTextInput with phone number
+   *   4. Click Query button #retrieveBtn
+   *   5. Wait for result element #dataMsg
+   *   6. Extract last word from dataMsg text (provider name)
    * - Detects captcha and throws error to trigger browser restart
    * - Captcha is now randomized (not every 5th lookup)
    * 
@@ -534,12 +543,17 @@ export class ProviderLookupService {
 
         console.log(`[ProviderLookup] Entered phone number: ${cleanPhone}`);
 
-        // Submit the form (look for submit button or press Enter)
-        await page.keyboard.press('Enter');
+        // Click the "Query" button
+        await page.waitForSelector('#retrieveBtn', { timeout: 5000 });
+        await page.click('#retrieveBtn');
 
-        // Wait for result to appear
-        // Give time for the page to process and display results
-        await this.sleep(2000);
+        console.log(`[ProviderLookup] Clicked Query button`);
+
+        // Wait for result to appear (wait for the dataMsg element)
+        await page.waitForSelector('#dataMsg', { timeout: 10000 });
+
+        // Give a bit more time for content to fully load
+        await this.sleep(1000);
 
         // Extract provider name from the result
         const provider = await this.extractProviderFromFormResult(page);
@@ -625,42 +639,50 @@ export class ProviderLookupService {
   /**
    * Extracts provider name from the form result
    * 
-   * NEW FORMAT: "has not been ported and is still serviced by TELKOM/TELKOM"
-   * Extracts the last word after the "/" (e.g., "TELKOM")
+   * NEW FORMAT (2025-01-30):
+   * - Looks for element: <label id="dataMsg">
+   * - Text format: "The number 0686128512 has not been ported and is still serviced by MTN/MTN."
+   * - Extracts the last word from the text (e.g., "MTN")
    * 
    * @param page - Puppeteer page with results
    * @returns Provider name or "Unknown"
    */
   private async extractProviderFromFormResult(page: Page): Promise<string> {
     try {
-      // Get all text content from the page
-      const bodyText = await page.evaluate(() => document.body.textContent || '');
+      // Get text from the #dataMsg element
+      const dataMsgText = await page.evaluate(() => {
+        const element = document.querySelector('#dataMsg');
+        return element ? element.textContent || '' : '';
+      });
       
-      console.log(`[ProviderLookup] Page text (first 500 chars): ${bodyText.substring(0, 500)}`);
-
-      // Look for the pattern "serviced by PROVIDER/PROVIDER"
-      const servicedByPattern = /serviced by\s+([^\/\s]+)\/([^\/\s]+)/i;
-      const match = bodyText.match(servicedByPattern);
-
-      if (match) {
-        // Extract the last word after the "/"
-        const provider = match[2].trim();
-        console.log(`[ProviderLookup] Extracted provider: "${provider}"`);
-        return provider;
+      if (!dataMsgText) {
+        console.log('[ProviderLookup] No #dataMsg element found or empty');
+        return 'Unknown';
       }
 
-      // Alternative: Look for just "serviced by PROVIDER"
-      const simplePattern = /serviced by\s+([^\s\.]+)/i;
-      const simpleMatch = bodyText.match(simplePattern);
+      console.log(`[ProviderLookup] dataMsg text: "${dataMsgText}"`);
 
-      if (simpleMatch) {
-        const provider = simpleMatch[1].trim();
-        console.log(`[ProviderLookup] Extracted provider (simple): "${provider}"`);
-        return provider;
+      // Extract the last word from the text
+      // Text format: "The number 0686128512 has not been ported and is still serviced by MTN/MTN."
+      // We want to extract "MTN" (the last word before the period)
+      
+      // Remove trailing punctuation and split by whitespace
+      const cleanedText = dataMsgText.trim().replace(/[.,;:!?]+$/, '');
+      const words = cleanedText.split(/\s+/);
+      
+      if (words.length === 0) {
+        console.log('[ProviderLookup] No words found in dataMsg text');
+        return 'Unknown';
       }
 
-      console.log('[ProviderLookup] No provider pattern found in page text');
-      return 'Unknown';
+      // Get the last word
+      const lastWord = words[words.length - 1].trim();
+      
+      // Remove any remaining punctuation from the last word
+      const provider = lastWord.replace(/[.,;:!?]+$/, '');
+      
+      console.log(`[ProviderLookup] Extracted provider: "${provider}"`);
+      return provider || 'Unknown';
 
     } catch (error) {
       console.warn('[ProviderLookup] Failed to extract provider from form result:', error);

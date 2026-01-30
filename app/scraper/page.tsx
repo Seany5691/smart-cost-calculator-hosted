@@ -743,16 +743,6 @@ export default function ScraperPage() {
           </div>
         </div>
 
-        {/* Excel Provider Lookup - Full Width */}
-        <div className="glass-card p-4 lg:p-6">
-          <ExcelProviderLookup
-            onComplete={(results) => {
-              console.log('[Scraper] Excel provider lookup completed:', results.length, 'businesses');
-              toast.success(`Excel provider lookup completed: ${results.length} businesses processed`);
-            }}
-          />
-        </div>
-
         {/* Progress & Summary Stats (Top Section) - Stacked on mobile */}
         {(isActive || status === 'completed' || status === 'stopped' || hasData) && (
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
@@ -834,18 +824,6 @@ export default function ScraperPage() {
               isLoading={isLoading}
               isExporting={isExporting}
             />
-          </div>
-
-          <div className="glass-card p-4 lg:p-6 w-full lg:w-auto">
-            <ConcurrencyControls
-              simultaneousTowns={config.simultaneousTowns}
-              simultaneousIndustries={config.simultaneousIndustries}
-              simultaneousLookups={config.simultaneousLookups}
-              onTownsChange={(value) => setConfig({ simultaneousTowns: value })}
-              onIndustriesChange={(value) => setConfig({ simultaneousIndustries: value })}
-              onLookupsChange={(value) => setConfig({ simultaneousLookups: value })}
-              disabled={isActive}
-            />
             
             {/* Provider Lookup Toggle */}
             <div className="mt-4 pt-4 border-t border-white/10">
@@ -865,6 +843,18 @@ export default function ScraperPage() {
                 </div>
               </label>
             </div>
+          </div>
+
+          <div className="glass-card p-4 lg:p-6 w-full lg:w-auto">
+            <ConcurrencyControls
+              simultaneousTowns={config.simultaneousTowns}
+              simultaneousIndustries={config.simultaneousIndustries}
+              simultaneousLookups={config.simultaneousLookups}
+              onTownsChange={(value) => setConfig({ simultaneousTowns: value })}
+              onIndustriesChange={(value) => setConfig({ simultaneousIndustries: value })}
+              onLookupsChange={(value) => setConfig({ simultaneousLookups: value })}
+              disabled={isActive}
+            />
           </div>
 
           {/* Row 3: Activity Log & Provider Export */}
@@ -892,7 +882,17 @@ export default function ScraperPage() {
           </div>
         )}
 
-        {/* Analytics Card - Below View All Results */}
+        {/* Excel Provider Lookup - Below View All Results */}
+        <div className="glass-card p-4 lg:p-6">
+          <ExcelProviderLookup
+            onComplete={(results) => {
+              console.log('[Scraper] Excel provider lookup completed:', results.length, 'businesses');
+              toast.success(`Excel provider lookup completed: ${results.length} businesses processed`);
+            }}
+          />
+        </div>
+
+        {/* Analytics Card - Below Excel Provider Lookup */}
         {hasData && (
           <ScrapingAnalytics
             isOpen={true}

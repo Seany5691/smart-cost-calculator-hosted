@@ -90,17 +90,19 @@ export default function ExcelProviderLookup({ onComplete }: ExcelProviderLookupP
 
       fileHeaders.forEach((header: string) => {
         const lower = header.toLowerCase();
-        if (lower.includes('name') || lower.includes('business')) {
+        
+        // Match exact headers from your Excel exports
+        if (header === 'name' || lower === 'name') {
           autoMapping.name = header;
-        } else if (lower.includes('phone') || lower.includes('tel') || lower.includes('mobile')) {
+        } else if (header === 'phone' || lower === 'phone') {
           autoMapping.phone = header;
-        } else if (lower.includes('address')) {
+        } else if (header === 'address' || lower === 'address') {
           autoMapping.address = header;
-        } else if (lower.includes('town') || lower.includes('city')) {
+        } else if (header === 'town' || lower === 'town') {
           autoMapping.town = header;
-        } else if (lower.includes('industry') || lower.includes('type') || lower.includes('category')) {
+        } else if (header === 'type_of_business' || header === 'industry' || lower === 'industry' || lower.includes('type') || lower.includes('business')) {
           autoMapping.industry = header;
-        } else if (lower.includes('url') || lower.includes('website') || lower.includes('maps')) {
+        } else if (header === 'maps_address' || header === 'mapsUrl' || lower === 'mapsurl' || lower.includes('maps') || lower.includes('url')) {
           autoMapping.mapsUrl = header;
         }
       });

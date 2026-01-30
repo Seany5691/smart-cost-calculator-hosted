@@ -568,56 +568,51 @@ export class ProviderLookupService {
   /**
    * Detects captcha on the current page
    * 
-   * Checks for common captcha indicators:
-   * - reCAPTCHA iframes
-   * - Captcha-related elements
-   * - Captcha keywords in page content
+   * Checks for the specific captcha challenge text:
+   * "Enter the numeric verification code shown above:(This helps prevent automated query attempts.)"
+   * 
+   * This is the actual captcha message from porting.co.za
    * 
    * @param page - Puppeteer page to check
    * @returns true if captcha detected, false otherwise
    */
   private async detectCaptchaOnPage(page: Page): Promise<boolean> {
     try {
-      // Check for reCAPTCHA iframe
-      const recaptchaFrame = await page.$('iframe[src*="recaptcha"]');
-      if (recaptchaFrame) {
-        console.log('[ProviderLookup] Detected reCAPTCHA iframe');
+      // Check for the specific captcha text from porting.co.za
+      const hasCaptchaText = await page.evaluate(() => {
+        const bodyText = document.body.textContent || '';
+        
+        // Look for the exact captcha message
+        return bodyText.includes('Enter the numeric verification code shown above') ||
+               bodyText.includes('This helps prevent automated query attempts');
+      });
+
+      if (hasCaptchaText) {
+        console.log('[ProviderLookup] Detected captcha challenge text');
         return true;
       }
 
-      // Check for captcha-related elements
-      const captchaSelectors = [
-        'div[class*="captcha"]',
-        'div[id*="captcha"]',
-        '.g-recaptcha',
-        '#g-recaptcha',
-        'iframe[src*="captcha"]',
-      ];
+      // Also check for VISIBLE reCAPTCHA iframe (backup check)
+      const hasVisibleRecaptcha = await page.evaluate(() => {
+        const recaptchaIframe = document.querySelector('iframe[src*="recaptcha"]') as HTMLIFrameElement;
+        if (!recaptchaIframe) return false;
+        
+        // Check if iframe is visible
+        const rect = recaptchaIframe.getBoundingClientRect();
+        const style = window.getComputedStyle(recaptchaIframe);
+        
+        return (
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          style.opacity !== '0'
+        );
+      });
 
-      for (const selector of captchaSelectors) {
-        const element = await page.$(selector);
-        if (element) {
-          console.log(`[ProviderLookup] Detected captcha element: ${selector}`);
-          return true;
-        }
-      }
-
-      // Check page content for captcha keywords
-      const content = await page.content();
-      const captchaKeywords = [
-        'recaptcha',
-        'captcha',
-        'verify you are human',
-        'verify you\'re human',
-        'unusual traffic',
-        'automated requests',
-      ];
-
-      for (const keyword of captchaKeywords) {
-        if (content.toLowerCase().includes(keyword)) {
-          console.log(`[ProviderLookup] Detected captcha keyword: ${keyword}`);
-          return true;
-        }
+      if (hasVisibleRecaptcha) {
+        console.log('[ProviderLookup] Detected VISIBLE reCAPTCHA iframe');
+        return true;
       }
 
       return false;

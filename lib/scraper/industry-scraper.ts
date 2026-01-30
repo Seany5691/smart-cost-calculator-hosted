@@ -34,7 +34,26 @@ export class IndustryScraper {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         // Navigate to Google Maps search
-        const searchQuery = `${this.industry} in ${this.town}, South Africa`;
+        // Build search query: "industry in town"
+        // Don't add "South Africa" if town already contains location info (province, country, etc.)
+        const townLower = this.town.toLowerCase();
+        const hasLocationInfo = 
+          townLower.includes('south africa') || 
+          townLower.includes('gauteng') || 
+          townLower.includes('western cape') || 
+          townLower.includes('eastern cape') || 
+          townLower.includes('northern cape') || 
+          townLower.includes('free state') || 
+          townLower.includes('kwazulu-natal') || 
+          townLower.includes('limpopo') || 
+          townLower.includes('mpumalanga') || 
+          townLower.includes('north west') || 
+          townLower.includes('northwest');
+        
+        const searchQuery = hasLocationInfo 
+          ? `${this.industry} in ${this.town}` 
+          : `${this.industry} in ${this.town}, South Africa`;
+        
         const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
 
         console.log(`[IndustryScraper] Attempt ${attempt}/${maxRetries} - Navigating to: ${searchQuery}`);

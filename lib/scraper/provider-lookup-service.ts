@@ -51,6 +51,7 @@ export class ProviderLookupService {
   private eventEmitter?: any;
   private batchManager: BatchManager;
   private retryStrategy: RetryStrategy;
+  private activePages: Set<Page> = new Set(); // Track all active pages to prevent leaks
 
   constructor(config: { 
     maxConcurrentBatches: number; 
@@ -216,7 +217,7 @@ export class ProviderLookupService {
         try {
           // Create initial browser
           browser = await this.createBrowser();
-          console.log(`[ProviderLookup] [Batch ${batchNumber}] Created browser for ${batchSize} lookups`);
+          console.log(`[ProviderLookup] [Batch ${batchNumber}] Created browser for ${batchSize} lookups (Active browsers: ${this.activeBrowsers})`);
           
           // Process the batch using BatchManager
           const batchResult = await this.batchManager.processBatch(async (lookup) => {
@@ -316,8 +317,10 @@ export class ProviderLookupService {
         } finally {
           // CRITICAL: Close browser AFTER batch completes
           if (browser) {
-            console.log(`[ProviderLookup] [Batch ${batchNumber}] Closing browser after ${batchSize} lookups`);
+            console.log(`[ProviderLookup] [Batch ${batchNumber}] Closing browser after ${batchSize} lookups (Active browsers: ${this.activeBrowsers})`);
             await browser.close();
+            this.activeBrowsers--;
+            console.log(`[ProviderLookup] [Batch ${batchNumber}] Browser closed successfully (Active browsers: ${this.activeBrowsers})`);
           }
         }
       }
@@ -465,7 +468,8 @@ export class ProviderLookupService {
    */
   private async createBrowser(): Promise<Browser> {
     try {
-      console.log('[ProviderLookup] Creating browser instance...');
+      this.activeBrowsers++;
+      console.log(`[ProviderLookup] Creating browser instance... (Active browsers: ${this.activeBrowsers})`);
       const puppeteer = await import('puppeteer');
       
       const launchOptions = {
@@ -482,10 +486,11 @@ export class ProviderLookupService {
       };
       
       const browser = await puppeteer.default.launch(launchOptions);
-      console.log('[ProviderLookup] Browser launched successfully');
+      console.log(`[ProviderLookup] Browser launched successfully (Active browsers: ${this.activeBrowsers})`);
       return browser;
     } catch (error) {
-      console.error('[ProviderLookup] Failed to create browser:', error);
+      this.activeBrowsers--;
+      console.error(`[ProviderLookup] Failed to create browser (Active browsers: ${this.activeBrowsers}):`, error);
       throw error;
     }
   }
@@ -513,8 +518,17 @@ export class ProviderLookupService {
   async lookupSingleProvider(browser: Browser, phoneNumber: string): Promise<string> {
     return this.retryStrategy.execute(async () => {
       const page = await browser.newPage();
+      this.activePages.add(page); // Track page to prevent leaks
 
       try {
+        // Set timeouts to prevent hanging on individual operations
+        // IMPORTANT: These are PER-OPERATION timeouts, NOT total page lifetime
+        // - page.setDefaultTimeout: Each operation (waitForSelector, etc.) times out after 30s
+        // - page.setDefaultNavigationTimeout: Each navigation (goto, etc.) times out after 30s
+        // The page can stay open for hours as long as each operation completes within 30s
+        page.setDefaultTimeout(30000); // 30 second timeout per operation
+        page.setDefaultNavigationTimeout(30000); // 30 second timeout per navigation
+        
         // Clean phone number (remove spaces, dashes, etc.)
         const cleanPhone = this.cleanPhoneNumber(phoneNumber);
         
@@ -574,7 +588,12 @@ export class ProviderLookupService {
         console.warn(`[ProviderLookup] Lookup failed for ${phoneNumber}:`, error);
         throw error; // Throw to trigger retry
       } finally {
-        await page.close();
+        this.activePages.delete(page); // Untrack page
+        try {
+          await page.close();
+        } catch (err) {
+          console.error('[ProviderLookup] Error closing page:', err);
+        }
       }
     });
   }
@@ -787,11 +806,23 @@ export class ProviderLookupService {
   }
 
   /**
-   * Cleans up browser resources (no-op now since browsers are closed per batch)
+   * Cleans up browser resources
+   * Closes all active pages to prevent memory leaks
    */
   async cleanup(): Promise<void> {
-    // Browsers are now closed after each batch, so nothing to clean up here
-    console.log('[ProviderLookup] Cleanup called (browsers already closed per batch)');
+    // Close all active pages first
+    console.log(`[ProviderLookup] Cleanup: Closing ${this.activePages.size} active pages...`);
+    
+    for (const page of this.activePages) {
+      try {
+        await page.close();
+      } catch (err) {
+        console.error('[ProviderLookup] Error closing page during cleanup:', err);
+      }
+    }
+    this.activePages.clear();
+    
+    console.log('[ProviderLookup] Cleanup complete - all pages closed');
   }
 
   /**

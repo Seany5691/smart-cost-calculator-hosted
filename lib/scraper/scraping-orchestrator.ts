@@ -122,8 +122,13 @@ export class ScrapingOrchestrator {
         return;
       }
 
-      // Requirement 4.4: Perform provider lookups after scraping completes
-      await this.performProviderLookups();
+      // Requirement 4.4: Perform provider lookups after scraping completes (if enabled)
+      if (this.config.enableProviderLookup) {
+        await this.performProviderLookups();
+      } else {
+        this.loggingManager.logMessage('Provider lookups disabled - skipping');
+        console.log('[Orchestrator] Provider lookups disabled in config');
+      }
 
       // Mark as completed
       this.status = 'completed';

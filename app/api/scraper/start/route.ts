@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
       simultaneousTowns: config?.simultaneousTowns || 2,
       simultaneousIndustries: config?.simultaneousIndustries || 2,
       simultaneousLookups: config?.simultaneousLookups || 2,
+      enableProviderLookup: config?.enableProviderLookup !== undefined ? config.enableProviderLookup : true, // Default to true
     };
 
     // Validate concurrency ranges

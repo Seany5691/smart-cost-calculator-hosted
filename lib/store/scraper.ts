@@ -39,6 +39,7 @@ export interface ScrapingConfig {
   browserHeadless: boolean;
   lookupBatchSize: number;
   outputFolder: string;
+  enableProviderLookup: boolean; // Toggle to enable/disable provider lookups
 }
 
 export interface ProgressState {
@@ -115,6 +116,7 @@ const defaultConfig: ScrapingConfig = {
   browserHeadless: true,
   lookupBatchSize: 5,
   outputFolder: 'output',
+  enableProviderLookup: true, // Toggle to enable/disable provider lookups
 };
 
 const defaultProgress: ProgressState = {

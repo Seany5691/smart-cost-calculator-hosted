@@ -30,6 +30,7 @@ import TemplateManager from '@/components/scraper/TemplateManager';
 import ScrapingAnalytics from '@/components/scraper/ScrapingAnalytics';
 import RetryFailedModal from '@/components/scraper/RetryFailedModal';
 import BatchExportModal from '@/components/scraper/BatchExportModal';
+import ExcelProviderLookup from '@/components/scraper/ExcelProviderLookup';
 
 function getDefaultIndustries(): string[] {
   return [
@@ -742,6 +743,16 @@ export default function ScraperPage() {
           </div>
         </div>
 
+        {/* Excel Provider Lookup - Full Width */}
+        <div className="glass-card p-4 lg:p-6">
+          <ExcelProviderLookup
+            onComplete={(results) => {
+              console.log('[Scraper] Excel provider lookup completed:', results.length, 'businesses');
+              toast.success(`Excel provider lookup completed: ${results.length} businesses processed`);
+            }}
+          />
+        </div>
+
         {/* Progress & Summary Stats (Top Section) - Stacked on mobile */}
         {(isActive || status === 'completed' || status === 'stopped' || hasData) && (
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
@@ -835,6 +846,25 @@ export default function ScraperPage() {
               onLookupsChange={(value) => setConfig({ simultaneousLookups: value })}
               disabled={isActive}
             />
+            
+            {/* Provider Lookup Toggle */}
+            <div className="mt-4 pt-4 border-t border-white/10">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={config.enableProviderLookup}
+                  onChange={(e) => setConfig({ enableProviderLookup: e.target.checked })}
+                  disabled={isActive}
+                  className="w-5 h-5 rounded border-2 border-rose-400/30 bg-slate-800/50 checked:bg-rose-500 checked:border-rose-500 focus:ring-2 focus:ring-rose-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-white">Enable Provider Lookups</div>
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    Automatically lookup network providers after scraping phone numbers
+                  </div>
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* Row 3: Activity Log & Provider Export */}

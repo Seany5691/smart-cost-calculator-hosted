@@ -8,6 +8,7 @@ export interface ScrapeConfig {
   simultaneousTowns: number;
   simultaneousIndustries: number;
   simultaneousLookups: number;
+  enableProviderLookup?: boolean; // Toggle to enable/disable provider lookups
 }
 
 export interface ScrapedBusiness {

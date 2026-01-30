@@ -176,6 +176,12 @@ export class BrowserWorker {
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       );
 
+      // Set timeouts to prevent hanging on individual operations
+      // Note: These are per-operation timeouts, not total page lifetime
+      // Page can stay open for hours as long as each operation completes within timeout
+      page.setDefaultTimeout(60000); // 60 seconds per operation (selector waits, etc.)
+      page.setDefaultNavigationTimeout(60000); // 60 seconds per navigation
+
       // Create scraper and scrape
       const scraper = new IndustryScraper(page, town, industry, this.eventEmitter);
       const businesses = await scraper.scrape();

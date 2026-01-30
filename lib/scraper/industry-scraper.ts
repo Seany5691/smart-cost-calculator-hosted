@@ -67,11 +67,23 @@ export class IndustryScraper {
         
         await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        // Wait for results feed to load
-        await this.page.waitForSelector('div[role="feed"]', { timeout: 10000 });
+        // Wait a bit for page to load
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Extract businesses from list view
-        const businesses = await this.extractFromListView();
+        // Check if we have a list view (multiple results) or single business view
+        const hasFeed = await this.page.$('div[role="feed"]');
+        
+        let businesses: ScrapedBusiness[];
+        
+        if (hasFeed) {
+          // Multiple results - use list view extraction
+          console.log(`[IndustryScraper] Found list view for ${searchQuery}`);
+          businesses = await this.extractFromListView();
+        } else {
+          // Single business result - extract from business card
+          console.log(`[IndustryScraper] Found single business view for ${searchQuery}`);
+          businesses = await this.extractFromSingleBusinessView();
+        }
 
         console.log(`[IndustryScraper] Successfully scraped ${businesses.length} businesses for ${searchQuery}`);
         return businesses;
@@ -374,4 +386,130 @@ export class IndustryScraper {
 
     return patterns.some(pattern => pattern.test(text));
   }
+
+  /**
+   * Extract business from single business view (when searching for specific business)
+   * This is used when Google Maps shows a single business card instead of a list
+   */
+  async extractFromSingleBusinessView(): Promise<ScrapedBusiness[]> {
+    try {
+      const data = await this.page.evaluate(() => {
+        // Extract name from h1
+        const mainPanel = document.querySelector('div[role="main"]');
+        const h1 = mainPanel?.querySelector('h1');
+        const name = h1?.textContent?.trim() || '';
+
+        // Get current URL as maps_address
+        const maps_address = window.location.href;
+
+        // Extract address - look for address elements
+        let address = '';
+        const addressSelectors = [
+          'button[data-item-id="address"]',
+          'div[data-item-id="address"]',
+          'button[aria-label*="Address"]',
+        ];
+
+        for (const selector of addressSelectors) {
+          const element = document.querySelector(selector);
+          if (element) {
+            address = element.textContent?.trim() || '';
+            if (address) break;
+          }
+        }
+
+        return {
+          name,
+          maps_address,
+          address,
+        };
+      });
+
+      // Extract phone using multiple strategies
+      const phone = await this.extractPhoneFromSingleView();
+
+      if (!data.name || data.name.trim() === '') {
+        console.log('[IndustryScraper] No business name found in single view');
+        return [];
+      }
+
+      const business: ScrapedBusiness = {
+        maps_address: data.maps_address || '',
+        name: data.name,
+        phone: phone || 'No phone',
+        provider: '', // Will be filled by provider lookup
+        address: data.address || '',
+        type_of_business: this.industry || 'Business',
+        town: this.town,
+      };
+
+      console.log(`[IndustryScraper] Extracted single business: ${business.name}`);
+      return [business];
+    } catch (error) {
+      this.errorLogger.logError('Failed to extract from single business view', error);
+      return [];
+    }
+  }
+
+  /**
+   * Extract phone number from single business view
+   */
+  async extractPhoneFromSingleView(): Promise<string> {
+    try {
+      // Strategy 1: Look for phone button
+      const phoneFromButton = await this.page.evaluate(() => {
+        const phoneButton = document.querySelector('button[data-item-id="phone:tel:"]');
+        if (phoneButton) {
+          const ariaLabel = phoneButton.getAttribute('aria-label');
+          if (ariaLabel) {
+            const match = ariaLabel.match(/\d[\d\s\-\(\)]+\d/);
+            if (match) return match[0].trim();
+          }
+        }
+        return null;
+      });
+
+      if (phoneFromButton) {
+        return this.cleanPhone(phoneFromButton);
+      }
+
+      // Strategy 2: Look in all text content
+      const phoneFromText = await this.page.evaluate(() => {
+        const mainPanel = document.querySelector('div[role="main"]');
+        if (!mainPanel) return null;
+
+        const text = mainPanel.textContent || '';
+        const phonePattern = /\d{3}[\s\-]?\d{3}[\s\-]?\d{4}/;
+        const match = text.match(phonePattern);
+        return match ? match[0] : null;
+      });
+
+      if (phoneFromText) {
+        return this.cleanPhone(phoneFromText);
+      }
+
+      return 'No phone';
+    } catch (error) {
+      this.errorLogger.logError('Failed to extract phone from single view', error);
+      return 'No phone';
+    }
+  }
+
+  /**
+   * Clean phone number - remove non-digits and convert +27 to 0
+   * Same logic as provider-lookup-service cleanPhoneNumber
+   */
+  private cleanPhone(phoneNumber: string): string {
+    // Remove all non-digit characters
+    let cleaned = phoneNumber.replace(/\D/g, '');
+    
+    // Convert international format (+27...) to local format (0...)
+    // South African country code is 27
+    if (cleaned.startsWith('27')) {
+      cleaned = '0' + cleaned.substring(2);
+    }
+    
+    return cleaned;
+  }
 }
+

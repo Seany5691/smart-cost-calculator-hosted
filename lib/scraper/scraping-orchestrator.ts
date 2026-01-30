@@ -249,7 +249,7 @@ export class ScrapingOrchestrator {
       // Extract all phone numbers
       const phoneNumbers = this.allBusinesses
         .map(b => b.phone)
-        .filter(phone => phone && phone.trim() !== '');
+        .filter(phone => phone && phone.trim() !== '' && phone !== 'No phone');
 
       if (phoneNumbers.length === 0) {
         this.loggingManager.logMessage('No phone numbers to lookup');
@@ -259,38 +259,32 @@ export class ScrapingOrchestrator {
       this.loggingManager.logMessage(`Starting provider lookups for ${phoneNumbers.length} phone numbers...`);
       console.log(`[Orchestrator] Starting provider lookups for ${phoneNumbers.length} numbers`);
 
+      // OPTIMIZATION: Clean all phone numbers in bulk before lookup
+      // This is much faster than cleaning each one individually during lookup
+      const cleanedPhones = phoneNumbers.map(phone => this.cleanPhoneNumber(phone));
+      
+      console.log(`[Orchestrator] Cleaned ${cleanedPhones.length} phone numbers for lookup`);
+
       // Create provider lookup service
       const providerService = new ProviderLookupService({
         maxConcurrentBatches: this.config.simultaneousLookups,
         eventEmitter: this.eventEmitter,
       });
 
-      // Perform lookups
-      const providerMap = await providerService.lookupProviders(phoneNumbers);
+      // Perform lookups with cleaned phone numbers
+      const providerMap = await providerService.lookupProviders(cleanedPhones);
 
       // Update businesses with provider information
+      // Match using cleaned phone numbers
       for (const business of this.allBusinesses) {
-        if (business.phone && business.phone.trim() !== '') {
-          // Try exact match first
-          let provider = providerMap.get(business.phone);
-          
-          // If no exact match, try cleaned version (remove spaces, dashes, etc.)
-          if (!provider) {
-            const cleanedPhone = business.phone.replace(/\D/g, '');
-            // Try to find a match with cleaned phone number
-            for (const [mapPhone, mapProvider] of providerMap.entries()) {
-              const cleanedMapPhone = mapPhone.replace(/\D/g, '');
-              if (cleanedPhone === cleanedMapPhone) {
-                provider = mapProvider;
-                break;
-              }
-            }
-          }
+        if (business.phone && business.phone.trim() !== '' && business.phone !== 'No phone') {
+          const cleanedPhone = this.cleanPhoneNumber(business.phone);
+          const provider = providerMap.get(cleanedPhone);
           
           if (provider) {
             business.provider = provider;
           } else {
-            console.warn(`[Orchestrator] No provider found for phone: ${business.phone}`);
+            console.warn(`[Orchestrator] No provider found for phone: ${business.phone} (cleaned: ${cleanedPhone})`);
           }
         }
       }
@@ -497,4 +491,25 @@ export class ScrapingOrchestrator {
   getFailedTowns(): string[] {
     return [...this.progress.failedTowns];
   }
+
+  /**
+   * Clean phone number - remove non-digits and convert +27 to 0
+   * Same logic as provider-lookup-service cleanPhoneNumber
+   * 
+   * @param phoneNumber - Raw phone number (e.g., "+27 18 771 2345" or "018 771 2345")
+   * @returns Cleaned phone number in SA format (e.g., "0187712345")
+   */
+  private cleanPhoneNumber(phoneNumber: string): string {
+    // Remove all non-digit characters
+    let cleaned = phoneNumber.replace(/\D/g, '');
+    
+    // Convert international format (+27...) to local format (0...)
+    // South African country code is 27
+    if (cleaned.startsWith('27')) {
+      cleaned = '0' + cleaned.substring(2);
+    }
+    
+    return cleaned;
+  }
 }
+

@@ -30,9 +30,9 @@ export default function BatchExportModal({
 
   // Filter businesses based on search
   const filteredBusinesses = businesses.filter(business =>
-    business.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    business.town.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    business.industry.toLowerCase().includes(searchQuery.toLowerCase())
+    business.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    business.town?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (business.industry && business.industry.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const toggleSelect = (business: Business) => {

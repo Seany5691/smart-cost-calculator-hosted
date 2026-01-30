@@ -34,7 +34,7 @@ export class IndustryScraper {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         // Navigate to Google Maps search
-        // Build search query: "industry in town"
+        // Build search query: "industry in town" or just "town" if no industry
         // Don't add "South Africa" if town already contains location info (province, country, etc.)
         const townLower = this.town.toLowerCase();
         const hasLocationInfo = 
@@ -50,9 +50,16 @@ export class IndustryScraper {
           townLower.includes('north west') || 
           townLower.includes('northwest');
         
-        const searchQuery = hasLocationInfo 
-          ? `${this.industry} in ${this.town}` 
-          : `${this.industry} in ${this.town}, South Africa`;
+        let searchQuery;
+        if (this.industry === '') {
+          // No industry - just search for the town/business name
+          searchQuery = hasLocationInfo ? this.town : `${this.town}, South Africa`;
+        } else {
+          // With industry - search "industry in town"
+          searchQuery = hasLocationInfo 
+            ? `${this.industry} in ${this.town}` 
+            : `${this.industry} in ${this.town}, South Africa`;
+        }
         
         const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
 

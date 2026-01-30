@@ -41,9 +41,9 @@ export class BrowserWorker {
   /**
    * Processes all industries for a town
    * 
-   * UPDATED: If no industries provided, treats town as a business search query
+   * UPDATED: If no industries provided, searches for the town/business name directly
    * - With industries: Searches "industry in town" (e.g., "Restaurants in Cape Town")
-   * - Without industries: Searches exact business name (e.g., "REGAL VANDERBIJLPARK")
+   * - Without industries: Searches just the town/business name (e.g., "REGAL VANDERBIJLPARK")
    * 
    * Requirement 5.1: Initialize browser instance if not already initialized
    * Requirement 5.2: Process up to simultaneousIndustries in parallel
@@ -51,11 +51,11 @@ export class BrowserWorker {
    * Requirement 5.4: Close browser after town is complete to free resources
    * 
    * @param town - Town name to scrape OR business name if no industries
-   * @param industries - Array of industries to scrape (empty for business-only search)
+   * @param industries - Array of industries to scrape (empty array for business-only search)
    * @returns Array of all scraped businesses
    */
   async processTown(town: string, industries: string[]): Promise<ScrapedBusiness[]> {
-    const allBusinesses: ScrapedBusiness[] = [];
+    const allBusinesses: ScrapedBusiness[]= [];
 
     try {
       // Check if stopped before starting
@@ -69,33 +69,25 @@ export class BrowserWorker {
         await this.initBrowser();
       }
 
-      // UPDATED: Handle business-only search (no industries selected)
-      if (!industries || industries.length === 0) {
-        console.log(`[Worker ${this.workerId}] Processing business search: ${town}`);
-        
-        // Search for the business name directly
-        const businesses = await this.scrapeBusinessDirect(town);
-        allBusinesses.push(...businesses);
-        
-        console.log(`[Worker ${this.workerId}] Completed business search: ${town} - Found ${businesses.length} businesses`);
-        return allBusinesses;
-      }
+      // If no industries, treat as a single search with empty industry string
+      const industriesToProcess = industries.length === 0 ? [''] : industries;
 
-      console.log(`[Worker ${this.workerId}] Processing town: ${town} with ${industries.length} industries`);
+      console.log(`[Worker ${this.workerId}] Processing: ${town} with ${industries.length === 0 ? 'no industry filter' : `${industries.length} industries`}`);
 
       // Process industries with concurrency control
       const concurrency = this.config.simultaneousIndustries;
       
-      for (let i = 0; i < industries.length; i += concurrency) {
+      for (let i = 0; i < industriesToProcess.length; i += concurrency) {
         // Check if stopped during processing
         if (this.isStopped) {
           console.log(`[Worker ${this.workerId}] Stopped during town processing: ${town}`);
           break;
         }
 
-        const industryBatch = industries.slice(i, i + concurrency);
+        const industryBatch = industriesToProcess.slice(i, i + concurrency);
         
-        console.log(`[Worker ${this.workerId}] Processing industry batch ${Math.floor(i / concurrency) + 1}: ${industryBatch.join(', ')}`);
+        const batchDescription = industries.length === 0 ? 'business search' : industryBatch.join(', ');
+        console.log(`[Worker ${this.workerId}] Processing batch ${Math.floor(i / concurrency) + 1}: ${batchDescription}`);
 
         // Process batch in parallel
         const batchPromises = industryBatch.map(industry =>
@@ -111,27 +103,29 @@ export class BrowserWorker {
 
           if (result.status === 'fulfilled') {
             allBusinesses.push(...result.value);
-            console.log(`[Worker ${this.workerId}] ${town} - ${industry}: Found ${result.value.length} businesses`);
+            const searchDesc = industry === '' ? town : `${town} - ${industry}`;
+            console.log(`[Worker ${this.workerId}] ${searchDesc}: Found ${result.value.length} businesses`);
           } else {
             // Requirement 5.3: Log error and continue with remaining industries
-            this.errorLogger.logScrapingError(town, industry, result.reason, {
+            this.errorLogger.logScrapingError(town, industry || 'business search', result.reason, {
               workerId: this.workerId,
             });
-            console.error(`[Worker ${this.workerId}] ${town} - ${industry}: Failed - ${result.reason.message}`);
+            const searchDesc = industry === '' ? town : `${town} - ${industry}`;
+            console.error(`[Worker ${this.workerId}] ${searchDesc}: Failed - ${result.reason.message}`);
           }
         }
 
         // Requirement 24.1: Wait 1 second between industry scrapes to avoid rate limiting
-        if (i + concurrency < industries.length && !this.isStopped) {
+        if (i + concurrency < industriesToProcess.length && !this.isStopped) {
           await this.sleep(1000);
         }
       }
 
-      console.log(`[Worker ${this.workerId}] Completed town: ${town} - Total businesses: ${allBusinesses.length}`);
+      console.log(`[Worker ${this.workerId}] Completed: ${town} - Total businesses: ${allBusinesses.length}`);
 
     } catch (error) {
       this.errorLogger.logError(
-        `Worker ${this.workerId} failed to process town: ${town}`,
+        `Worker ${this.workerId} failed to process: ${town}`,
         error,
         { workerId: this.workerId, town }
       );
@@ -145,74 +139,15 @@ export class BrowserWorker {
   }
 
   /**
-   * Scrapes a business directly by name (no industry filter)
-   * Used when no industries are selected - searches for exact business name
+   * Scrapes a single industry for a town
    * 
    * @param businessQuery - Business name to search (e.g., "REGAL VANDERBIJLPARK")
-   * @returns Array of scraped businesses
-   */
-  private async scrapeBusinessDirect(businessQuery: string): Promise<ScrapedBusiness[]> {
-    if (!this.browser) {
-      throw new Error(`Worker ${this.workerId}: Browser not initialized`);
-    }
-
-    // Check if stopped
-    if (this.isStopped) {
-      console.log(`[Worker ${this.workerId}] Stopped, skipping business search: ${businessQuery}`);
-      return [];
-    }
-
-    this.activeScrapes++;
-    let page: Page | null = null;
-
-    try {
-      // Create new page for this business search
-      page = await this.browser.newPage();
-      this.activePages.add(page);
-
-      // Set viewport and user agent
-      await page.setViewport({ width: 1920, height: 1080 });
-      await page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      );
-
-      // Use BusinessLookupScraper for direct business search
-      const { BusinessLookupScraper } = await import('./business-lookup-scraper');
-      const scraper = new BusinessLookupScraper(page, businessQuery);
-      const businesses = await scraper.scrape();
-
-      return businesses;
-
-    } catch (error) {
-      // Don't log errors if we're stopped (expected behavior)
-      if (!this.isStopped) {
-        this.errorLogger.logError(
-          `Worker ${this.workerId} failed to scrape business: ${businessQuery}`,
-          error,
-          { workerId: this.workerId, businessQuery }
-        );
-      }
-      throw error;
-    } finally {
-      // Always close the page
-      if (page) {
-        this.activePages.delete(page);
-        try {
-          await page.close();
-        } catch (err) {
-          // Ignore errors when closing page (might already be closed)
-        }
-      }
-      this.activeScrapes--;
-    }
-  }
-
   /**
-   * Scrapes a single industry for a town
+   * Scrapes a single industry for a town (or just the town if industry is empty)
    * Creates a new page and uses IndustryScraper to extract businesses
    * 
-   * @param town - Town name
-   * @param industry - Industry name
+   * @param town - Town name or business name
+   * @param industry - Industry name (empty string for business-only search)
    * @returns Array of scraped businesses
    */
   private async scrapeIndustry(town: string, industry: string): Promise<ScrapedBusiness[]> {
@@ -222,7 +157,8 @@ export class BrowserWorker {
 
     // Check if stopped
     if (this.isStopped) {
-      console.log(`[Worker ${this.workerId}] Stopped, skipping ${town} - ${industry}`);
+      const searchDesc = industry === '' ? town : `${town} - ${industry}`;
+      console.log(`[Worker ${this.workerId}] Stopped, skipping ${searchDesc}`);
       return [];
     }
 
@@ -230,7 +166,7 @@ export class BrowserWorker {
     let page: Page | null = null;
 
     try {
-      // Create new page for this industry
+      // Create new page for this search
       page = await this.browser.newPage();
       this.activePages.add(page);
 

@@ -46,9 +46,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!industries || !Array.isArray(industries) || industries.length === 0) {
+    // Industries are optional - if empty, will search for business names directly
+    if (!industries || !Array.isArray(industries)) {
       return NextResponse.json(
-        { error: 'Industries array is required and must not be empty' },
+        { error: 'Industries must be an array (can be empty for business-only search)' },
         { status: 400 }
       );
     }
@@ -89,12 +90,24 @@ export async function POST(request: NextRequest) {
 
     // Create a meaningful session name
     let sessionName = '';
-    if (towns.length === 1) {
-      sessionName = `${towns[0]} - ${industries.length} ${industries.length === 1 ? 'Industry' : 'Industries'}`;
-    } else if (towns.length <= 3) {
-      sessionName = `${towns.join(', ')} - ${industries.length} ${industries.length === 1 ? 'Industry' : 'Industries'}`;
+    if (industries.length === 0) {
+      // Business-only search (no industries selected)
+      if (towns.length === 1) {
+        sessionName = `${towns[0]} - Business Search`;
+      } else if (towns.length <= 3) {
+        sessionName = `${towns.join(', ')} - Business Search`;
+      } else {
+        sessionName = `${towns.slice(0, 2).join(', ')} +${towns.length - 2} more - Business Search`;
+      }
     } else {
-      sessionName = `${towns.slice(0, 2).join(', ')} +${towns.length - 2} more - ${industries.length} ${industries.length === 1 ? 'Industry' : 'Industries'}`;
+      // Industry search
+      if (towns.length === 1) {
+        sessionName = `${towns[0]} - ${industries.length} ${industries.length === 1 ? 'Industry' : 'Industries'}`;
+      } else if (towns.length <= 3) {
+        sessionName = `${towns.join(', ')} - ${industries.length} ${industries.length === 1 ? 'Industry' : 'Industries'}`;
+      } else {
+        sessionName = `${towns.slice(0, 2).join(', ')} +${towns.length - 2} more - ${industries.length} ${industries.length === 1 ? 'Industry' : 'Industries'}`;
+      }
     }
 
     // Create session in database

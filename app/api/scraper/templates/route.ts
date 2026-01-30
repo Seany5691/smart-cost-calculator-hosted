@@ -84,9 +84,10 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
       );
     }
 
-    if (!industries || !Array.isArray(industries) || industries.length === 0) {
+    // Industries are optional - can be empty for business-only search
+    if (!industries || !Array.isArray(industries)) {
       return NextResponse.json(
-        { error: 'At least one industry is required' },
+        { error: 'Industries must be an array (can be empty for business-only search)' },
         { status: 400 }
       );
     }

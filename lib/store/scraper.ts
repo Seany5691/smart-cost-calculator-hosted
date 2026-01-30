@@ -223,27 +223,22 @@ export const useScraperStore = create<ScraperState>()(
         if (state.towns.length === 0) {
           get().addLog({
             timestamp: new Date().toISOString(),
-            message: 'Error: At least one town is required',
+            message: 'Error: At least one town/business is required',
             level: 'error',
           });
           return;
         }
         
-        if (state.industries.length === 0) {
-          get().addLog({
-            timestamp: new Date().toISOString(),
-            message: 'Error: At least one industry is required',
-            level: 'error',
-          });
-          return;
-        }
+        // Industries are optional - if empty, will search for business names directly
+        // No validation needed for industries
         
         try {
           set({ status: 'running' });
           
+          const searchType = state.industries.length === 0 ? 'business search' : `${state.industries.length} industry(ies)`;
           get().addLog({
             timestamp: new Date().toISOString(),
-            message: `Starting scraping for ${state.towns.length} town(s) and ${state.industries.length} industry(ies)`,
+            message: `Starting scraping for ${state.towns.length} town(s)/business(es) - ${searchType}`,
             level: 'info',
           });
           

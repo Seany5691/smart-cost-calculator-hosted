@@ -1,29 +1,36 @@
 /**
  * ProviderLookupService - Looks up phone service providers using porting.co.za
  * 
- * Performs batched lookups to identify telecommunications providers for phone numbers.
- * Handles captcha avoidance by creating new browser instances every 5 lookups.
+ * MAJOR UPDATE (2025-01-30):
+ * - porting.co.za changed their website - direct URL access no longer works
+ * - Now uses form interaction: navigate to page, fill input field, submit, extract result
+ * - Input element: <input id="numberTextInput" formcontrolname="number" />
+ * - Result format: "has not been ported and is still serviced by TELKOM/TELKOM"
+ * - Extracts provider name after the "/" (e.g., "TELKOM")
+ * - Captcha is now RANDOMIZED (not every 5th lookup)
+ * - When captcha detected: closes browser, creates new one, continues
+ * - Captcha detection happens BEFORE entering number
  * 
- * CRITICAL FIX APPLIED (2025-01-29):
- * - Fixed browser creation to match old working scraper behavior
- * - Creates ONE browser per batch of 5 lookups (not one per lookup)
+ * BROWSER MANAGEMENT:
+ * - Creates ONE browser per batch of lookups
  * - Reuses browser for all lookups in batch
+ * - If captcha detected during lookup: restarts browser and retries
  * - Closes browser after batch completes
- * - This avoids captcha which appears every 6th browser instance
+ * - Max 3 browser restarts per batch to prevent infinite loops
  * 
- * CACHING (Phase 3):
+ * CACHING:
  * - Checks cache before performing lookups
  * - Caches results for 30 days
  * - Significantly reduces redundant API calls
  * 
- * Rate Limiting (Requirement 24.2):
- * - Waits 500ms between provider lookups within a batch (Req 24.2)
+ * Rate Limiting:
+ * - Waits 500ms between provider lookups within a batch
+ * - Waits 2-5 seconds between batches
  * 
- * BATCH MANAGEMENT (Phase 1 - Robustness Enhancement):
+ * BATCH MANAGEMENT:
  * - Uses BatchManager for intelligent batch processing
  * - Adaptive batch sizing based on success rate (3-5 lookups per batch)
- * - Maintains backward compatibility with existing API
- * - Captcha detection DISABLED by default (correct browser management avoids captcha)
+ * - Captcha detection disabled by default (handled by browser restart logic)
  * 
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 24.2
  */
@@ -147,17 +154,20 @@ export class ProviderLookupService {
   /**
    * Process lookups using BatchManager for intelligent batch processing
    * 
-   * CRITICAL FIX APPLIED: This method now creates ONE browser per batch of 5 lookups,
-   * matching the old working scraper's behavior exactly.
+   * UPDATED (2025-01-30): Now handles captcha detection by restarting browser
+   * - Captcha is now randomized (not every 5th lookup)
+   * - When captcha detected, closes current browser and creates new one
+   * - Continues with remaining lookups in batch
    * 
    * This method:
    * 1. Converts phone numbers to ProviderLookup objects
    * 2. Adds them to BatchManager batches
    * 3. Creates ONE browser when batch is full
    * 4. Reuses that browser for ALL lookups in the batch
-   * 5. Closes browser after batch completes
-   * 6. Waits 500ms between lookups within batch
-   * 7. Handles progress reporting
+   * 5. If captcha detected, closes browser and creates new one
+   * 6. Closes browser after batch completes
+   * 7. Waits 500ms between lookups within batch
+   * 8. Handles progress reporting
    * 
    * @param phonesToLookup - Phone numbers that need lookup (not in cache)
    * @param cachedCount - Number of results already found in cache
@@ -194,22 +204,24 @@ export class ProviderLookupService {
         const batchSize = this.batchManager.getCurrentBatchCount();
         console.log(`[ProviderLookup] Processing batch ${batchNumber} with ${batchSize} lookups`);
         
-        // CRITICAL FIX: Create ONE browser for this entire batch (not one per lookup!)
+        // Create browser for this batch
         let browser: Browser | null = null;
-        let lookupIndex = 0; // Track position within batch
+        let lookupIndex = 0;
+        let browserRestartCount = 0;
+        const MAX_BROWSER_RESTARTS = 3; // Prevent infinite restart loop
         
         try {
-          // Create browser BEFORE processing batch
+          // Create initial browser
           browser = await this.createBrowser();
           console.log(`[ProviderLookup] [Batch ${batchNumber}] Created browser for ${batchSize} lookups`);
           
-          // Process the batch using BatchManager with the SAME browser for all lookups
+          // Process the batch using BatchManager
           const batchResult = await this.batchManager.processBatch(async (lookup) => {
             lookupIndex++;
             console.log(`[ProviderLookup] [Batch ${batchNumber}] Lookup ${lookupIndex}/${batchSize}: ${lookup.phoneNumber}`);
             
             try {
-              // CRITICAL: Use the SAME browser instance for all lookups in this batch
+              // Try lookup with current browser
               const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber);
               
               // Add 500ms delay between lookups (except after last one)
@@ -218,8 +230,50 @@ export class ProviderLookupService {
               }
               
               return provider === 'Unknown' ? null : provider;
+              
             } catch (error) {
-              // All retries exhausted, return null (failed lookup)
+              const errorMessage = (error as Error).message;
+              
+              // If captcha detected, restart browser and retry
+              if (errorMessage === 'CAPTCHA_DETECTED' && browserRestartCount < MAX_BROWSER_RESTARTS) {
+                browserRestartCount++;
+                console.warn(`[ProviderLookup] [Batch ${batchNumber}] Captcha detected, restarting browser (attempt ${browserRestartCount}/${MAX_BROWSER_RESTARTS})`);
+                
+                // Close current browser
+                if (browser) {
+                  await browser.close();
+                }
+                
+                // Create new browser
+                browser = await this.createBrowser();
+                console.log(`[ProviderLookup] [Batch ${batchNumber}] New browser created after captcha`);
+                
+                // Wait a bit before retrying
+                await this.sleep(2000);
+                
+                // Retry the lookup with new browser
+                try {
+                  const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber);
+                  
+                  // Add 500ms delay between lookups (except after last one)
+                  if (lookupIndex < batchSize) {
+                    await this.sleep(500);
+                  }
+                  
+                  return provider === 'Unknown' ? null : provider;
+                } catch (retryError) {
+                  console.error(`[ProviderLookup] [Batch ${batchNumber}] Retry failed for ${lookup.phoneNumber}:`, retryError);
+                  
+                  // Add 500ms delay between lookups (except after last one)
+                  if (lookupIndex < batchSize) {
+                    await this.sleep(500);
+                  }
+                  
+                  return null;
+                }
+              }
+              
+              // All retries exhausted or other error
               console.error(`[ProviderLookup] All retries exhausted for ${lookup.phoneNumber}:`, error);
               
               // Add 500ms delay between lookups (except after last one)
@@ -248,16 +302,16 @@ export class ProviderLookupService {
               fromCache: cachedCount,
               batchSuccessRate: batchResult.successRate,
               batchSize: batchResult.batchSize,
+              browserRestarts: browserRestartCount,
             });
           }
 
-          console.log(`[ProviderLookup] [Batch ${batchNumber}] Complete: ${batchResult.successful} successful, ${batchResult.failed} failed (${Math.round(batchResult.successRate * 100)}% success rate)`);
+          console.log(`[ProviderLookup] [Batch ${batchNumber}] Complete: ${batchResult.successful} successful, ${batchResult.failed} failed (${Math.round(batchResult.successRate * 100)}% success rate, ${browserRestartCount} browser restarts)`);
           
         } catch (error) {
           console.error(`[ProviderLookup] [Batch ${batchNumber}] Error processing batch:`, error);
         } finally {
-          // CRITICAL: Close browser AFTER batch completes (after up to 5 lookups)
-          // This ensures we create a new browser for the next batch, avoiding captcha
+          // CRITICAL: Close browser AFTER batch completes
           if (browser) {
             console.log(`[ProviderLookup] [Batch ${batchNumber}] Closing browser after ${batchSize} lookups`);
             await browser.close();
@@ -435,15 +489,17 @@ export class ProviderLookupService {
 
   /**
    * Looks up provider for a single phone number using the provided browser
-   * Requirement 3.1: Use porting.co.za lookup service
-   * Requirement 3.7: Return "Unknown" when provider lookup fails
    * 
-   * CRITICAL FIX: Wrapped in RetryStrategy.execute() for automatic retry with exponential backoff
-   * This matches the OLD working scraper behavior exactly.
+   * NEW APPROACH (2025-01-30):
+   * - porting.co.za changed their site - direct URL access no longer works
+   * - Now uses form interaction: navigate to page, fill input, submit, extract result
+   * - Detects captcha and throws error to trigger browser restart
+   * - Captcha is now randomized (not every 5th lookup)
    * 
    * @param browser - Browser instance to use
    * @param phoneNumber - Phone number to lookup
    * @returns Provider name or "Unknown"
+   * @throws Error if captcha detected (triggers browser restart)
    */
   async lookupSingleProvider(browser: Browser, phoneNumber: string): Promise<string> {
     return this.retryStrategy.execute(async () => {
@@ -455,21 +511,52 @@ export class ProviderLookupService {
         
         console.log(`[ProviderLookup] Looking up phone: ${phoneNumber} -> cleaned: ${cleanPhone}`);
 
-        // Navigate directly to the lookup API URL
-        const url = `https://www.porting.co.za/PublicWebsite/crdb?msisdn=${cleanPhone}`;
-        await page.goto(url, { waitUntil: 'networkidle0', timeout: 15000 });
+        // Navigate to the porting.co.za homepage
+        await page.goto('https://www.porting.co.za/', { waitUntil: 'networkidle0', timeout: 15000 });
 
-        // Wait for the result span to appear
-        await page.waitForSelector('span.p1', { timeout: 5000 });
+        // Check for captcha BEFORE entering number
+        const hasCaptcha = await this.detectCaptchaOnPage(page);
+        if (hasCaptcha) {
+          console.warn(`[ProviderLookup] Captcha detected on page for ${phoneNumber}, will restart browser`);
+          throw new Error('CAPTCHA_DETECTED');
+        }
 
-        // Extract provider name from the span
-        const provider = await this.extractProviderFromPage(page);
+        // Wait for the input field to be available
+        await page.waitForSelector('#numberTextInput', { timeout: 5000 });
+
+        // Clear and type the phone number into the input field
+        await page.click('#numberTextInput');
+        await page.evaluate(() => {
+          const input = document.querySelector('#numberTextInput') as HTMLInputElement;
+          if (input) input.value = '';
+        });
+        await page.type('#numberTextInput', cleanPhone, { delay: 100 });
+
+        console.log(`[ProviderLookup] Entered phone number: ${cleanPhone}`);
+
+        // Submit the form (look for submit button or press Enter)
+        await page.keyboard.press('Enter');
+
+        // Wait for result to appear
+        // Give time for the page to process and display results
+        await this.sleep(2000);
+
+        // Extract provider name from the result
+        const provider = await this.extractProviderFromFormResult(page);
         
         console.log(`[ProviderLookup] Result for ${phoneNumber}: ${provider}`);
 
         return provider;
 
       } catch (error) {
+        const errorMessage = (error as Error).message;
+        
+        // If captcha detected, throw special error to trigger browser restart
+        if (errorMessage === 'CAPTCHA_DETECTED') {
+          console.warn(`[ProviderLookup] Captcha detected for ${phoneNumber}, browser needs restart`);
+          throw error;
+        }
+        
         console.warn(`[ProviderLookup] Lookup failed for ${phoneNumber}:`, error);
         throw error; // Throw to trigger retry
       } finally {
@@ -479,7 +566,119 @@ export class ProviderLookupService {
   }
 
   /**
-   * Extracts provider name from the lookup result page
+   * Detects captcha on the current page
+   * 
+   * Checks for common captcha indicators:
+   * - reCAPTCHA iframes
+   * - Captcha-related elements
+   * - Captcha keywords in page content
+   * 
+   * @param page - Puppeteer page to check
+   * @returns true if captcha detected, false otherwise
+   */
+  private async detectCaptchaOnPage(page: Page): Promise<boolean> {
+    try {
+      // Check for reCAPTCHA iframe
+      const recaptchaFrame = await page.$('iframe[src*="recaptcha"]');
+      if (recaptchaFrame) {
+        console.log('[ProviderLookup] Detected reCAPTCHA iframe');
+        return true;
+      }
+
+      // Check for captcha-related elements
+      const captchaSelectors = [
+        'div[class*="captcha"]',
+        'div[id*="captcha"]',
+        '.g-recaptcha',
+        '#g-recaptcha',
+        'iframe[src*="captcha"]',
+      ];
+
+      for (const selector of captchaSelectors) {
+        const element = await page.$(selector);
+        if (element) {
+          console.log(`[ProviderLookup] Detected captcha element: ${selector}`);
+          return true;
+        }
+      }
+
+      // Check page content for captcha keywords
+      const content = await page.content();
+      const captchaKeywords = [
+        'recaptcha',
+        'captcha',
+        'verify you are human',
+        'verify you\'re human',
+        'unusual traffic',
+        'automated requests',
+      ];
+
+      for (const keyword of captchaKeywords) {
+        if (content.toLowerCase().includes(keyword)) {
+          console.log(`[ProviderLookup] Detected captcha keyword: ${keyword}`);
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.warn('[ProviderLookup] Error detecting captcha:', error);
+      return false; // Fail open - assume no captcha on error
+    }
+  }
+
+  /**
+   * Extracts provider name from the form result
+   * 
+   * NEW FORMAT: "has not been ported and is still serviced by TELKOM/TELKOM"
+   * Extracts the last word after the "/" (e.g., "TELKOM")
+   * 
+   * @param page - Puppeteer page with results
+   * @returns Provider name or "Unknown"
+   */
+  private async extractProviderFromFormResult(page: Page): Promise<string> {
+    try {
+      // Get all text content from the page
+      const bodyText = await page.evaluate(() => document.body.textContent || '');
+      
+      console.log(`[ProviderLookup] Page text (first 500 chars): ${bodyText.substring(0, 500)}`);
+
+      // Look for the pattern "serviced by PROVIDER/PROVIDER"
+      const servicedByPattern = /serviced by\s+([^\/\s]+)\/([^\/\s]+)/i;
+      const match = bodyText.match(servicedByPattern);
+
+      if (match) {
+        // Extract the last word after the "/"
+        const provider = match[2].trim();
+        console.log(`[ProviderLookup] Extracted provider: "${provider}"`);
+        return provider;
+      }
+
+      // Alternative: Look for just "serviced by PROVIDER"
+      const simplePattern = /serviced by\s+([^\s\.]+)/i;
+      const simpleMatch = bodyText.match(simplePattern);
+
+      if (simpleMatch) {
+        const provider = simpleMatch[1].trim();
+        console.log(`[ProviderLookup] Extracted provider (simple): "${provider}"`);
+        return provider;
+      }
+
+      console.log('[ProviderLookup] No provider pattern found in page text');
+      return 'Unknown';
+
+    } catch (error) {
+      console.warn('[ProviderLookup] Failed to extract provider from form result:', error);
+      return 'Unknown';
+    }
+  }
+
+  /**
+   * Extracts provider name from the lookup result page (OLD METHOD - DEPRECATED)
+   * 
+   * @deprecated This method is no longer used as porting.co.za changed their site.
+   * Use extractProviderFromFormResult instead.
+   * 
    * @param page - Puppeteer page with results
    * @returns Provider name or "Unknown"
    */

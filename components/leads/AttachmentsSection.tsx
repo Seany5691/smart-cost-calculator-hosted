@@ -6,7 +6,9 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Paperclip, Upload, Download, Trash2, FileText, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Paperclip, Upload, Download, Trash2, FileText, X, Loader2, AlertTriangle } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast/useToast';
 
 interface Attachment {
   id: string;
@@ -31,11 +33,21 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
   const [uploading, setUploading] = useState(false);
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    fetchAttachments();
-  }, [leadId]);
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      fetchAttachments();
+    }
+  }, [leadId, mounted]);
 
   const fetchAttachments = async () => {
     try {
@@ -62,9 +74,13 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
       if (!response.ok) throw new Error('Failed to fetch attachments');
       const data = await response.json();
       setAttachments(data.attachments || []);
+      setError(null);
     } catch (err) {
       console.error('Error fetching attachments:', err);
-      setError('Failed to load attachments');
+      toast.error('Failed to load attachments', {
+        message: err instanceof Error ? err.message : 'Please try again',
+        section: 'leads'
+      });
     } finally {
       setLoading(false);
     }
@@ -77,7 +93,10 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
     // Validate file size (10MB max)
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError('File size exceeds 10MB limit');
+      toast.error('File too large', {
+        message: 'File size exceeds 10MB limit',
+        section: 'leads'
+      });
       return;
     }
 
@@ -122,11 +141,20 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
         fileInputRef.current.value = '';
       }
 
+      // Show success toast
+      toast.success('File uploaded', {
+        message: `${file.name} has been attached`,
+        section: 'leads'
+      });
+
       // Refresh attachments list
       await fetchAttachments();
     } catch (err: any) {
       console.error('Error uploading file:', err);
-      setError(err.message || 'Failed to upload file');
+      toast.error('Upload failed', {
+        message: err.message || 'Failed to upload file',
+        section: 'leads'
+      });
     } finally {
       setUploading(false);
     }
@@ -165,14 +193,26 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+
+      toast.success('File downloaded', {
+        message: attachment.filename,
+        section: 'leads'
+      });
     } catch (err) {
       console.error('Error downloading file:', err);
-      setError('Failed to download file');
+      toast.error('Download failed', {
+        message: 'Failed to download file',
+        section: 'leads'
+      });
     }
   };
 
-  const handleDelete = async (attachmentId: string) => {
-    if (!window.confirm('Are you sure you want to delete this attachment?')) return;
+  const handleDeleteClick = (attachmentId: string) => {
+    setDeleteConfirm(attachmentId);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
 
     try {
       // Get auth token
@@ -188,7 +228,7 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
       }
 
       const response = await fetch(
-        `/api/leads/${leadId}/attachments/${attachmentId}`,
+        `/api/leads/${leadId}/attachments/${deleteConfirm}`,
         { 
           method: 'DELETE',
           headers: {
@@ -199,11 +239,21 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
 
       if (!response.ok) throw new Error('Failed to delete attachment');
 
+      toast.success('File deleted', {
+        message: 'Attachment has been removed',
+        section: 'leads'
+      });
+
       // Refresh attachments list
       await fetchAttachments();
     } catch (err) {
       console.error('Error deleting attachment:', err);
-      setError('Failed to delete attachment');
+      toast.error('Delete failed', {
+        message: 'Failed to delete attachment',
+        section: 'leads'
+      });
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
@@ -224,145 +274,197 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
     });
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Paperclip className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Attachments</h2>
-              <p className="text-sm text-gray-500">
-                {attachments.length} {attachments.length === 1 ? 'file' : 'files'}
-              </p>
-            </div>
-          </div>
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-          )}
-        </div>
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && onClose) {
+      onClose();
+    }
+  };
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
+  if (!mounted) return null;
 
-          {/* Upload Section */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-            <div className="flex items-start gap-4">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload File (Max 10MB)
-                </label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  onChange={handleFileSelect}
-                  disabled={uploading}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
-                />
-                <input
-                  type="text"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Description (optional)"
-                  disabled={uploading}
-                  className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                />
+  return createPortal(
+    <>
+      {/* Main Modal */}
+      <div 
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+        onClick={handleBackdropClick}
+      >
+        <div 
+          className="bg-gradient-to-br from-slate-900 to-emerald-900 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden border border-emerald-500/30"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header - Sticky */}
+          <div className="flex items-center justify-between p-6 border-b border-emerald-500/20 sticky top-0 bg-gradient-to-br from-slate-900 to-emerald-900 z-10">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-500/20 rounded-lg">
+                <Paperclip className="w-5 h-5 text-emerald-400" />
               </div>
-              {uploading && (
-                <div className="flex items-center gap-2 text-blue-600">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                  <span className="text-sm">Uploading...</span>
-                </div>
-              )}
+              <div>
+                <h2 className="text-2xl font-bold text-white">Attachments</h2>
+                <p className="text-sm text-emerald-200">
+                  {attachments.length} {attachments.length === 1 ? 'file' : 'files'}
+                </p>
+              </div>
             </div>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-emerald-200" />
+              </button>
+            )}
           </div>
 
-          {/* Attachments List */}
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : attachments.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">No attachments yet</p>
-              <p className="text-sm text-gray-400 mt-1">
-                Upload files to attach them to this lead
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {attachments.map((attachment) => (
-                <div
-                  key={attachment.id}
-                  className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-                >
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <FileText className="w-5 h-5 text-gray-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">
-                      {attachment.filename}
-                    </p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                      <span>{formatFileSize(attachment.file_size)}</span>
-                      <span>•</span>
-                      <span>{formatDate(attachment.created_at)}</span>
-                    </div>
-                    {attachment.description && (
-                      <p className="text-sm text-gray-600 mt-1 truncate">
-                        {attachment.description}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleDownload(attachment)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Download"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(attachment.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+          {/* Content - Scrollable with custom scrollbar */}
+          <div className="overflow-y-auto max-h-[calc(90vh-180px)] p-6 custom-scrollbar">
+            {/* Upload Section */}
+            <div className="mb-6 p-4 bg-white/5 border border-emerald-500/20 rounded-lg backdrop-blur-sm">
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-emerald-200 mb-2">
+                    Upload File (Max 10MB)
+                  </label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileSelect}
+                    disabled={uploading}
+                    className="block w-full text-sm text-emerald-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-500/20 file:text-emerald-300 hover:file:bg-emerald-500/30 disabled:opacity-50 file:cursor-pointer cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Description (optional)"
+                    disabled={uploading}
+                    className="mt-2 w-full px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                  />
                 </div>
-              ))}
+                {uploading && (
+                  <div className="flex items-center gap-2 text-emerald-400">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="text-sm">Uploading...</span>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t border-gray-200 bg-gray-50">
-          <div className="flex justify-end">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-            >
-              Close
-            </button>
+            {/* Attachments List */}
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+              </div>
+            ) : attachments.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="w-12 h-12 text-emerald-400/30 mx-auto mb-3" />
+                <p className="text-emerald-200">No attachments yet</p>
+                <p className="text-sm text-emerald-300/70 mt-1">
+                  Upload files to attach them to this lead
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center gap-4 p-4 bg-white/5 border border-emerald-500/20 rounded-lg hover:bg-white/10 transition-all backdrop-blur-sm"
+                  >
+                    <div className="p-2 bg-emerald-500/20 rounded-lg">
+                      <FileText className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white truncate">
+                        {attachment.filename}
+                      </p>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-emerald-300/70">
+                        <span>{formatFileSize(attachment.file_size)}</span>
+                        <span>•</span>
+                        <span>{formatDate(attachment.created_at)}</span>
+                      </div>
+                      {attachment.description && (
+                        <p className="text-sm text-emerald-200/80 mt-1 truncate">
+                          {attachment.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDownload(attachment)}
+                        className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors"
+                        title="Download"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(attachment.id)}
+                        className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="p-6 border-t border-emerald-500/20 bg-gradient-to-br from-slate-900 to-emerald-900">
+            <div className="flex justify-end">
+              <button
+                onClick={onClose}
+                className="px-6 py-2 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors font-semibold"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && createPortal(
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
+          onClick={() => setDeleteConfirm(null)}
+        >
+          <div 
+            className="bg-gradient-to-br from-slate-900 to-red-900 rounded-2xl shadow-2xl max-w-md w-full border border-red-500/30"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-red-500/20 rounded-lg">
+                  <AlertTriangle className="w-6 h-6 text-red-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white">Delete Attachment</h3>
+              </div>
+              <p className="text-gray-300 mb-6">
+                Are you sure you want to delete this attachment? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="px-4 py-2 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>,
+    document.body
   );
 }

@@ -26,12 +26,12 @@ export default function AddNoteModal({
   const [speechSupported, setSpeechSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef<string>('');
-  const isListeningRef = useRef<boolean>(false); // Track listening state for closure
+  const isListeningRef = useRef<boolean>(false);
   
   // CRITICAL: Mounted state for SSR safety - prevents hydration mismatch
   const [mounted, setMounted] = useState(false);
 
-  // Set mounted state on client side only
+  // Set mounted state on client side only - setup speech recognition ONCE
   useEffect(() => {
     setMounted(true);
     
@@ -46,6 +46,7 @@ export default function AddNoteModal({
         recognitionRef.current.lang = 'en-US';
         recognitionRef.current.maxAlternatives = 1;
 
+        // Setup event handlers ONCE - they will use refs to access current state
         recognitionRef.current.onresult = (event: any) => {
           // Get the final transcript
           const transcript = event.results[0][0].transcript;
@@ -59,7 +60,7 @@ export default function AddNoteModal({
             transcriptRef.current = '';
           }
           
-          // Auto-restart if button is still pressed (use ref to avoid stale closure)
+          // Auto-restart if button is still pressed (use ref to get current state)
           if (isListeningRef.current) {
             try {
               recognitionRef.current.start();
@@ -84,12 +85,33 @@ export default function AddNoteModal({
     }
     
     return () => {
-      setMounted(false);
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          // Ignore errors on cleanup
+        }
       }
     };
-  }, []);
+  }, []); // Only run once on mount
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setContent('');
+      setError('');
+      setIsListening(false);
+      isListeningRef.current = false;
+      transcriptRef.current = '';
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+    }
+  }, [isOpen]);
 
   // Don't render until mounted (prevents SSR hydration issues)
   if (!mounted || !isOpen) return null;
@@ -174,7 +196,11 @@ export default function AddNoteModal({
       isListeningRef.current = false;
       transcriptRef.current = '';
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          // Ignore errors on cleanup
+        }
       }
       onClose();
     }

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, FileText, Loader2 } from 'lucide-react';
+import { X, FileText, Loader2, Mic, MicOff } from 'lucide-react';
 
 interface AddNoteModalProps {
   isOpen: boolean;
@@ -22,6 +22,10 @@ export default function AddNoteModal({
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef<string>('');
   
   // CRITICAL: Mounted state for SSR safety - prevents hydration mismatch
   const [mounted, setMounted] = useState(false);
@@ -29,11 +33,83 @@ export default function AddNoteModal({
   // Set mounted state on client side only
   useEffect(() => {
     setMounted(true);
-    return () => setMounted(false);
+    
+    // Check if speech recognition is supported
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        setSpeechSupported(true);
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        recognitionRef.current.lang = 'en-US';
+        recognitionRef.current.maxAlternatives = 1;
+
+        recognitionRef.current.onresult = (event: any) => {
+          // Get the final transcript
+          const transcript = event.results[0][0].transcript;
+          transcriptRef.current = transcript;
+        };
+
+        recognitionRef.current.onend = () => {
+          // Add the transcript when recognition ends
+          if (transcriptRef.current.trim()) {
+            setContent(prev => prev + transcriptRef.current + ' ');
+            transcriptRef.current = '';
+          }
+          
+          // Auto-restart if button is still pressed
+          if (isListening) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              console.error('Failed to restart:', e);
+              setIsListening(false);
+            }
+          }
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsListening(false);
+          transcriptRef.current = '';
+          if (event.error === 'not-allowed') {
+            setError('Microphone access denied. Please allow microphone access in your browser settings.');
+          }
+        };
+      }
+    }
+    
+    return () => {
+      setMounted(false);
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
   }, []);
 
   // Don't render until mounted (prevents SSR hydration issues)
   if (!mounted || !isOpen) return null;
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) return;
+
+    if (isListening) {
+      setIsListening(false);
+      recognitionRef.current.stop();
+      transcriptRef.current = '';
+    } else {
+      try {
+        transcriptRef.current = '';
+        recognitionRef.current.start();
+        setIsListening(true);
+        setError('');
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        setError('Failed to start speech recognition');
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +165,11 @@ export default function AddNoteModal({
     if (!loading) {
       setContent('');
       setError('');
+      setIsListening(false);
+      transcriptRef.current = '';
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       onClose();
     }
   };
@@ -131,18 +212,50 @@ export default function AddNoteModal({
           )}
 
           <div className="space-y-2">
-            <label className="text-white font-medium">
-              Note Content <span className="text-red-400">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-white font-medium">
+                Note Content <span className="text-red-400">*</span>
+              </label>
+              {speechSupported && (
+                <button
+                  type="button"
+                  onClick={toggleListening}
+                  className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-all ${
+                    isListening
+                      ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse'
+                      : 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30'
+                  }`}
+                  title={isListening ? 'Stop recording' : 'Start voice input'}
+                >
+                  {isListening ? (
+                    <>
+                      <MicOff className="w-4 h-4" />
+                      <span className="text-sm font-medium">Stop</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-4 h-4" />
+                      <span className="text-sm font-medium">Speak</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={6}
-              placeholder="Enter your note here..."
+              placeholder={isListening ? "Listening... speak now" : "Type your note or click 'Speak' to use voice input..."}
               required
               disabled={loading}
               className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
             />
+            {isListening && (
+              <p className="text-xs text-emerald-300 mt-1 flex items-center">
+                <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></span>
+                Recording... Speak clearly into your microphone
+              </p>
+            )}
             <p className="text-sm text-emerald-300/70">
               Add any important information about this lead
             </p>

@@ -278,10 +278,31 @@ export default function MainSheetPage() {
       const lead = availableLeads.find(l => l.id === leadId);
       if (!lead) return;
 
+      // If lead is marked as bad, unmark it when adding to working area
+      if (lead.background_color === '#FF0000') {
+        const token = getAuthToken();
+        const headers: HeadersInit = { 'Content-Type': 'application/json' };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        await fetch(`/api/leads/${leadId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ background_color: undefined })
+        });
+
+        // Update local lead object
+        lead.background_color = undefined;
+      }
+
       setWorkingLeads([...workingLeads, lead]);
       setSuccessMessage(`${lead.name} added to working area`);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
+      
+      // Refresh leads to update the UI
+      await fetchLeadsData();
     } catch (err: any) {
       setError(err.message || 'Failed to select lead');
     }
@@ -300,24 +321,32 @@ export default function MainSheetPage() {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      // Toggle: If already marked as bad, unmark it; otherwise mark it
+      const isCurrentlyBad = lead.background_color === '#FF0000';
+      const newBackgroundColor = isCurrentlyBad ? undefined : '#FF0000';
+
       const response = await fetch(`/api/leads/${leadId}`, {
         method: 'PATCH',
         headers,
-        body: JSON.stringify({ background_color: '#FF0000' })
+        body: JSON.stringify({ background_color: newBackgroundColor })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to mark lead as no good');
+        throw new Error(isCurrentlyBad ? 'Failed to unmark lead' : 'Failed to mark lead as no good');
       }
 
       setWorkingLeads(workingLeads.filter(l => l.id !== leadId));
       await fetchLeadsData();
       
-      setSuccessMessage(`${lead.name} marked as "No Good" (highlighted red)`);
+      if (isCurrentlyBad) {
+        setSuccessMessage(`${lead.name} unmarked (no longer highlighted)`);
+      } else {
+        setSuccessMessage(`${lead.name} marked as "No Good" (highlighted red)`);
+      }
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to mark lead as no good');
+      setError(err.message || 'Failed to update lead');
     }
   };
 
@@ -341,7 +370,7 @@ export default function MainSheetPage() {
     }
   };
 
-  const handleBulkSelectToWorking = () => {
+  const handleBulkSelectToWorking = async () => {
     try {
       setError(null);
       
@@ -351,12 +380,41 @@ export default function MainSheetPage() {
       }
 
       const leadsToAdd = availableLeads.filter(l => selectedAvailableLeads.includes(l.id));
+      
+      // Unmark any bad leads when adding to working area
+      const token = getAuthToken();
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const badLeads = leadsToAdd.filter(l => l.background_color === '#FF0000');
+      if (badLeads.length > 0) {
+        await Promise.all(
+          badLeads.map(lead =>
+            fetch(`/api/leads/${lead.id}`, {
+              method: 'PATCH',
+              headers,
+              body: JSON.stringify({ background_color: undefined })
+            })
+          )
+        );
+        
+        // Update local lead objects
+        badLeads.forEach(lead => {
+          lead.background_color = undefined;
+        });
+      }
+
       setWorkingLeads([...workingLeads, ...leadsToAdd]);
       setSelectedAvailableLeads([]);
       
       setSuccessMessage(`${leadsToAdd.length} lead(s) added to working area`);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
+      
+      // Refresh leads to update the UI
+      await fetchLeadsData();
     } catch (err: any) {
       setError(err.message || 'Failed to add leads to working area');
     }
@@ -503,12 +561,15 @@ export default function MainSheetPage() {
 
       const route = await routeResponse.json();
 
-      // Move all working leads to "leads" status
+      // Move all working leads to "leads" status and unmark bad leads
       const updatePromises = workingLeads.map(lead =>
         fetch(`/api/leads/${lead.id}`, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ status: 'leads' })
+          body: JSON.stringify({ 
+            status: 'leads',
+            background_color: undefined // Unmark bad when generating route
+          })
         })
       );
       await Promise.all(updatePromises);
@@ -565,12 +626,15 @@ export default function MainSheetPage() {
         'Authorization': `Bearer ${token}`
       };
 
-      // Update all working leads to target status
+      // Update all working leads to target status and unmark bad leads
       const updatePromises = workingLeads.map(lead =>
         fetch(`/api/leads/${lead.id}`, {
           method: 'PUT',
           headers,
-          body: JSON.stringify({ status: targetStatus })
+          body: JSON.stringify({ 
+            status: targetStatus,
+            background_color: undefined // Always unmark bad when moving to any tab
+          })
         }).then(async (res) => {
           if (!res.ok) {
             const error = await res.json();

@@ -11,12 +11,12 @@ import { Paperclip, Upload, Download, Trash2, FileText, X } from 'lucide-react';
 interface Attachment {
   id: string;
   lead_id: string;
-  file_name: string;
-  file_type: string;
+  filename: string;
+  mime_type: string;
   file_size: number;
-  storage_path: string;
-  description: string | null;
-  uploaded_by: string;
+  file_path: string;
+  description?: string | null;
+  user_id: string;
   created_at: string;
 }
 
@@ -40,7 +40,25 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
   const fetchAttachments = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/leads/${leadId}/attachments`);
+      
+      // Get auth token
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`/api/leads/${leadId}/attachments`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      
       if (!response.ok) throw new Error('Failed to fetch attachments');
       const data = await response.json();
       setAttachments(data.attachments || []);
@@ -67,6 +85,18 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
       setUploading(true);
       setError(null);
 
+      // Get auth token
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) {
+        throw new Error('Not authenticated');
+      }
+
       const formData = new FormData();
       formData.append('file', file);
       if (description) {
@@ -75,6 +105,9 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
 
       const response = await fetch(`/api/leads/${leadId}/attachments`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
         body: formData,
       });
 
@@ -101,8 +134,25 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
 
   const handleDownload = async (attachment: Attachment) => {
     try {
+      // Get auth token
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch(
-        `/api/leads/${leadId}/attachments/${attachment.id}`
+        `/api/leads/${leadId}/attachments/${attachment.id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          }
+        }
       );
       if (!response.ok) throw new Error('Failed to download file');
 
@@ -110,7 +160,7 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = attachment.file_name;
+      a.download = attachment.filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -125,9 +175,26 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
     if (!window.confirm('Are you sure you want to delete this attachment?')) return;
 
     try {
+      // Get auth token
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch(
         `/api/leads/${leadId}/attachments/${attachmentId}`,
-        { method: 'DELETE' }
+        { 
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          }
+        }
       );
 
       if (!response.ok) throw new Error('Failed to delete attachment');
@@ -249,7 +316,7 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 truncate">
-                      {attachment.file_name}
+                      {attachment.filename}
                     </p>
                     <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                       <span>{formatFileSize(attachment.file_size)}</span>

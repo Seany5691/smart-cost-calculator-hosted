@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useLeadsStore } from '@/lib/store/leads';
 import type { Lead } from '@/lib/leads/types';
-import { Eye, Edit, Trash2, Phone, MapPin, Mail, Calendar, ChevronDown, ChevronUp, StickyNote, Bell, Clock, Plus, X, FileText, Share2 } from 'lucide-react';
+import { Eye, Edit, Trash2, Phone, MapPin, Mail, Calendar, ChevronDown, ChevronUp, StickyNote, Bell, Clock, Plus, X, FileText, Share2, Paperclip } from 'lucide-react';
 import LeadDetailsModal from './LeadDetailsModal';
 import EditLeadModal from './EditLeadModal';
 import LaterStageModal from './LaterStageModal';
@@ -14,6 +14,7 @@ import ShareLeadModal from './ShareLeadModal';
 import SharedWithIndicator from './SharedWithIndicator';
 import DeleteNoteModal from './DeleteNoteModal';
 import DeleteReminderModal from './DeleteReminderModal';
+import AttachmentsSection from './AttachmentsSection';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/Toast/useToast';
 
@@ -76,6 +77,7 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
   const [laterStageLead, setLaterStageLead] = useState<Lead | null>(null);
   const [signedLead, setSignedLead] = useState<Lead | null>(null);
+  const [attachmentsModalLead, setAttachmentsModalLead] = useState<Lead | null>(null);
 
   const handleCreateProposal = (lead: Lead) => {
     // Store lead ID in localStorage for the calculator to attach the proposal
@@ -792,6 +794,14 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
                     <span className="text-xs">Edit</span>
                   </button>
                   <button
+                    onClick={() => setAttachmentsModalLead(lead)}
+                    className="flex flex-col items-center justify-center p-3 min-h-[60px] text-yellow-400 hover:bg-yellow-500/20 rounded-lg transition-colors"
+                    title="Attachments"
+                  >
+                    <Paperclip className="w-5 h-5 mb-1" />
+                    <span className="text-xs">Files</span>
+                  </button>
+                  <button
                     onClick={() => handleCreateProposal(lead)}
                     className="flex flex-col items-center justify-center p-3 min-h-[60px] text-purple-400 hover:bg-purple-500/20 rounded-lg transition-colors"
                     title="Create Proposal"
@@ -945,6 +955,14 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
               section: 'leads'
             });
           }}
+        />
+      )}
+
+      {/* Attachments Modal */}
+      {attachmentsModalLead && (
+        <AttachmentsSection
+          leadId={attachmentsModalLead.id}
+          onClose={() => setAttachmentsModalLead(null)}
         />
       )}
 

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useLeadsStore } from '@/lib/store/leads';
 import type { Lead } from '@/lib/leads/types';
-import { Eye, Edit, Trash2, Phone, MapPin, Calendar, ChevronDown, ChevronUp, StickyNote, Bell, Clock, Plus, X, FileText, Share2 } from 'lucide-react';
+import { Eye, Edit, Trash2, Phone, MapPin, Calendar, ChevronDown, ChevronUp, StickyNote, Bell, Clock, Plus, X, FileText, Share2, Paperclip } from 'lucide-react';
 import LeadDetailsModal from './LeadDetailsModal';
 import EditLeadModal from './EditLeadModal';
 import LaterStageModal from './LaterStageModal';
@@ -14,6 +14,7 @@ import ShareLeadModal from './ShareLeadModal';
 import SharedWithIndicator from './SharedWithIndicator';
 import DeleteNoteModal from './DeleteNoteModal';
 import DeleteReminderModal from './DeleteReminderModal';
+import AttachmentsSection from './AttachmentsSection';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/Toast/useToast';
 
@@ -105,6 +106,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
   const [deleteReminderModal, setDeleteReminderModal] = useState<{ leadId: string; reminderId: string } | null>(null);
   const [isDeletingNote, setIsDeletingNote] = useState(false);
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
+  const [attachmentsModalLead, setAttachmentsModalLead] = useState<Lead | null>(null);
 
   const handleCreateProposal = (lead: Lead) => {
     // Store lead ID in localStorage for the calculator to attach the proposal
@@ -630,6 +632,13 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
+                            onClick={() => setAttachmentsModalLead(lead)}
+                            className="text-yellow-400 hover:text-yellow-300"
+                            title="Attachments"
+                          >
+                            <Paperclip className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => setShareModalLead(lead)}
                             className="text-cyan-400 hover:text-cyan-300"
                             title="Share Lead"
@@ -960,6 +969,14 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
               section: 'leads'
             });
           }}
+        />
+      )}
+
+      {/* Attachments Modal */}
+      {attachmentsModalLead && (
+        <AttachmentsSection
+          leadId={attachmentsModalLead.id}
+          onClose={() => setAttachmentsModalLead(null)}
         />
       )}
 

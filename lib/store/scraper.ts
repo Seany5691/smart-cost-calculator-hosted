@@ -25,7 +25,7 @@ export interface Business {
   town: string;
   industry: string;
   address?: string;
-  website?: string;
+  website?: string; // Google Maps URL (also known as maps_address)
   rating?: number;
   reviews?: number;
 }

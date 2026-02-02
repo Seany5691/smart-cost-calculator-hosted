@@ -58,7 +58,17 @@ export function useScraperSSE(sessionId: string | null, enabled: boolean = true)
             case 'business':
               // NEW - Phase 2: Real-time business display
               console.log('[SSE] New business scraped:', message.data);
-              addBusinesses([message.data]);
+              // Convert ScrapedBusiness to Business format
+              const convertedBusiness = {
+                name: message.data.name,
+                phone: message.data.phone,
+                provider: message.data.provider || 'Unknown',
+                town: message.data.town,
+                industry: message.data.type_of_business,
+                address: message.data.address,
+                website: message.data.maps_address, // Convert maps_address to website
+              };
+              addBusinesses([convertedBusiness]);
               break;
 
             case 'town-complete':
@@ -93,9 +103,25 @@ export function useScraperSSE(sessionId: string | null, enabled: boolean = true)
               // NEW - Provider fix: Update businesses with provider data
               console.log('[SSE] Providers updated:', message.data);
               if (message.data.businesses && Array.isArray(message.data.businesses)) {
-                // Replace all businesses with updated ones (includes providers)
-                useScraperStore.getState().clearAll();
-                addBusinesses(message.data.businesses);
+                // Update businesses with provider information
+                // Instead of clearing and re-adding, update the existing businesses
+                const updatedBusinesses = message.data.businesses;
+                const currentBusinesses = useScraperStore.getState().businesses;
+                
+                // Create a map of updated businesses by unique key
+                const updatedMap = new Map(
+                  updatedBusinesses.map((b: any) => [`${b.name}-${b.phone}-${b.town}`, b])
+                );
+                
+                // Update existing businesses with provider info
+                const mergedBusinesses = currentBusinesses.map(business => {
+                  const key = `${business.name}-${business.phone}-${business.town}`;
+                  const updated: any = updatedMap.get(key);
+                  return updated ? { ...business, provider: updated.provider } : business;
+                });
+                
+                // Replace businesses with merged version
+                useScraperStore.setState({ businesses: mergedBusinesses });
               }
               
               // Deactivate lookup progress
@@ -115,14 +141,13 @@ export function useScraperSSE(sessionId: string | null, enabled: boolean = true)
               // Deactivate lookup progress
               updateLookupProgress({ isActive: false });
               
-              // Add businesses to store (if not already added via real-time updates)
-              if (message.data.businesses && Array.isArray(message.data.businesses)) {
-                addBusinesses(message.data.businesses);
-              }
+              // Don't add businesses here - they were already added via real-time 'business' events
+              // This prevents duplication and ensures View All Results updates in real-time
               
+              const totalBusinesses = useScraperStore.getState().businesses.length;
               addLog({
                 timestamp: new Date().toISOString(),
-                message: `🎉 All done! Collected ${message.data.businesses?.length || 0} businesses total`,
+                message: `🎉 All done! Collected ${totalBusinesses} businesses total`,
                 level: 'success',
               });
               

@@ -27,7 +27,19 @@ export async function POST(request: NextRequest) {
 
       // Create Excel file using the exportToExcel function
       const sessionName = filename?.replace('.xlsx', '') || 'businesses';
-      const buffer = await exportToExcel(businesses, sessionName);
+      
+      // Convert Business format (from store) to ScrapedBusiness format (for Excel export)
+      const scrapedBusinesses = businesses.map((b: any) => ({
+        maps_address: b.website || '',
+        name: b.name,
+        phone: b.phone || 'N/A',
+        provider: b.provider || 'Unknown',
+        address: b.address || '',
+        type_of_business: b.industry || '',
+        town: b.town,
+      }));
+      
+      const buffer = await exportToExcel(scrapedBusinesses, sessionName);
 
       // Convert Buffer to Uint8Array for NextResponse
       const uint8Array = new Uint8Array(buffer);

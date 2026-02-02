@@ -20,6 +20,7 @@ import { useToast } from '@/components/ui/Toast/useToast';
 interface LeadsCardsProps {
   leads: Lead[];
   onUpdate: () => void;
+  disableBackgroundColor?: boolean; // Don't show background_color styling
 }
 
 interface LeadNote {
@@ -57,7 +58,7 @@ function getAuthToken(): string | null {
   return null;
 }
 
-export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
+export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = false }: LeadsCardsProps) {
   const { selectedLeads, toggleLeadSelection } = useLeadsStore();
   const { toast } = useToast();
   const router = useRouter();
@@ -485,7 +486,7 @@ export default function LeadsCards({ leads, onUpdate }: LeadsCardsProps) {
             <div
               key={lead.id}
               className="bg-white/10 border border-white/20 rounded-lg overflow-hidden hover:border-emerald-500/50 transition-colors"
-              style={{ backgroundColor: lead.background_color }}
+              style={disableBackgroundColor ? {} : { backgroundColor: lead.background_color }}
             >
               {/* Card Header */}
               <div className="p-4 border-b border-white/10">

@@ -84,9 +84,10 @@ function getRelativeTime(date: string): string {
 interface LeadsTableProps {
   leads: Lead[];
   onUpdate: () => void;
+  disableBackgroundColor?: boolean; // Don't show background_color styling
 }
 
-export default function LeadsTable({ leads, onUpdate }: LeadsTableProps) {
+export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = false }: LeadsTableProps) {
   const { selectedLeads, toggleLeadSelection } = useLeadsStore();
   const { toast } = useToast();
   const router = useRouter();
@@ -523,7 +524,7 @@ export default function LeadsTable({ leads, onUpdate }: LeadsTableProps) {
                   <React.Fragment key={lead.id}>
                     <tr
                       className="hover:bg-white/5 transition-colors cursor-pointer"
-                      style={{ backgroundColor: lead.background_color }}
+                      style={disableBackgroundColor ? {} : { backgroundColor: lead.background_color }}
                       onClick={(e) => {
                         // Only toggle if not clicking on interactive elements
                         const target = e.target as HTMLElement;
@@ -659,7 +660,7 @@ export default function LeadsTable({ leads, onUpdate }: LeadsTableProps) {
 
                     {/* Expanded Notes & Reminders Row */}
                     {isExpanded && (
-                      <tr style={{ backgroundColor: lead.background_color }}>
+                      <tr style={disableBackgroundColor ? {} : { backgroundColor: lead.background_color }}>
                         <td colSpan={8} className="px-4 py-4 border-t border-white/10">
                           <div className="space-y-4">
                             <div className="flex items-center gap-3 mb-2">

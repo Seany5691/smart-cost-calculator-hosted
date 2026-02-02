@@ -377,9 +377,9 @@ export default function LeadsManager({ statusFilter }: { statusFilter?: string }
           </p>
         </div>
       ) : viewMode === 'grid' || isMobile ? (
-        <LeadsCards leads={filteredAndSortedLeads} onUpdate={handleRefresh} />
+        <LeadsCards leads={filteredAndSortedLeads} onUpdate={handleRefresh} disableBackgroundColor={true} />
       ) : (
-        <LeadsTable leads={filteredAndSortedLeads} onUpdate={handleRefresh} />
+        <LeadsTable leads={filteredAndSortedLeads} onUpdate={handleRefresh} disableBackgroundColor={true} />
       )}
 
       {/* Pagination */}

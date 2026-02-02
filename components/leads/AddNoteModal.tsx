@@ -25,8 +25,7 @@ export default function AddNoteModal({
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
-  const transcriptRef = useRef<string>('');
-  const isListeningRef = useRef<boolean>(false);
+  const finalTranscriptRef = useRef<string>('');
   
   // CRITICAL: Mounted state for SSR safety - prevents hydration mismatch
   const [mounted, setMounted] = useState(false);
@@ -39,46 +38,69 @@ export default function AddNoteModal({
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
+        console.log('[Speech] Initializing speech recognition');
         setSpeechSupported(true);
         recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = false;
+        
+        // NEW APPROACH: Use continuous mode with interim results
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
         recognitionRef.current.lang = 'en-US';
         recognitionRef.current.maxAlternatives = 1;
 
-        // Setup event handlers ONCE - they will use refs to access current state
+        // Setup event handlers ONCE
+        recognitionRef.current.onstart = () => {
+          console.log('[Speech] Recognition started');
+          finalTranscriptRef.current = '';
+        };
+
         recognitionRef.current.onresult = (event: any) => {
-          // Get the final transcript
-          const transcript = event.results[0][0].transcript;
-          transcriptRef.current = transcript;
+          console.log('[Speech] Result event fired, results count:', event.results.length);
+          
+          let interimTranscript = '';
+          let finalTranscript = '';
+          
+          // Process all results
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            console.log('[Speech] Result', i, '- isFinal:', event.results[i].isFinal, '- text:', transcript);
+            
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+          
+          // If we have final transcript, add it to content immediately
+          if (finalTranscript) {
+            console.log('[Speech] Adding final transcript:', finalTranscript);
+            finalTranscriptRef.current += finalTranscript;
+            setContent(prev => {
+              const newContent = prev + finalTranscript;
+              console.log('[Speech] New content:', newContent);
+              return newContent;
+            });
+          }
         };
 
         recognitionRef.current.onend = () => {
-          // Add the transcript when recognition ends
-          if (transcriptRef.current.trim()) {
-            setContent(prev => prev + transcriptRef.current + ' ');
-            transcriptRef.current = '';
-          }
-          
-          // Auto-restart if button is still pressed (use ref to get current state)
-          if (isListeningRef.current) {
-            try {
-              recognitionRef.current.start();
-            } catch (e) {
-              console.error('Failed to restart:', e);
-              setIsListening(false);
-              isListeningRef.current = false;
-            }
-          }
+          console.log('[Speech] Recognition ended');
+          setIsListening(false);
         };
 
         recognitionRef.current.onerror = (event: any) => {
-          console.error('Speech recognition error:', event.error);
+          console.error('[Speech] Recognition error:', event.error);
           setIsListening(false);
-          isListeningRef.current = false;
-          transcriptRef.current = '';
+          
           if (event.error === 'not-allowed') {
             setError('Microphone access denied. Please allow microphone access in your browser settings.');
+          } else if (event.error === 'no-speech') {
+            console.log('[Speech] No speech detected');
+          } else if (event.error === 'aborted') {
+            console.log('[Speech] Recognition aborted');
+          } else {
+            setError(`Speech recognition error: ${event.error}`);
           }
         };
       }
@@ -101,8 +123,7 @@ export default function AddNoteModal({
       setContent('');
       setError('');
       setIsListening(false);
-      isListeningRef.current = false;
-      transcriptRef.current = '';
+      finalTranscriptRef.current = '';
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
@@ -120,19 +141,22 @@ export default function AddNoteModal({
     if (!recognitionRef.current) return;
 
     if (isListening) {
-      setIsListening(false);
-      isListeningRef.current = false;
-      recognitionRef.current.stop();
-      transcriptRef.current = '';
-    } else {
+      console.log('[Speech] Stopping recognition');
       try {
-        transcriptRef.current = '';
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.error('[Speech] Error stopping:', e);
+      }
+      setIsListening(false);
+    } else {
+      console.log('[Speech] Starting recognition');
+      try {
+        finalTranscriptRef.current = '';
         recognitionRef.current.start();
         setIsListening(true);
-        isListeningRef.current = true;
         setError('');
       } catch (error) {
-        console.error('Error starting speech recognition:', error);
+        console.error('[Speech] Error starting speech recognition:', error);
         setError('Failed to start speech recognition');
       }
     }
@@ -192,16 +216,15 @@ export default function AddNoteModal({
     if (!loading) {
       setContent('');
       setError('');
-      setIsListening(false);
-      isListeningRef.current = false;
-      transcriptRef.current = '';
-      if (recognitionRef.current) {
+      if (isListening && recognitionRef.current) {
         try {
           recognitionRef.current.stop();
         } catch (e) {
           // Ignore errors on cleanup
         }
       }
+      setIsListening(false);
+      finalTranscriptRef.current = '';
       onClose();
     }
   };

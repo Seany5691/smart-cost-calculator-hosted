@@ -49,6 +49,24 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
   const [selectedRange, setSelectedRange] = useState<TimeRange>('all');
   const [updatingReminders, setUpdatingReminders] = useState<Set<string>>(new Set());
 
+  // Helper function to parse date strings in LOCAL timezone (not UTC)
+  // This prevents timezone conversion issues where "2026-02-04" becomes "2026-02-04 02:00 SAST"
+  const parseLocalDate = (dateStr: string): Date => {
+    const dateOnly = dateStr.split('T')[0]; // Get just the date part
+    const [year, month, day] = dateOnly.split('-').map(Number);
+    // Create date in local timezone (month is 0-indexed)
+    return new Date(year, month - 1, day);
+  };
+
+  // Helper function to format date in local timezone
+  const formatLocalDate = (dateStr: string): string => {
+    const date = parseLocalDate(dateStr);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   // Extended type for reminders with joined lead data
   type ReminderWithLeadData = LeadReminder & {
     lead_name?: string;
@@ -94,11 +112,12 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
     const next7DaysEnd = new Date(today);
     next7DaysEnd.setDate(next7DaysEnd.getDate() + 7);
     
-    // Filter reminders (keep all logic as is)
+    // Filter reminders using local date parsing
     let filteredReminders = reminders.filter(reminder => {
       if (selectedRange === 'all') return true;
       
-      const reminderDate = new Date(reminder.reminder_date);
+      // Parse reminder date in LOCAL timezone
+      const reminderDate = parseLocalDate(reminder.reminder_date);
       const reminderDateTime = new Date(
         reminderDate.getFullYear(),
         reminderDate.getMonth(),
@@ -127,7 +146,8 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
       if (!event.is_owner) return;
       
       // Filter out past events (events where the date has passed)
-      const eventDate = new Date(event.event_date);
+      // Parse event date in LOCAL timezone
+      const eventDate = parseLocalDate(event.event_date);
       const eventDateTime = new Date(
         eventDate.getFullYear(),
         eventDate.getMonth(),
@@ -143,8 +163,8 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
       
       if (groupedEvents.has(groupKey)) {
         const existing = groupedEvents.get(groupKey)!;
-        const existingDate = new Date(existing.event_date);
-        const currentDate = new Date(event.event_date);
+        const existingDate = parseLocalDate(existing.event_date);
+        const currentDate = parseLocalDate(event.event_date);
         
         // Update start date if this event is earlier
         if (currentDate < existingDate) {
@@ -153,7 +173,7 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
         }
         
         // Update end date if this event is later
-        const existingEndDate = existing.end_date ? new Date(existing.end_date) : existingDate;
+        const existingEndDate = existing.end_date ? parseLocalDate(existing.end_date) : existingDate;
         if (currentDate > existingEndDate) {
           existing.end_date = event.event_date;
         }
@@ -176,7 +196,8 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
     let filteredEvents = Array.from(groupedEvents.values()).filter(event => {
       if (selectedRange === 'all') return true;
       
-      const eventDate = new Date(event.event_date);
+      // Parse event date in LOCAL timezone
+      const eventDate = parseLocalDate(event.event_date);
       const eventDateTime = new Date(
         eventDate.getFullYear(),
         eventDate.getMonth(),
@@ -185,7 +206,7 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
       
       // For multi-day events, check if the range overlaps with the selected range
       if (event.end_date) {
-        const endDate = new Date(event.end_date);
+        const endDate = parseLocalDate(event.end_date);
         const endDateTime = new Date(
           endDate.getFullYear(),
           endDate.getMonth(),
@@ -244,17 +265,35 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
   // Check if reminder is overdue or today
   const getReminderStatus = (reminder: LeadReminder) => {
     const now = new Date();
-    const reminderDateTime = new Date(`${reminder.reminder_date}T${reminder.reminder_time}`);
+    
+    // Parse reminder date in LOCAL timezone
+    const reminderDate = parseLocalDate(reminder.reminder_date);
+    
+    // Parse time if provided
+    let reminderDateTime = reminderDate;
+    if (reminder.reminder_time) {
+      const timeOnly = reminder.reminder_time.split('T')[1] || reminder.reminder_time;
+      const [hours, minutes, seconds] = timeOnly.split(':').map(Number);
+      reminderDateTime = new Date(
+        reminderDate.getFullYear(),
+        reminderDate.getMonth(),
+        reminderDate.getDate(),
+        hours || 0,
+        minutes || 0,
+        seconds || 0
+      );
+    }
+    
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const reminderDate = new Date(
-      reminderDateTime.getFullYear(),
-      reminderDateTime.getMonth(),
-      reminderDateTime.getDate()
+    const reminderDateOnly = new Date(
+      reminderDate.getFullYear(),
+      reminderDate.getMonth(),
+      reminderDate.getDate()
     );
     
     if (reminderDateTime < now) {
       return 'overdue';
-    } else if (reminderDate.getTime() === today.getTime()) {
+    } else if (reminderDateOnly.getTime() === today.getTime()) {
       return 'today';
     } else {
       return 'future';
@@ -372,10 +411,22 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
     if (!dateStr) return '';
     
     try {
-      // Parse the date properly
+      // Parse the date in LOCAL timezone (not UTC) to avoid timezone conversion issues
+      // Database stores dates as DATE type (no timezone), so we need to interpret them as local dates
       const dateOnly = dateStr.split('T')[0]; // Get just the date part if it's ISO format
-      const timeOnly = timeStr ? timeStr.split('T')[1] || timeStr : '00:00:00'; // Get just time part
-      const reminderDateTime = new Date(`${dateOnly}T${timeOnly}`);
+      const [year, month, day] = dateOnly.split('-').map(Number);
+      
+      // Create date in local timezone by using Date constructor with year, month, day
+      // Month is 0-indexed in JavaScript
+      const reminderDate = new Date(year, month - 1, day);
+      
+      // Parse time if provided
+      let reminderDateTime = reminderDate;
+      if (timeStr) {
+        const timeOnly = timeStr.split('T')[1] || timeStr; // Get just time part
+        const [hours, minutes, seconds] = timeOnly.split(':').map(Number);
+        reminderDateTime = new Date(year, month - 1, day, hours || 0, minutes || 0, seconds || 0);
+      }
       
       // Check if date is valid
       if (isNaN(reminderDateTime.getTime())) {
@@ -383,17 +434,29 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
       }
       
       const now = new Date();
-      const diffMs = reminderDateTime.getTime() - now.getTime();
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      const diffDays = Math.floor(diffHours / 24);
       
-      if (diffHours < 0) {
+      // For day calculations, compare dates at midnight in local timezone
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const reminderDateOnly = new Date(reminderDate.getFullYear(), reminderDate.getMonth(), reminderDate.getDate());
+      
+      // Calculate day difference based on calendar days, not 24-hour periods
+      const diffMs = reminderDateOnly.getTime() - today.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      
+      // For same-day reminders, show hours/minutes
+      if (diffDays === 0) {
+        const timeDiffMs = reminderDateTime.getTime() - now.getTime();
+        if (timeDiffMs < 0) {
+          return 'Overdue';
+        } else if (timeDiffMs < 60 * 60 * 1000) { // Less than 1 hour
+          const diffMins = Math.floor(timeDiffMs / (1000 * 60));
+          return `In ${diffMins} min${diffMins !== 1 ? 's' : ''}`;
+        } else {
+          const diffHours = Math.floor(timeDiffMs / (1000 * 60 * 60));
+          return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+        }
+      } else if (diffDays < 0) {
         return 'Overdue';
-      } else if (diffHours < 1) {
-        const diffMins = Math.floor(diffMs / (1000 * 60));
-        return `In ${diffMins} min${diffMins !== 1 ? 's' : ''}`;
-      } else if (diffHours < 24) {
-        return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
       } else if (diffDays === 1) {
         return 'Tomorrow';
       } else {
@@ -494,11 +557,11 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
 
               // Format date display for single or multi-day events
               const formatEventDate = () => {
-                const startDate = new Date(event.event_date);
+                const startDate = parseLocalDate(event.event_date);
                 
                 if (event.end_date && event.end_date !== event.event_date) {
                   // Multi-day event
-                  const endDate = new Date(event.end_date);
+                  const endDate = parseLocalDate(event.end_date);
                   const startMonth = startDate.toLocaleDateString('en-US', { month: 'short' });
                   const endMonth = endDate.toLocaleDateString('en-US', { month: 'short' });
                   const startDay = startDate.getDate();
@@ -680,10 +743,7 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
                     {/* Date and time */}
                     <div className="flex items-center gap-3 text-sm text-white/80 flex-wrap">
                       <span>
-                        {new Date(reminder.reminder_date || '').toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric'
-                        })}
+                        {formatLocalDate(reminder.reminder_date || '')}
                       </span>
                       <span>
                         {formatReminderTime(reminder.reminder_time || null, reminder.is_all_day)}

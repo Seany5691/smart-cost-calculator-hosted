@@ -26,6 +26,7 @@ export default function AddNoteModal({
   const [speechSupported, setSpeechSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef<string>('');
+  const isListeningRef = useRef<boolean>(false); // Track listening state for closure
   
   // CRITICAL: Mounted state for SSR safety - prevents hydration mismatch
   const [mounted, setMounted] = useState(false);
@@ -58,13 +59,14 @@ export default function AddNoteModal({
             transcriptRef.current = '';
           }
           
-          // Auto-restart if button is still pressed
-          if (isListening) {
+          // Auto-restart if button is still pressed (use ref to avoid stale closure)
+          if (isListeningRef.current) {
             try {
               recognitionRef.current.start();
             } catch (e) {
               console.error('Failed to restart:', e);
               setIsListening(false);
+              isListeningRef.current = false;
             }
           }
         };
@@ -72,6 +74,7 @@ export default function AddNoteModal({
         recognitionRef.current.onerror = (event: any) => {
           console.error('Speech recognition error:', event.error);
           setIsListening(false);
+          isListeningRef.current = false;
           transcriptRef.current = '';
           if (event.error === 'not-allowed') {
             setError('Microphone access denied. Please allow microphone access in your browser settings.');
@@ -96,6 +99,7 @@ export default function AddNoteModal({
 
     if (isListening) {
       setIsListening(false);
+      isListeningRef.current = false;
       recognitionRef.current.stop();
       transcriptRef.current = '';
     } else {
@@ -103,6 +107,7 @@ export default function AddNoteModal({
         transcriptRef.current = '';
         recognitionRef.current.start();
         setIsListening(true);
+        isListeningRef.current = true;
         setError('');
       } catch (error) {
         console.error('Error starting speech recognition:', error);
@@ -166,6 +171,7 @@ export default function AddNoteModal({
       setContent('');
       setError('');
       setIsListening(false);
+      isListeningRef.current = false;
       transcriptRef.current = '';
       if (recognitionRef.current) {
         recognitionRef.current.stop();

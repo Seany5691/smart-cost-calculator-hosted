@@ -522,8 +522,16 @@ export default function LeadsTable({ leads, onUpdate }: LeadsTableProps) {
                 return (
                   <React.Fragment key={lead.id}>
                     <tr
-                      className="hover:bg-white/5 transition-colors"
+                      className="hover:bg-white/5 transition-colors cursor-pointer"
                       style={{ backgroundColor: lead.background_color }}
+                      onClick={(e) => {
+                        // Only toggle if not clicking on interactive elements
+                        const target = e.target as HTMLElement;
+                        const isInteractive = target.closest('button, a, input, select');
+                        if (!isInteractive) {
+                          toggleExpand(lead.id);
+                        }
+                      }}
                     >
                       <td className="px-4 py-3">
                         <input

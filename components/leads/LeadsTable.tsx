@@ -503,7 +503,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                 <th className={`px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider ${showDateInfo ? 'w-[120px]' : 'w-[180px]'}`}>
                   Provider
                 </th>
-                <th className={`px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider ${showDateInfo ? 'w-[120px]' : 'w-1/5 min-w-[180px]'}`}>
+                <th className={`px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider ${showDateInfo ? 'w-[120px]' : 'w-[150px]'}`}>
                   Town
                 </th>
                 {showDateInfo && (

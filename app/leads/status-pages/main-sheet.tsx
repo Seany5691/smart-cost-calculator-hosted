@@ -817,7 +817,7 @@ export default function MainSheetPage() {
             {/* Action Buttons - Mobile Optimized */}
             <div className="flex flex-col gap-2 md:flex-row md:gap-3">
               {/* Move To Dropdown */}
-              <div className="relative w-full md:w-auto z-50">
+              <div className="relative w-full md:w-auto z-[100]">
                 <button
                   onClick={() => setShowMoveToDropdown(!showMoveToDropdown)}
                   disabled={workingLeads.length === 0 || routeLoading}
@@ -833,7 +833,7 @@ export default function MainSheetPage() {
                 </button>
                 
                 {showMoveToDropdown && workingLeads.length > 0 && (
-                  <div className="absolute left-0 right-0 md:right-0 md:left-auto mt-2 w-full md:w-56 bg-slate-800 border border-emerald-500/30 rounded-lg shadow-xl z-50">
+                  <div className="absolute left-0 right-0 md:right-0 md:left-auto mt-2 w-full md:w-56 bg-slate-800 border border-emerald-500/30 rounded-lg shadow-xl z-[100]">
                     <div className="py-1">
                       <button
                         onClick={() => {

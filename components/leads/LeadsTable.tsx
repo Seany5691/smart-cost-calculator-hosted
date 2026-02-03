@@ -494,16 +494,16 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                     className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-emerald-500"
                   />
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-1/5 min-w-[150px]">
+                <th className={`px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider ${showDateInfo ? 'w-1/5 min-w-[150px]' : 'w-1/4 min-w-[200px]'}`}>
                   Name
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-[140px]">
                   Phone
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[120px]">
+                <th className={`px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider ${showDateInfo ? 'w-[120px]' : 'w-[180px]'}`}>
                   Provider
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[120px]">
+                <th className={`px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider ${showDateInfo ? 'w-[120px]' : 'w-1/5 min-w-[180px]'}`}>
                   Town
                 </th>
                 {showDateInfo && (
@@ -514,7 +514,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[120px]">
                   Status
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-auto">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>

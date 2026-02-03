@@ -39,7 +39,15 @@ const ProposalGenerator = forwardRef<ProposalGeneratorRef, ProposalGeneratorProp
         // Dynamically import PDF-lib for form filling
         const { PDFDocument } = await import('pdf-lib');
         
-        const response = await fetch('/Proposal.pdf');
+        // Determine which PDF template to use based on proposal type
+        let pdfFileName = 'Proposal.pdf'; // Default: Normal Proposal
+        if (proposalData.proposalType === 'comparative') {
+          pdfFileName = 'Proposal1.pdf';
+        } else if (proposalData.proposalType === 'cash') {
+          pdfFileName = 'Proposal2.pdf';
+        }
+        
+        const response = await fetch(`/${pdfFileName}`);
         if (!response.ok) {
           throw new Error('Failed to fetch PDF template');
         }

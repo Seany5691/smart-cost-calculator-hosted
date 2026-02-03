@@ -16,6 +16,7 @@ export interface ProposalData {
   currentMRC: number;
   specialistEmail: string;
   specialistPhone: string;
+  proposalType: 'normal' | 'comparative' | 'cash';
 }
 
 export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalModalProps) {
@@ -30,7 +31,8 @@ export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalMod
     customerName: dealDetails.customerName || '',
     currentMRC: 0,
     specialistEmail: '',
-    specialistPhone: ''
+    specialistPhone: '',
+    proposalType: 'normal'
   });
 
   // Set mounted state on client side only
@@ -108,7 +110,8 @@ export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalMod
       customerName: dealDetails.customerName || '',
       currentMRC: 0,
       specialistEmail: '',
-      specialistPhone: ''
+      specialistPhone: '',
+      proposalType: 'normal'
     });
     onClose();
   };
@@ -145,6 +148,53 @@ export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalMod
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] sm:h-[calc(100vh-80px)] custom-scrollbar space-y-4">
+          {/* Proposal Type Selection */}
+          <div className="space-y-3 pb-4 border-b border-purple-500/20">
+            <label className="text-white font-medium">
+              Proposal Type <span className="text-red-400">*</span>
+            </label>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Normal Proposal */}
+              <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                <input
+                  type="radio"
+                  name="proposalType"
+                  value="normal"
+                  checked={formData.proposalType === 'normal'}
+                  onChange={(e) => handleInputChange('proposalType', e.target.value)}
+                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2"
+                />
+                <span className="text-white font-medium">Normal Proposal</span>
+              </label>
+              
+              {/* Comparative Proposal */}
+              <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                <input
+                  type="radio"
+                  name="proposalType"
+                  value="comparative"
+                  checked={formData.proposalType === 'comparative'}
+                  onChange={(e) => handleInputChange('proposalType', e.target.value)}
+                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2"
+                />
+                <span className="text-white font-medium">Comparative Proposal</span>
+              </label>
+              
+              {/* Cash Proposal */}
+              <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                <input
+                  type="radio"
+                  name="proposalType"
+                  value="cash"
+                  checked={formData.proposalType === 'cash'}
+                  onChange={(e) => handleInputChange('proposalType', e.target.value)}
+                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2"
+                />
+                <span className="text-white font-medium">Cash Proposal</span>
+              </label>
+            </div>
+          </div>
+
           {/* Customer Name */}
           <div className="space-y-2">
             <label htmlFor="customerName" className="text-white font-medium">

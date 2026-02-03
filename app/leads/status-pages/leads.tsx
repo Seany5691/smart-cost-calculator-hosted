@@ -15,7 +15,7 @@ export default function LeadsStatusPage() {
         </div>
         <AddLeadButton defaultStatus="leads" />
       </div>
-      <LeadsManager statusFilter="leads" />
+      <LeadsManager key="leads-status" statusFilter="leads" />
     </div>
   );
 }

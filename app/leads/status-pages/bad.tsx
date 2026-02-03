@@ -15,7 +15,7 @@ export default function BadLeadsStatusPage() {
         </div>
         <AddLeadButton defaultStatus="bad" />
       </div>
-      <LeadsManager statusFilter="bad" />
+      <LeadsManager key="bad-status" statusFilter="bad" />
     </div>
   );
 }

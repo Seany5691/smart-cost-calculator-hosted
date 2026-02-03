@@ -15,7 +15,7 @@ export default function WorkingStatusPage() {
         </div>
         <AddLeadButton defaultStatus="working" />
       </div>
-      <LeadsManager statusFilter="working" />
+      <LeadsManager key="working-status" statusFilter="working" />
     </div>
   );
 }

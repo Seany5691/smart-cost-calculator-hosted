@@ -59,17 +59,12 @@ export default function LoginPage() {
 
     try {
       await login(username, password);
-      // Success - redirect will happen via useEffect when isAuthenticated changes
-      // Wait a moment to ensure state is updated
-      setTimeout(() => {
-        setIsSubmitting(false);
-      }, 100);
+      // Success - redirect immediately
+      router.replace('/');
     } catch (error) {
       // Error is already set in the store
       console.error('Login failed:', error);
       setIsSubmitting(false);
-      // Explicitly prevent any navigation on error
-      return;
     }
   };
 

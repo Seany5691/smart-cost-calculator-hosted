@@ -197,10 +197,10 @@ export default function LeadsManager({ statusFilter }: { statusFilter?: string }
     }
   };
 
-  // Fetch leads on mount and when filters/page change
+  // Fetch leads on mount and when filters/page change or statusFilter changes
   useEffect(() => {
     fetchLeads();
-  }, [filters, currentPage, token]);
+  }, [filters, currentPage, token, statusFilter]);
 
   // Refresh handler
   const handleRefresh = () => {

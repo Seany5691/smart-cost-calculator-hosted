@@ -15,7 +15,7 @@ export default function LaterStatusPage() {
         </div>
         <AddLeadButton defaultStatus="later" />
       </div>
-      <LeadsManager statusFilter="later" />
+      <LeadsManager key="later-status" statusFilter="later" />
     </div>
   );
 }

@@ -15,7 +15,7 @@ export default function SignedStatusPage() {
         </div>
         <AddLeadButton defaultStatus="signed" />
       </div>
-      <LeadsManager statusFilter="signed" />
+      <LeadsManager key="signed-status" statusFilter="signed" />
     </div>
   );
 }

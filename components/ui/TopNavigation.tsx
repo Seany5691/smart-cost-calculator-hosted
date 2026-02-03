@@ -75,6 +75,12 @@ export default function TopNavigation() {
     setMounted(true);
   }, []);
 
+  // Reset dropdown state when authentication changes
+  useEffect(() => {
+    setShowUserMenu(false);
+    setShowMobileMenu(false);
+  }, [isAuthenticated]);
+
   // Don't show navigation on login page
   if (!mounted || pathname === '/login' || !isAuthenticated) {
     return null;
@@ -82,6 +88,7 @@ export default function TopNavigation() {
 
   const handleLogout = async () => {
     try {
+      setShowUserMenu(false); // Close the dropdown before logout
       await logout();
       router.push('/login');
     } catch (error) {

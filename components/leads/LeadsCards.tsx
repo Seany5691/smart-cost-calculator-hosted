@@ -14,6 +14,7 @@ import ShareLeadModal from './ShareLeadModal';
 import SharedWithIndicator from './SharedWithIndicator';
 import DeleteNoteModal from './DeleteNoteModal';
 import DeleteReminderModal from './DeleteReminderModal';
+import DeleteLeadModal from './DeleteLeadModal';
 import AttachmentsSection from './AttachmentsSection';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/Toast/useToast';
@@ -884,33 +885,13 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
         const isOwner = lead && currentUserId && lead.user_id === currentUserId;
         
         return (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="glass-card p-6 max-w-md w-full">
-              <h3 className="text-lg font-semibold text-white mb-4">
-                {isOwner ? 'Confirm Delete' : 'Remove Shared Lead'}
-              </h3>
-              <p className="text-gray-300 mb-6">
-                {isOwner 
-                  ? 'Are you sure you want to delete this lead? This will permanently delete it for everyone it\'s shared with. This action cannot be undone.'
-                  : 'Are you sure you want to remove this lead that has been shared with you? This will only remove it from your view, not from the owner or other users.'
-                }
-              </p>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={() => setDeleteConfirm(null)}
-                  className="px-4 py-2 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleDelete(deleteConfirm)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  {isOwner ? 'Delete' : 'Remove'}
-                </button>
-              </div>
-            </div>
-          </div>
+          <DeleteLeadModal
+            isOpen={true}
+            onClose={() => setDeleteConfirm(null)}
+            onConfirm={() => handleDelete(deleteConfirm)}
+            leadName={lead?.name || 'this lead'}
+            isOwner={!!isOwner}
+          />
         );
       })()}
 

@@ -70,7 +70,7 @@ export default function DashboardStats() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
         {[1, 2, 3].map((i) => (
           <div key={i} className="glass-card rounded-2xl p-6 lg:p-4 animate-pulse">
             <div className="h-4 bg-white/10 rounded w-1/2 mb-4"></div>
@@ -96,7 +96,7 @@ export default function DashboardStats() {
   const showScraperStats = user?.role === 'admin' || user?.role === 'manager';
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
       {/* Calculator Stats */}
       <div className="glass-card rounded-2xl p-6 lg:p-4">
         <div className="flex items-center justify-between mb-4">

@@ -71,14 +71,6 @@ const quickActions: QuickAction[] = [
     gradient: 'from-orange-500 to-red-500',
     roles: ['admin'],
   },
-  {
-    title: 'User Management',
-    description: 'Manage users, roles, and permissions',
-    icon: Users,
-    href: '/admin', // Admin panel includes user management
-    gradient: 'from-violet-500 to-purple-500',
-    roles: ['admin'],
-  },
 ];
 
 export default function QuickActions() {
@@ -91,7 +83,7 @@ export default function QuickActions() {
   );
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
       {visibleActions.map((action) => {
         const IconComponent = action.icon;
         return (

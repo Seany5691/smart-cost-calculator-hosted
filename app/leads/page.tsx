@@ -219,13 +219,13 @@ export default function LeadsPage() {
           {/* Requirement: 1.7 - Glassmorphism tab bar */}
           <div className="sticky top-4 z-10 glass-card p-2">
             {/* Requirement: 1.8, 1.9, 1.10 - Responsive tabs with horizontal scroll on mobile */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide touch-pan-x">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide touch-pan-x justify-between">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
                   className={`
-                    flex-shrink-0 px-4 py-3 rounded-2xl font-medium transition-all duration-300
+                    flex-1 min-w-[100px] px-4 py-3 rounded-2xl font-medium transition-all duration-300
                     flex items-center gap-2 justify-center whitespace-nowrap
                     ${
                       activeTab === tab.id

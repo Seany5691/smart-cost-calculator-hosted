@@ -86,9 +86,10 @@ interface LeadsTableProps {
   leads: Lead[];
   onUpdate: () => void;
   disableBackgroundColor?: boolean; // Don't show background_color styling
+  showDateInfo?: boolean; // Show Date Info column (for Later Stage and Signed tabs)
 }
 
-export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = false }: LeadsTableProps) {
+export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = false, showDateInfo = false }: LeadsTableProps) {
   const { selectedLeads, toggleLeadSelection } = useLeadsStore();
   const { toast } = useToast();
   const router = useRouter();
@@ -479,7 +480,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
           <table className="min-w-full divide-y divide-white/10">
             <thead className="bg-white/5">
               <tr>
-                <th className="px-4 py-3 text-left">
+                <th className="px-3 py-3 text-left w-12">
                   <input
                     type="checkbox"
                     checked={selectedLeads.length === leads.length && leads.length > 0}
@@ -493,25 +494,27 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                     className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-emerald-500"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-1/5 min-w-[150px]">
                   Name
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-[140px]">
                   Phone
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[120px]">
                   Provider
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[120px]">
                   Town
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                  Date Info
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                {showDateInfo && (
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap w-[140px]">
+                    Date Info
+                  </th>
+                )}
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-[120px]">
                   Status
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-auto">
                   Actions
                 </th>
               </tr>
@@ -536,7 +539,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                         }
                       }}
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3 w-12">
                         <input
                           type="checkbox"
                           checked={selectedLeads.includes(lead.id)}
@@ -544,7 +547,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                           className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-emerald-500"
                         />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3">
                         <div className="text-sm font-medium text-white">
                           {lead.name}
                         </div>
@@ -554,38 +557,40 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-white">
+                      <td className="px-3 py-3 text-sm text-white whitespace-nowrap">
                         {lead.phone && (
                           <a
                             href={`tel:${lead.phone}`}
                             className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300"
                           >
-                            <Phone className="w-3 h-3" />
-                            {lead.phone}
+                            <Phone className="w-3 h-3 flex-shrink-0" />
+                            <span className="whitespace-nowrap">{lead.phone}</span>
                           </a>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-white">
+                      <td className="px-3 py-3 text-sm text-white">
                         {lead.provider}
                       </td>
-                      <td className="px-4 py-3 text-sm text-white">
+                      <td className="px-3 py-3 text-sm text-white">
                         {lead.town}
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        {lead.status === 'signed' && lead.date_signed && (
-                          <div className="flex items-center gap-1.5 text-green-400">
-                            <Calendar className="w-3 h-3" />
-                            <span className="text-xs">Signed: {formatDate(lead.date_signed)}</span>
-                          </div>
-                        )}
-                        {lead.status === 'later' && lead.date_to_call_back && (
-                          <div className="flex items-center gap-1.5 text-orange-400">
-                            <Calendar className="w-3 h-3" />
-                            <span className="text-xs">Callback: {formatDate(lead.date_to_call_back)}</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
+                      {showDateInfo && (
+                        <td className="px-3 py-3 text-sm whitespace-nowrap">
+                          {lead.status === 'signed' && lead.date_signed && (
+                            <div className="flex items-center gap-1.5 text-green-400">
+                              <Calendar className="w-3 h-3 flex-shrink-0" />
+                              <span className="text-xs">Signed: {formatDate(lead.date_signed)}</span>
+                            </div>
+                          )}
+                          {lead.status === 'later' && lead.date_to_call_back && (
+                            <div className="flex items-center gap-1.5 text-orange-400">
+                              <Calendar className="w-3 h-3 flex-shrink-0" />
+                              <span className="text-xs">Callback: {formatDate(lead.date_to_call_back)}</span>
+                            </div>
+                          )}
+                        </td>
+                      )}
+                      <td className="px-3 py-3">
                         <select
                           key={`status-${lead.id}-${lead.status}`}
                           value={lead.status}
@@ -600,8 +605,8 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                           <option value="signed">Signed</option>
                         </select>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <SharedWithIndicator leadId={lead.id} compact={true} />
                           <button
                             onClick={() => toggleExpand(lead.id)}
@@ -670,7 +675,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                     {/* Expanded Notes & Reminders Row */}
                     {isExpanded && (
                       <tr style={disableBackgroundColor ? {} : { backgroundColor: lead.background_color }}>
-                        <td colSpan={8} className="px-4 py-4 border-t border-white/10">
+                        <td colSpan={showDateInfo ? 8 : 7} className="px-4 py-4 border-t border-white/10">
                           <div className="space-y-4">
                             <div className="flex items-center gap-3 mb-2">
                               <span className="text-sm text-white/80 font-medium">Notes & Reminders</span>

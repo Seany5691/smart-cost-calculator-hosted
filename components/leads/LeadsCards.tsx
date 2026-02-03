@@ -22,6 +22,7 @@ interface LeadsCardsProps {
   leads: Lead[];
   onUpdate: () => void;
   disableBackgroundColor?: boolean; // Don't show background_color styling
+  showDateInfo?: boolean; // Show Date Info (for Later Stage and Signed tabs)
 }
 
 interface LeadNote {
@@ -59,7 +60,7 @@ function getAuthToken(): string | null {
   return null;
 }
 
-export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = false }: LeadsCardsProps) {
+export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = false, showDateInfo = false }: LeadsCardsProps) {
   const { selectedLeads, toggleLeadSelection } = useLeadsStore();
   const { toast } = useToast();
   const router = useRouter();

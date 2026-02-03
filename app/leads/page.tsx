@@ -73,6 +73,9 @@ export default function LeadsPage() {
     return 'dashboard';
   });
   
+  // Add a refresh key that changes when tab changes to force component remount
+  const [refreshKey, setRefreshKey] = useState(0);
+  
   const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState({
     totalLeads: 0,
@@ -97,6 +100,7 @@ export default function LeadsPage() {
       const tab = event.detail.tab as TabId;
       if (tab && TABS.some(t => t.id === tab)) {
         setActiveTab(tab);
+        setRefreshKey(prev => prev + 1);
       }
     };
 
@@ -113,8 +117,10 @@ export default function LeadsPage() {
       const tab = params.get('tab') as TabId;
       if (tab && TABS.some(t => t.id === tab)) {
         setActiveTab(tab);
+        setRefreshKey(prev => prev + 1);
       } else {
         setActiveTab('dashboard');
+        setRefreshKey(prev => prev + 1);
       }
     };
 
@@ -192,6 +198,8 @@ export default function LeadsPage() {
   // Requirement: 1.2 - Tab click handler with URL sync
   const handleTabChange = (tabId: TabId) => {
     setActiveTab(tabId);
+    // Increment refresh key to force component remount
+    setRefreshKey(prev => prev + 1);
     // Update URL without page reload
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -251,16 +259,16 @@ export default function LeadsPage() {
           {/* Requirement: 1.7 - Glassmorphism content card */}
           <div className="glass-card p-6 min-h-[600px]">
             {/* Requirement: 1.12, 1.13 - Lazy load with Suspense and loading states */}
-            <Suspense fallback={<TabLoadingFallback tabName={currentTab.name} />}>
+            <Suspense key={`${activeTab}-${refreshKey}`} fallback={<TabLoadingFallback tabName={currentTab.name} />}>
               {activeTab === 'dashboard' && <DashboardContent stats={stats} />}
-              {activeTab === 'main-sheet' && <MainSheetContent />}
-              {activeTab === 'leads' && <LeadsContent />}
-              {activeTab === 'working' && <WorkingContent />}
-              {activeTab === 'later' && <LaterContent />}
-              {activeTab === 'bad' && <BadContent />}
-              {activeTab === 'signed' && <SignedContent />}
-              {activeTab === 'routes' && <RoutesContent />}
-              {activeTab === 'reminders' && <RemindersContent />}
+              {activeTab === 'main-sheet' && <MainSheetContent key={refreshKey} />}
+              {activeTab === 'leads' && <LeadsContent key={refreshKey} />}
+              {activeTab === 'working' && <WorkingContent key={refreshKey} />}
+              {activeTab === 'later' && <LaterContent key={refreshKey} />}
+              {activeTab === 'bad' && <BadContent key={refreshKey} />}
+              {activeTab === 'signed' && <SignedContent key={refreshKey} />}
+              {activeTab === 'routes' && <RoutesContent key={refreshKey} />}
+              {activeTab === 'reminders' && <RemindersContent key={refreshKey} />}
             </Suspense>
           </div>
         </div>

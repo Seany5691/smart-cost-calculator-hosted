@@ -200,6 +200,7 @@ export default function LeadsManager({ statusFilter }: { statusFilter?: string }
   // Fetch leads on mount and when filters/page change or statusFilter changes
   useEffect(() => {
     fetchLeads();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, currentPage, token, statusFilter]);
 
   // Refresh handler

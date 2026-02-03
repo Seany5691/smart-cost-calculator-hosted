@@ -817,8 +817,9 @@ export default function MainSheetPage() {
             {/* Action Buttons - Mobile Optimized */}
             <div className="flex flex-col gap-2 md:flex-row md:gap-3">
               {/* Move To Dropdown */}
-              <div className="relative w-full md:w-auto z-[100]">
+              <div className="relative w-full md:w-auto">
                 <button
+                  id="move-to-button"
                   onClick={() => setShowMoveToDropdown(!showMoveToDropdown)}
                   disabled={workingLeads.length === 0 || routeLoading}
                   className={`w-full md:w-auto inline-flex items-center justify-center px-6 py-3 min-h-[48px] rounded-lg font-semibold transition-all ${
@@ -832,56 +833,98 @@ export default function MainSheetPage() {
                   <ChevronDown className="w-4 h-4 ml-2" />
                 </button>
                 
-                {showMoveToDropdown && workingLeads.length > 0 && (
-                  <div className="absolute left-0 right-0 md:right-0 md:left-auto mt-2 w-full md:w-56 bg-slate-800 border border-emerald-500/30 rounded-lg shadow-xl z-[100]">
-                    <div className="py-1">
-                      <button
-                        onClick={() => {
-                          handleMoveToStatus('leads');
-                          setShowMoveToDropdown(false);
-                        }}
-                        className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
-                      >
-                        Leads (Active Pipeline)
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleMoveToStatus('working');
-                          setShowMoveToDropdown(false);
-                        }}
-                        className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
-                      >
-                        Working On
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleMoveToStatus('later');
-                          setShowMoveToDropdown(false);
-                        }}
-                        className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
-                      >
-                        Later Stage
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleMoveToStatus('bad');
-                          setShowMoveToDropdown(false);
-                        }}
-                        className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
-                      >
-                        Bad Leads
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleMoveToStatus('signed');
-                          setShowMoveToDropdown(false);
-                        }}
-                        className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
-                      >
-                        Signed
-                      </button>
+                {showMoveToDropdown && workingLeads.length > 0 && isMounted && createPortal(
+                  <>
+                    {/* Backdrop */}
+                    <div 
+                      className="fixed inset-0 z-[9998]"
+                      onClick={() => setShowMoveToDropdown(false)}
+                    />
+                    {/* Dropdown */}
+                    <div 
+                      className="fixed z-[9999] bg-slate-800 border border-emerald-500/30 rounded-lg shadow-xl"
+                      style={{
+                        top: (() => {
+                          const button = document.getElementById('move-to-button');
+                          if (button) {
+                            const rect = button.getBoundingClientRect();
+                            return `${rect.bottom + 8}px`;
+                          }
+                          return '0px';
+                        })(),
+                        left: (() => {
+                          const button = document.getElementById('move-to-button');
+                          if (button) {
+                            const rect = button.getBoundingClientRect();
+                            // On mobile, align with button left edge
+                            // On desktop, align with button right edge
+                            if (window.innerWidth < 768) {
+                              return `${rect.left}px`;
+                            } else {
+                              return `${rect.right - 224}px`; // 224px = w-56
+                            }
+                          }
+                          return '0px';
+                        })(),
+                        width: window.innerWidth < 768 ? (() => {
+                          const button = document.getElementById('move-to-button');
+                          if (button) {
+                            return `${button.getBoundingClientRect().width}px`;
+                          }
+                          return '100%';
+                        })() : '14rem' // w-56
+                      }}
+                    >
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            handleMoveToStatus('leads');
+                            setShowMoveToDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
+                        >
+                          Leads (Active Pipeline)
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleMoveToStatus('working');
+                            setShowMoveToDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
+                        >
+                          Working On
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleMoveToStatus('later');
+                            setShowMoveToDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
+                        >
+                          Later Stage
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleMoveToStatus('bad');
+                            setShowMoveToDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
+                        >
+                          Bad Leads
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleMoveToStatus('signed');
+                            setShowMoveToDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-3 min-h-[44px] text-white hover:bg-emerald-500/20 transition-colors"
+                        >
+                          Signed
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  </>,
+                  document.body
                 )}
               </div>
 

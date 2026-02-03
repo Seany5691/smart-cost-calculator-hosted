@@ -15,6 +15,7 @@ import SharedWithIndicator from './SharedWithIndicator';
 import DeleteNoteModal from './DeleteNoteModal';
 import DeleteReminderModal from './DeleteReminderModal';
 import DeleteLeadModal from './DeleteLeadModal';
+import AttachmentsSection from './AttachmentsSection';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/Toast/useToast';
 

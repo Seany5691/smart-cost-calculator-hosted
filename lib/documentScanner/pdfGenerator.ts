@@ -71,7 +71,9 @@ export async function generatePDF(
 
   // Save PDF and return as Blob (Requirement 10.1)
   const pdfBytes = await pdfDoc.save();
-  return new Blob([pdfBytes], { type: "application/pdf" });
+  // Convert to standard Uint8Array to ensure compatibility
+  const standardBytes = new Uint8Array(pdfBytes);
+  return new Blob([standardBytes], { type: "application/pdf" });
 }
 
 /**

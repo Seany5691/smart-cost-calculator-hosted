@@ -252,10 +252,6 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick, onRemi
     }
   };
 
-  const getLeadData = (leadId: string) => {
-    return leads.find(l => l.id === leadId);
-  };
-
   // Navigation functions
   const handlePrev = () => {
     if (viewMode === 'month') {
@@ -279,25 +275,6 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick, onRemi
 
   const handleToday = () => {
     setCurrentDate(new Date());
-  };
-
-  // Get items for a specific date
-  const getItemsForDate = (date: Date) => {
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    
-    const dateReminders = reminders.filter(reminder => {
-      if (!reminder.reminder_date) return false;
-      const reminderDateStr = reminder.reminder_date.split('T')[0];
-      return reminderDateStr === dateStr;
-    });
-
-    const dateEvents = calendarEvents.filter(event => {
-      if (!event.event_date) return false;
-      const eventDateStr = event.event_date.split('T')[0];
-      return eventDateStr === dateStr;
-    });
-
-    return { reminders: dateReminders, events: dateEvents };
   };
 
   // Get formatted date range for header

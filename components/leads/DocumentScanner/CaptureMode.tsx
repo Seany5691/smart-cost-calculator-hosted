@@ -313,7 +313,7 @@ export default function CaptureMode({
   if (state.error) {
     return (
       <div
-        className="fixed inset-0 z-50 bg-black flex items-center justify-center p-6"
+        className="fixed inset-0 z-[10001] bg-black flex items-center justify-center p-6"
         role="dialog"
         aria-labelledby="camera-error-title"
         aria-describedby="camera-error-description"
@@ -366,7 +366,7 @@ export default function CaptureMode({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black">
+    <div className="fixed inset-0 z-[10001] bg-black">
       {/* Video stream */}
       <video
         ref={videoRef}

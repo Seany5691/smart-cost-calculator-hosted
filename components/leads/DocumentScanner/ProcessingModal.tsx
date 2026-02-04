@@ -63,7 +63,7 @@ export default function ProcessingModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10001] flex items-center justify-center p-4"
       role="dialog"
       aria-labelledby="processing-title"
       aria-describedby="processing-description"
@@ -217,7 +217,7 @@ export default function ProcessingModal({
       {/* Cancel Confirmation Dialog */}
       {showCancelConfirm && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10002] flex items-center justify-center p-4"
           role="alertdialog"
           aria-labelledby="cancel-confirm-title"
           aria-describedby="cancel-confirm-description"

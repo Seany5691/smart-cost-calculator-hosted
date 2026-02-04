@@ -483,7 +483,7 @@ export default function CropAdjustment({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+    <div className="fixed inset-0 z-[10001] bg-black flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-4 flex items-center justify-between">
         <div>

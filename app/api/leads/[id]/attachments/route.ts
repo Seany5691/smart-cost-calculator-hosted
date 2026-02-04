@@ -33,12 +33,11 @@ export async function GET(
       `SELECT 
         id,
         lead_id,
-        uploaded_by as user_id,
-        file_name as filename,
-        storage_path as file_path,
+        user_id,
+        filename,
+        file_path,
         file_size,
-        file_type as mime_type,
-        description,
+        mime_type,
         created_at
       FROM attachments
       WHERE lead_id = $1
@@ -118,23 +117,14 @@ export async function POST(
     const result = await pool.query(
       `INSERT INTO attachments (
         lead_id,
-        uploaded_by,
-        file_name,
-        storage_path,
+        user_id,
+        filename,
+        file_path,
         file_size,
-        file_type,
+        mime_type,
         created_at
       ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-      RETURNING 
-        id,
-        lead_id,
-        uploaded_by as user_id,
-        file_name as filename,
-        storage_path as file_path,
-        file_size,
-        file_type as mime_type,
-        description,
-        created_at`,
+      RETURNING *`,
       [leadId, userId, fileName, storagePath, fileSize, fileType]
     );
 

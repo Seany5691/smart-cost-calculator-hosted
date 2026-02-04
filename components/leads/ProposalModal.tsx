@@ -30,6 +30,25 @@ export default function ProposalModal({
     return () => setMounted(false);
   }, []);
 
+  // Handle escape key and prevent body scroll
+  useEffect(() => {
+    if (!isOpen) return;
+
+    document.body.style.overflow = 'hidden';
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleCancel();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
   if (!mounted) return null;
 
@@ -82,92 +101,114 @@ export default function ProposalModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-      <div className="bg-gradient-to-br from-slate-900 to-purple-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-purple-500/30">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-purple-500/20">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/20 rounded-lg">
-              <FileText className="w-5 h-5 text-purple-400" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-white">Create Proposal</h2>
-              <p className="text-sm text-purple-200">{lead.name}</p>
-            </div>
-          </div>
-          <button
-            onClick={handleCancel}
-            disabled={loading}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-purple-200" />
-          </button>
-        </div>
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] transition-opacity"
+        onClick={handleCancel}
+        aria-hidden="true"
+      />
 
-        {/* Form */}
-        <form onSubmit={handleCreateProposal} className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] custom-scrollbar space-y-5">
-          {/* Info Box */}
-          <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/20">
-                <AlertCircle className="w-5 h-5 text-purple-400" />
+      {/* Modal */}
+      <div
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="proposal-modal-title"
+      >
+        <div
+          className="bg-gradient-to-br from-slate-900 to-emerald-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-emerald-500/30"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Sticky Header */}
+          <div className="sticky top-0 bg-gradient-to-r from-green-500 to-emerald-500 p-6 flex items-center justify-between z-10 rounded-t-2xl flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-lg">
+                <FileText className="w-6 h-6 text-white" />
               </div>
-              <div className="flex-1">
-                <h4 className="text-white font-medium mb-1">Ready to create a proposal?</h4>
-                <p className="text-purple-200 text-sm">
-                  Provide a description for this proposal. You'll be taken to the calculator to generate the proposal document.
-                </p>
+              <div>
+                <h2 id="proposal-modal-title" className="text-2xl font-bold text-white">
+                  Create Proposal
+                </h2>
+                <p className="text-sm text-white/90">{lead.name}</p>
               </div>
             </div>
-          </div>
-
-          {/* Description Field */}
-          <div>
-            <label className="block text-white font-medium mb-2">
-              <FileText className="w-4 h-4 inline mr-1" />
-              Description <span className="text-red-400">*</span>
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g., Initial proposal for phone system upgrade, Follow-up proposal with revised pricing, etc."
-              className="w-full px-4 py-3 bg-white/10 border border-purple-500/30 rounded-lg text-white placeholder-purple-300/50 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500 resize-none"
-              rows={4}
+            <button
+              onClick={handleCancel}
               disabled={loading}
-              required
-            />
-            <p className="text-sm text-purple-300/70 mt-1">
-              This will be saved as a note with the proposal creation date
-            </p>
+              className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+              aria-label="Close modal"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-              <div className="flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          {/* Scrollable Content */}
+          <form onSubmit={handleCreateProposal} className="p-6 overflow-y-auto max-h-[calc(90vh-160px)] custom-scrollbar space-y-5">
+            {/* Info Box */}
+            <div className="bg-emerald-500/10 rounded-lg p-4 border border-emerald-500/20">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/20">
+                  <AlertCircle className="w-5 h-5 text-emerald-400" />
+                </div>
                 <div className="flex-1">
-                  <p className="text-red-400 font-medium mb-1">Error</p>
-                  <p className="text-sm text-red-300">{error}</p>
+                  <h4 className="text-white font-medium mb-1">Ready to create a proposal?</h4>
+                  <p className="text-emerald-200 text-sm">
+                    Provide a description for this proposal. You'll be taken to the calculator to generate the proposal document.
+                  </p>
                 </div>
               </div>
             </div>
-          )}
 
-          {/* Footer */}
-          <div className="flex gap-3 justify-end pt-4 border-t border-purple-500/20">
+            {/* Description Field */}
+            <div>
+              <label className="block text-emerald-200 font-medium mb-2">
+                <FileText className="w-4 h-4 inline mr-1" />
+                Description <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g., Initial proposal for phone system upgrade, Follow-up proposal with revised pricing, etc."
+                className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 resize-none"
+                rows={4}
+                disabled={loading}
+                required
+              />
+              <p className="text-sm text-emerald-300/70 mt-1">
+                This will be saved as a note with the proposal creation date
+              </p>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-red-400 font-medium mb-1">Error</p>
+                    <p className="text-sm text-red-300">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </form>
+
+          {/* Sticky Footer */}
+          <div className="sticky bottom-0 bg-slate-900/80 backdrop-blur-sm border-t border-emerald-500/20 p-6 flex flex-col sm:flex-row justify-end gap-3 rounded-b-2xl flex-shrink-0">
             <button
               type="button"
               onClick={handleCancel}
               disabled={loading}
-              className="px-6 py-2 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors"
+              className="w-full sm:w-auto px-6 py-3 min-h-[44px] text-emerald-200 bg-white/10 border border-emerald-500/30 rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
+              onClick={handleCreateProposal}
               disabled={loading || !description.trim()}
-              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="w-full sm:w-auto px-6 py-3 min-h-[44px] bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-semibold"
             >
               {loading ? (
                 <>
@@ -182,9 +223,10 @@ export default function ProposalModal({
               )}
             </button>
           </div>
-        </form>
+        </div>
       </div>
-    </div>,
+    </>,
     document.body
   );
 }
+

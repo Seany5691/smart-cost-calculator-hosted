@@ -90,6 +90,8 @@ export async function PUT(
       date_to_call_back,
       dateSigned,
       date_signed,
+      dateProposalCreated,
+      date_proposal_created,
       coordinates,
       backgroundColor,
       listName
@@ -98,6 +100,7 @@ export async function PUT(
     // Support both camelCase and snake_case for backward compatibility
     const callbackDate = date_to_call_back || dateToCallBack;
     const signedDate = date_signed || dateSigned;
+    const proposalCreatedDate = date_proposal_created || dateProposalCreated;
 
     // Validate status-specific requirements
     if (status === 'later' && !callbackDate) {
@@ -110,6 +113,13 @@ export async function PUT(
     if (status === 'signed' && !signedDate) {
       return NextResponse.json(
         { error: 'Date signed is required for "signed" status' },
+        { status: 400 }
+      );
+    }
+
+    if (status === 'proposal' && !proposalCreatedDate) {
+      return NextResponse.json(
+        { error: 'Date proposal created is required for "proposal" status' },
         { status: 400 }
       );
     }
@@ -131,11 +141,12 @@ export async function PUT(
         notes = COALESCE($10, notes),
         date_to_call_back = COALESCE($11, date_to_call_back),
         date_signed = COALESCE($12, date_signed),
-        coordinates = COALESCE($13, coordinates),
-        background_color = COALESCE($14, background_color),
-        list_name = COALESCE($15, list_name),
+        date_proposal_created = COALESCE($13, date_proposal_created),
+        coordinates = COALESCE($14, coordinates),
+        background_color = COALESCE($15, background_color),
+        list_name = COALESCE($16, list_name),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $16
+      WHERE id = $17
       RETURNING *`,
       [
         mapsAddress,
@@ -150,6 +161,7 @@ export async function PUT(
         notes,
         callbackDate,
         signedDate,
+        proposalCreatedDate,
         coordinates ? JSON.stringify(coordinates) : null,
         backgroundColor,
         listName,

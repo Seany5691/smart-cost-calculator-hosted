@@ -21,7 +21,7 @@ function getAuthToken(): string | null {
 }
 
 interface AddLeadButtonProps {
-  defaultStatus?: 'new' | 'leads' | 'working' | 'later' | 'bad' | 'signed';
+  defaultStatus?: 'new' | 'leads' | 'working' | 'proposal' | 'later' | 'bad' | 'signed';
   onSuccess?: () => void;
 }
 
@@ -29,6 +29,7 @@ const LEAD_STATUSES = [
   { value: 'new', label: 'New (Main Sheet)' },
   { value: 'leads', label: 'Leads (Active Pipeline)' },
   { value: 'working', label: 'Working On' },
+  { value: 'proposal', label: 'Proposal' },
   { value: 'later', label: 'Later Stage' },
   { value: 'bad', label: 'Bad Leads' },
   { value: 'signed', label: 'Signed' }

@@ -8,6 +8,7 @@ import LeadDetailsModal from './LeadDetailsModal';
 import EditLeadModal from './EditLeadModal';
 import LaterStageModal from './LaterStageModal';
 import SignedModal from './SignedModal';
+import ProposalModal from './ProposalModal';
 import AddNoteModal from './AddNoteModal';
 import AddReminderModal from './AddReminderModal';
 import ShareLeadModal from './ShareLeadModal';
@@ -79,6 +80,7 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
   const [laterStageLead, setLaterStageLead] = useState<Lead | null>(null);
   const [signedLead, setSignedLead] = useState<Lead | null>(null);
+  const [proposalLead, setProposalLead] = useState<Lead | null>(null);
   const [attachmentsModalLead, setAttachmentsModalLead] = useState<Lead | null>(null);
 
   const handleCreateProposal = (lead: Lead) => {
@@ -179,6 +181,7 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
       new: 'bg-blue-100 text-blue-800 border-blue-200',
       leads: 'bg-purple-100 text-purple-800 border-purple-200',
       working: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      proposal: 'bg-indigo-100 text-indigo-800 border-indigo-200',
       bad: 'bg-red-100 text-red-800 border-red-200',
       later: 'bg-orange-100 text-orange-800 border-orange-200',
       signed: 'bg-green-100 text-green-800 border-green-200'
@@ -332,7 +335,12 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
   };
 
   const handleStatusChange = async (lead: Lead, newStatus: string) => {
-    // Show modal for later or signed status
+    // Show modal for proposal, later or signed status
+    if (newStatus === 'proposal') {
+      setProposalLead(lead);
+      return;
+    }
+    
     if (newStatus === 'later') {
       setLaterStageLead(lead);
       return;
@@ -478,6 +486,53 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
     }
   };
 
+  const handleProposalConfirm = async (data: { date_proposal_created: string; notes: string }) => {
+    if (!proposalLead) return;
+    
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error('Not authenticated', {
+          message: 'Please log in to continue',
+          section: 'leads'
+        });
+        return;
+      }
+      
+      const response = await fetch(`/api/leads/${proposalLead.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: 'proposal',
+          date_proposal_created: data.date_proposal_created,
+          notes: data.notes
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update lead');
+      }
+
+      setProposalLead(null);
+      onUpdate();
+      
+      toast.success('Proposal created', {
+        message: 'Lead moved to Proposal status',
+        section: 'leads'
+      });
+    } catch (error) {
+      console.error('Error updating lead:', error);
+      toast.error('Failed to create proposal', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        section: 'leads'
+      });
+    }
+  };
+
   return (
     <>
       <div className="block lg:hidden space-y-4">
@@ -526,6 +581,7 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
                     <option value="new">New (Main Sheet)</option>
                     <option value="leads">Leads (Active Pipeline)</option>
                     <option value="working">Working On</option>
+                    <option value="proposal">Proposal</option>
                     <option value="later">Later Stage</option>
                     <option value="bad">Bad Lead</option>
                     <option value="signed">Signed</option>
@@ -590,6 +646,15 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
                     <Calendar className="w-4 h-4 text-green-400" />
                     <span className="text-sm text-green-300 font-medium">
                       Signed: {new Date(lead.date_signed).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </span>
+                  </div>
+                )}
+
+                {lead.date_proposal_created && lead.status === 'proposal' && (
+                  <div className="flex items-center gap-1.5 p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
+                    <Calendar className="w-4 h-4 text-indigo-400" />
+                    <span className="text-sm text-indigo-300 font-medium">
+                      Proposal Created: {new Date(lead.date_proposal_created).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </span>
                   </div>
                 )}
@@ -981,6 +1046,16 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
           isOpen={true}
           onClose={() => setSignedLead(null)}
           onConfirm={handleSignedConfirm}
+        />
+      )}
+      
+      {/* Proposal Modal */}
+      {proposalLead && (
+        <ProposalModal
+          lead={proposalLead}
+          isOpen={true}
+          onClose={() => setProposalLead(null)}
+          onConfirm={handleProposalConfirm}
         />
       )}
     </>

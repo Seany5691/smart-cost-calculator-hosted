@@ -8,6 +8,7 @@ import LeadDetailsModal from './LeadDetailsModal';
 import EditLeadModal from './EditLeadModal';
 import LaterStageModal from './LaterStageModal';
 import SignedModal from './SignedModal';
+import ProposalModal from './ProposalModal';
 import AddNoteModal from './AddNoteModal';
 import AddReminderModal from './AddReminderModal';
 import ShareLeadModal from './ShareLeadModal';
@@ -99,6 +100,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [laterStageLead, setLaterStageLead] = useState<Lead | null>(null);
   const [signedLead, setSignedLead] = useState<Lead | null>(null);
+  const [proposalLead, setProposalLead] = useState<Lead | null>(null);
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
   const [notesReminders, setNotesReminders] = useState<Record<string, { notes: LeadNote[], reminders: LeadReminder[], loading: boolean }>>({});
   const [addNoteModalLead, setAddNoteModalLead] = useState<Lead | null>(null);
@@ -335,7 +337,12 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
   };
   
   const handleStatusChange = async (lead: Lead, newStatus: string) => {
-    // Show modal for later or signed status
+    // Show modal for proposal, later or signed status
+    if (newStatus === 'proposal') {
+      setProposalLead(lead);
+      return;
+    }
+    
     if (newStatus === 'later') {
       setLaterStageLead(lead);
       return;
@@ -462,11 +469,52 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
     }
   };
 
+  const handleProposalConfirm = async (data: { date_proposal_created: string; notes: string }) => {
+    if (!proposalLead) return;
+    
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error('Not authenticated', {
+          message: 'Please log in to continue',
+          section: 'leads'
+        });
+        return;
+      }
+      
+      const response = await fetch(`/api/leads/${proposalLead.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: 'proposal',
+          date_proposal_created: data.date_proposal_created,
+          notes: data.notes || proposalLead.notes
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update lead');
+      }
+
+      setProposalLead(null);
+      // Refresh the leads list to show updated data
+      onUpdate();
+    } catch (error) {
+      console.error('Error updating lead:', error);
+      throw error;
+    }
+  };
+
   const getStatusColor = (status: string) => {
     const colors = {
       new: 'bg-blue-100 text-blue-800',
       leads: 'bg-purple-100 text-purple-800',
       working: 'bg-yellow-100 text-yellow-800',
+      proposal: 'bg-indigo-100 text-indigo-800',
       bad: 'bg-red-100 text-red-800',
       later: 'bg-orange-100 text-orange-800',
       signed: 'bg-green-100 text-green-800'
@@ -583,6 +631,12 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                               <span className="text-xs">Signed: {formatDate(lead.date_signed)}</span>
                             </div>
                           )}
+                          {lead.status === 'proposal' && lead.date_proposal_created && (
+                            <div className="flex items-center gap-1.5 text-indigo-400">
+                              <Calendar className="w-3 h-3 flex-shrink-0" />
+                              <span className="text-xs">Proposal Created: {formatDate(lead.date_proposal_created)}</span>
+                            </div>
+                          )}
                           {lead.status === 'later' && lead.date_to_call_back && (
                             <div className="flex items-center gap-1.5 text-orange-400">
                               <Calendar className="w-3 h-3 flex-shrink-0" />
@@ -601,6 +655,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                           <option value="new">New</option>
                           <option value="leads">Leads</option>
                           <option value="working">Working</option>
+                          <option value="proposal">Proposal</option>
                           <option value="later">Later</option>
                           <option value="bad">Bad</option>
                           <option value="signed">Signed</option>
@@ -882,6 +937,15 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
           isOpen={true}
           onClose={() => setSignedLead(null)}
           onConfirm={handleSignedConfirm}
+        />
+      )}
+      
+      {proposalLead && (
+        <ProposalModal
+          lead={proposalLead}
+          isOpen={true}
+          onClose={() => setProposalLead(null)}
+          onConfirm={handleProposalConfirm}
         />
       )}
 

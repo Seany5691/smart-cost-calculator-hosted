@@ -11,12 +11,13 @@
 // Lead Status Type
 // =====================================================
 
-export type LeadStatus = 'new' | 'leads' | 'working' | 'later' | 'bad' | 'signed';
+export type LeadStatus = 'new' | 'leads' | 'working' | 'proposal' | 'later' | 'bad' | 'signed';
 
 export const LEAD_STATUSES = [
   { value: 'new', label: 'New' },
   { value: 'leads', label: 'Leads' },
   { value: 'working', label: 'Working On' },
+  { value: 'proposal', label: 'Proposal' },
   { value: 'later', label: 'Later Stage' },
   { value: 'bad', label: 'Bad Leads' },
   { value: 'signed', label: 'Signed' },
@@ -43,6 +44,7 @@ export interface Lead {
   notes?: string;
   date_to_call_back?: string;
   date_signed?: string;
+  date_proposal_created?: string;
   user_id: string;
   created_at: string;
   updated_at: string;
@@ -420,7 +422,7 @@ export interface GoogleMapsUrlParts {
 // =====================================================
 
 export function isLeadStatus(value: string): value is LeadStatus {
-  return ['new', 'leads', 'working', 'later', 'bad', 'signed'].includes(value);
+  return ['new', 'leads', 'working', 'proposal', 'later', 'bad', 'signed'].includes(value);
 }
 
 export function isReminderStatus(value: string): value is ReminderStatus {

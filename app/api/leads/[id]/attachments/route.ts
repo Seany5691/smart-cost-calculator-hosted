@@ -38,6 +38,7 @@ export async function GET(
         storage_path as file_path,
         file_size,
         file_type as mime_type,
+        description,
         created_at
       FROM attachments
       WHERE lead_id = $1
@@ -132,6 +133,7 @@ export async function POST(
         storage_path as file_path,
         file_size,
         file_type as mime_type,
+        description,
         created_at`,
       [leadId, userId, fileName, storagePath, fileSize, fileType]
     );

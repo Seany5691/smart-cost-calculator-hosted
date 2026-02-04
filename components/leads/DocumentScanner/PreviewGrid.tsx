@@ -253,7 +253,7 @@ export default function PreviewGrid({
   };
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="fixed inset-0 z-[10001] flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-4 py-4 sm:px-6">
         <div className="flex items-center justify-between">

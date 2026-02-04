@@ -46,9 +46,12 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
   const { importSessions, fetchImportSessions } = useImportStore();
   const [routesCount, setRoutesCount] = useState(0);
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [selectedCalendarUserId, setSelectedCalendarUserId] = useState<string | null>(null);
+  const [selectedCalendarOwnerName, setSelectedCalendarOwnerName] = useState<string | null>(null);
+  const [sharedCalendarReminders, setSharedCalendarReminders] = useState<any[]>([]);
 
   // Fetch calendar events
-  const fetchCalendarEvents = async () => {
+  const fetchCalendarEvents = async (userId?: string | null) => {
     try {
       const token = localStorage.getItem('auth-storage');
       let authToken = null;
@@ -67,7 +70,12 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
       const startDateStr = today.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
-      const response = await fetch(`/api/calendar/events?start_date=${startDateStr}&end_date=${endDateStr}`, {
+      let url = `/api/calendar/events?start_date=${startDateStr}&end_date=${endDateStr}`;
+      if (userId) {
+        url += `&user_id=${userId}`;
+      }
+
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }
@@ -82,13 +90,52 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
     }
   };
 
+  // Fetch reminders for selected calendar
+  const fetchRemindersForCalendar = async (userId?: string | null) => {
+    try {
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) return;
+
+      let url = '/api/reminders';
+      if (userId) {
+        url += `?user_id=${userId}`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSharedCalendarReminders(data.reminders || []);
+      }
+    } catch (err) {
+      console.error('Error fetching reminders for calendar:', err);
+    }
+  };
+
   // Fetch routes and reminders on mount
   useEffect(() => {
     fetchRoutes();
     fetchAllReminders();
     fetchImportSessions(undefined, undefined, 5); // Fetch last 5 imports
     fetchCalendarEvents();
+    fetchRemindersForCalendar();
   }, [fetchRoutes, fetchAllReminders, fetchImportSessions]);
+
+  // Re-fetch when selected calendar changes
+  useEffect(() => {
+    fetchCalendarEvents(selectedCalendarUserId);
+    fetchRemindersForCalendar(selectedCalendarUserId);
+  }, [selectedCalendarUserId]);
 
   // Update routes count when routes change
   useEffect(() => {
@@ -217,7 +264,7 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
             Reminders Calendar
           </h2>
           <CallbackCalendar 
-            reminders={reminders}
+            reminders={selectedCalendarUserId ? sharedCalendarReminders : reminders}
             leads={allLeads}
             onLeadClick={(leadId) => {
               // Find the lead and navigate to its status tab
@@ -226,6 +273,10 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
                 handleStatClick(lead.status);
               }
             }}
+            onCalendarChange={(userId, ownerName) => {
+              setSelectedCalendarUserId(userId);
+              setSelectedCalendarOwnerName(ownerName);
+            }}
           />
         </div>
 
@@ -233,12 +284,17 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
         <div className="glass-card p-6">
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
             <Bell className="w-5 h-5 text-emerald-400" />
-            Upcoming Reminders
+            {selectedCalendarOwnerName 
+              ? `${selectedCalendarOwnerName}'s Upcoming Reminders`
+              : 'Upcoming Reminders'
+            }
           </h2>
           <UpcomingReminders 
-            reminders={reminders}
+            reminders={selectedCalendarUserId ? sharedCalendarReminders : reminders}
             leads={allLeads}
             calendarEvents={calendarEvents}
+            selectedCalendarUserId={selectedCalendarUserId}
+            selectedCalendarOwnerName={selectedCalendarOwnerName}
             onLeadClick={(leadId) => {
               // Find the lead and navigate to its status tab
               const lead = allLeads.find(l => l.id === leadId);
@@ -248,8 +304,12 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
             }}
             onReminderUpdate={() => {
               // Refresh reminders when a reminder is updated
-              fetchAllReminders();
-              fetchCalendarEvents();
+              if (selectedCalendarUserId) {
+                fetchRemindersForCalendar(selectedCalendarUserId);
+              } else {
+                fetchAllReminders();
+              }
+              fetchCalendarEvents(selectedCalendarUserId);
             }}
           />
         </div>

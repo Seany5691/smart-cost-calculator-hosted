@@ -28,9 +28,10 @@ interface WeekViewProps {
   leads: Lead[];
   onLeadClick: (leadId: string) => void;
   onEventClick: (event: CalendarEvent) => void;
+  onDateClick?: (date: Date) => void;
 }
 
-export default function WeekView({ currentDate, reminders, events, leads, onLeadClick, onEventClick }: WeekViewProps) {
+export default function WeekView({ currentDate, reminders, events, leads, onLeadClick, onEventClick, onDateClick }: WeekViewProps) {
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   
   // Get week dates
@@ -89,8 +90,11 @@ export default function WeekView({ currentDate, reminders, events, leads, onLead
               ${isPast ? 'opacity-70' : ''}
             `}
           >
-            {/* Day header */}
-            <div className="mb-3 pb-2 border-b border-emerald-500/20">
+            {/* Day header - Clickable */}
+            <button
+              onClick={() => onDateClick && onDateClick(date)}
+              className="w-full mb-3 pb-2 border-b border-emerald-500/20 hover:bg-white/5 rounded-lg transition-colors text-left"
+            >
               <div className="text-xs text-emerald-300">{dayNames[date.getDay()]}</div>
               <div className={`text-lg font-bold ${isToday ? 'text-emerald-400' : 'text-white'}`}>
                 {date.getDate()}
@@ -98,7 +102,12 @@ export default function WeekView({ currentDate, reminders, events, leads, onLead
               <div className="text-xs text-emerald-200">
                 {date.toLocaleDateString('en-US', { month: 'short' })}
               </div>
-            </div>
+              {(dayReminders.length > 0 || dayEvents.length > 0) && (
+                <div className="text-[10px] text-emerald-400 mt-1">
+                  {dayEvents.length} events, {dayReminders.length} reminders
+                </div>
+              )}
+            </button>
 
             {/* Items list */}
             <div className="space-y-2 overflow-y-auto max-h-[400px] custom-scrollbar">
@@ -156,9 +165,28 @@ export default function WeekView({ currentDate, reminders, events, leads, onLead
                           {formatReminderTime(reminder.reminder_time || null, reminder.is_all_day)}
                         </div>
                         {leadData && (
-                          <div className="text-xs text-emerald-200 mt-1 truncate">
-                            <User className="w-3 h-3 inline mr-1" />
-                            {leadData.name}
+                          <div className="space-y-0.5 mt-1">
+                            <div className="text-xs text-emerald-200 truncate">
+                              <User className="w-3 h-3 inline mr-1" />
+                              {leadData.name}
+                            </div>
+                            {leadData.contact_person && (
+                              <div className="text-[10px] text-emerald-300 truncate">
+                                Contact: {leadData.contact_person}
+                              </div>
+                            )}
+                            {leadData.town && (
+                              <div className="text-[10px] text-emerald-300 truncate flex items-center gap-1">
+                                <MapPin className="w-2.5 h-2.5" />
+                                {leadData.town}
+                              </div>
+                            )}
+                            {leadData.phone && (
+                              <div className="text-[10px] text-emerald-300 truncate flex items-center gap-1">
+                                <Phone className="w-2.5 h-2.5" />
+                                {leadData.phone}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

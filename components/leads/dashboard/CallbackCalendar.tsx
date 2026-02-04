@@ -23,6 +23,7 @@ interface CallbackCalendarProps {
   reminders: LeadReminder[];
   leads: Lead[];
   onLeadClick: (leadId: string) => void;
+  onCalendarChange?: (userId: string | null, ownerName: string | null) => void;
 }
 
 interface CalendarDate {
@@ -50,7 +51,7 @@ interface CalendarEvent {
   can_add?: boolean;
 }
 
-export default function CallbackCalendar({ reminders, leads, onLeadClick }: CallbackCalendarProps) {
+export default function CallbackCalendar({ reminders, leads, onLeadClick, onCalendarChange }: CallbackCalendarProps) {
   const [mounted, setMounted] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -81,12 +82,19 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick }: Call
     if (!selectedCalendarUserId) {
       // Viewing own calendar - can always add
       setCanAddToSelectedCalendar(true);
+      if (onCalendarChange) {
+        onCalendarChange(null, null);
+      }
     } else {
       // Viewing shared calendar - check permission
       const sharedCal = sharedCalendars.find(cal => cal.owner_user_id === selectedCalendarUserId);
       setCanAddToSelectedCalendar(sharedCal?.can_add_events || false);
+      if (onCalendarChange) {
+        const ownerName = sharedCal?.owner_name || sharedCal?.owner_username || 'Unknown';
+        onCalendarChange(selectedCalendarUserId, ownerName);
+      }
     }
-  }, [selectedCalendarUserId, sharedCalendars]);
+  }, [selectedCalendarUserId, sharedCalendars, onCalendarChange]);
 
   // Fetch calendars shared with me
   const fetchSharedCalendars = async () => {

@@ -37,6 +37,8 @@ interface AdvancedCalendarProps {
   leads: Lead[];
   onLeadClick: (leadId: string) => void;
   onReminderUpdate?: () => void;
+  selectedCalendarUserId?: string | null;
+  hideCalendarSelector?: boolean;
 }
 
 interface CalendarEvent {
@@ -56,7 +58,7 @@ interface CalendarEvent {
   can_add?: boolean;
 }
 
-export default function AdvancedCalendar({ reminders, leads, onLeadClick, onReminderUpdate }: AdvancedCalendarProps) {
+export default function AdvancedCalendar({ reminders, leads, onLeadClick, onReminderUpdate, selectedCalendarUserId: externalSelectedCalendarUserId, hideCalendarSelector = false }: AdvancedCalendarProps) {
   const [mounted, setMounted] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -70,12 +72,46 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick, onRemi
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [sharedCalendars, setSharedCalendars] = useState<any[]>([]);
-  const [selectedCalendarUserId, setSelectedCalendarUserId] = useState<string | null>(null);
+  const [internalSelectedCalendarUserId, setInternalSelectedCalendarUserId] = useState<string | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const [canAddToSelectedCalendar, setCanAddToSelectedCalendar] = useState(true);
   const { toast } = useToast();
+
+  // Use external selectedCalendarUserId if provided, otherwise use internal state
+  const selectedCalendarUserId = externalSelectedCalendarUserId !== undefined 
+    ? externalSelectedCalendarUserId 
+    : internalSelectedCalendarUserId;
+
+  // Helper function to parse date strings in LOCAL timezone (not UTC)
+  const parseLocalDate = (dateStr: string): Date => {
+    const dateOnly = dateStr.split('T')[0];
+    const [year, month, day] = dateOnly.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  // Get lead data for a reminder
+  const getLeadData = (leadId: string) => {
+    return leads.find(l => l.id === leadId);
+  };
+
+  // Get items for a specific date
+  const getItemsForDate = (date: Date) => {
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    
+    const dateReminders = reminders.filter(r => {
+      if (!r.reminder_date) return false;
+      return r.reminder_date.split('T')[0] === dateStr;
+    });
+
+    const dateEvents = calendarEvents.filter(e => {
+      if (!e.event_date) return false;
+      return e.event_date.split('T')[0] === dateStr;
+    });
+
+    return { reminders: dateReminders, events: dateEvents };
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -285,12 +321,12 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick, onRemi
     <div className="relative">
       {/* Header */}
       <div className="space-y-4 mb-6">
-        {/* Calendar Selector */}
-        {sharedCalendars.length > 0 && (
+        {/* Calendar Selector - Only show if not hidden by parent */}
+        {!hideCalendarSelector && sharedCalendars.length > 0 && (
           <div className="flex justify-center">
             <select
               value={selectedCalendarUserId || ''}
-              onChange={(e) => setSelectedCalendarUserId(e.target.value || null)}
+              onChange={(e) => setInternalSelectedCalendarUserId(e.target.value || null)}
               className="px-4 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-white/15 transition-colors"
             >
               <option value="">📅 My Calendar</option>
@@ -433,6 +469,10 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick, onRemi
               onEventClick={(event) => {
                 setSelectedEvent(event);
                 setShowEditEventModal(true);
+              }}
+              onDateClick={(date) => {
+                setSelectedDate(date);
+                setShowPopover(true);
               }}
             />
           )}

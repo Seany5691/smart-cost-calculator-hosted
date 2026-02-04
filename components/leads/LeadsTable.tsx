@@ -1026,6 +1026,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
       {attachmentsModalLead && (
         <AttachmentsSection
           leadId={attachmentsModalLead.id}
+          leadName={attachmentsModalLead.name}
           onClose={() => setAttachmentsModalLead(null)}
         />
       )}

@@ -269,6 +269,7 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
       {showAttachments && (
         <AttachmentsSection
           leadId={lead.id}
+          leadName={lead.name}
           onClose={() => setShowAttachments(false)}
         />
       )}

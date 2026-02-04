@@ -19,13 +19,14 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get('date_from');
     const dateTo = searchParams.get('date_to');
     const includeCompleted = searchParams.get('includeCompleted') === 'true';
+    const filterUserId = searchParams.get('user_id'); // Filter by specific user (for viewing shared calendars)
     
     // Pagination
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = (page - 1) * limit;
 
-    // Build query with filters - include both owned and shared reminders
+    // Build query with filters
     let sql = `
       SELECT 
         r.id,
@@ -61,11 +62,21 @@ export async function GET(request: NextRequest) {
       JOIN users u ON r.user_id = u.id
       LEFT JOIN leads l ON r.lead_id = l.id
       LEFT JOIN reminder_shares rs ON r.id = rs.reminder_id
-      WHERE (r.user_id = $1 OR rs.shared_with_user_id = $1)
+      WHERE 1=1
     `;
 
     const params: any[] = [authResult.user.userId];
     let paramIndex = 2;
+
+    // If filtering by specific user (viewing shared calendar), only show that user's reminders
+    // Otherwise, show both owned and shared reminders
+    if (filterUserId) {
+      sql += ` AND r.user_id = $${paramIndex}`;
+      params.push(filterUserId);
+      paramIndex++;
+    } else {
+      sql += ` AND (r.user_id = $1 OR rs.shared_with_user_id = $1)`;
+    }
 
     // Apply status filter
     if (status) {
@@ -102,15 +113,24 @@ export async function GET(request: NextRequest) {
       paramIndex++;
     }
 
-    // Get total count with same filters - include both owned and shared reminders
+    // Get total count with same filters
     let countSql = `
       SELECT COUNT(DISTINCT r.id) 
       FROM reminders r
       LEFT JOIN reminder_shares rs ON r.id = rs.reminder_id
-      WHERE (r.user_id = $1 OR rs.shared_with_user_id = $1)
+      WHERE 1=1
     `;
     const countParams: any[] = [authResult.user.userId];
     let countParamIndex = 2;
+
+    // Apply same user filter to count
+    if (filterUserId) {
+      countSql += ` AND r.user_id = ${countParamIndex}`;
+      countParams.push(filterUserId);
+      countParamIndex++;
+    } else {
+      countSql += ` AND (r.user_id = $1 OR rs.shared_with_user_id = $1)`;
+    }
 
     if (status) {
       countSql += ` AND r.status = $${countParamIndex}`;

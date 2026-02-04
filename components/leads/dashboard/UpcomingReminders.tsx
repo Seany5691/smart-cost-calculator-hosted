@@ -19,6 +19,8 @@ interface UpcomingRemindersProps {
   onLeadClick: (leadId: string) => void;
   onReminderUpdate?: () => void;
   calendarEvents?: CalendarEvent[];
+  selectedCalendarUserId?: string | null;
+  selectedCalendarOwnerName?: string | null;
 }
 
 interface CalendarEvent {
@@ -45,7 +47,7 @@ interface GroupedCalendarEvent extends CalendarEvent {
 
 type TimeRange = 'all' | 'today' | 'tomorrow' | 'week' | 'next7';
 
-export default function UpcomingReminders({ reminders, leads, onLeadClick, onReminderUpdate, calendarEvents = [] }: UpcomingRemindersProps) {
+export default function UpcomingReminders({ reminders, leads, onLeadClick, onReminderUpdate, calendarEvents = [], selectedCalendarUserId, selectedCalendarOwnerName }: UpcomingRemindersProps) {
   const [selectedRange, setSelectedRange] = useState<TimeRange>('all');
   const [updatingReminders, setUpdatingReminders] = useState<Set<string>>(new Set());
 
@@ -142,8 +144,15 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
     const groupedEvents = new Map<string, GroupedCalendarEvent>();
     
     calendarEvents.forEach(event => {
-      // Only show events where user is the owner (not shared events from others)
-      if (!event.is_owner) return;
+      // When viewing a shared calendar, show only that user's events
+      // When viewing own calendar, show only own events (not shared events from others)
+      if (selectedCalendarUserId) {
+        // Viewing shared calendar - only show events created by that user
+        if (event.created_by !== selectedCalendarUserId) return;
+      } else {
+        // Viewing own calendar - only show events where user is the owner
+        if (!event.is_owner) return;
+      }
       
       // Filter out past events (events where the date has passed)
       // Parse event date in LOCAL timezone

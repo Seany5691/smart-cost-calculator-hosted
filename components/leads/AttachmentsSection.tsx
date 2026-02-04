@@ -7,8 +7,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Paperclip, Upload, Download, Trash2, FileText, X, Loader2, AlertTriangle } from 'lucide-react';
+import { Paperclip, Upload, Download, Trash2, FileText, X, Loader2, AlertTriangle, Camera } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast/useToast';
+import DocumentScannerModal from './DocumentScanner/DocumentScannerModal';
+import ErrorBoundary from './DocumentScanner/ErrorBoundary';
 
 interface Attachment {
   id: string;
@@ -24,10 +26,11 @@ interface Attachment {
 
 interface AttachmentsSectionProps {
   leadId: string;
+  leadName: string;
   onClose?: () => void;
 }
 
-export default function AttachmentsSection({ leadId, onClose }: AttachmentsSectionProps) {
+export default function AttachmentsSection({ leadId, leadName, onClose }: AttachmentsSectionProps) {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -35,6 +38,7 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -320,34 +324,46 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
           {/* Content - Scrollable with custom scrollbar */}
           <div className="overflow-y-auto max-h-[calc(90vh-180px)] p-6 custom-scrollbar">
             {/* Upload Section */}
-            <div className="mb-6 p-4 bg-white/5 border border-emerald-500/20 rounded-lg backdrop-blur-sm">
-              <div className="flex items-start gap-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-emerald-200 mb-2">
-                    Upload File (Max 10MB)
-                  </label>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    onChange={handleFileSelect}
-                    disabled={uploading}
-                    className="block w-full text-sm text-emerald-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-500/20 file:text-emerald-300 hover:file:bg-emerald-500/30 disabled:opacity-50 file:cursor-pointer cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Description (optional)"
-                    disabled={uploading}
-                    className="mt-2 w-full px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
-                  />
-                </div>
-                {uploading && (
-                  <div className="flex items-center gap-2 text-emerald-400">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span className="text-sm">Uploading...</span>
+            <div className="mb-6 space-y-3">
+              {/* Scan Document Button */}
+              <button
+                onClick={() => setShowScanner(true)}
+                className="w-full py-4 px-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-3 group"
+              >
+                <Camera className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <span>Scan Document</span>
+              </button>
+
+              {/* File Upload Section */}
+              <div className="p-4 bg-white/5 border border-emerald-500/20 rounded-lg backdrop-blur-sm">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-emerald-200 mb-2">
+                      Upload File (Max 10MB)
+                    </label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      onChange={handleFileSelect}
+                      disabled={uploading}
+                      className="block w-full text-sm text-emerald-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-500/20 file:text-emerald-300 hover:file:bg-emerald-500/30 disabled:opacity-50 file:cursor-pointer cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Description (optional)"
+                      disabled={uploading}
+                      className="mt-2 w-full px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                    />
                   </div>
-                )}
+                  {uploading && (
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="text-sm">Uploading...</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -424,6 +440,21 @@ export default function AttachmentsSection({ leadId, onClose }: AttachmentsSecti
           </div>
         </div>
       </div>
+
+      {/* Document Scanner Modal */}
+      {showScanner && (
+        <ErrorBoundary onClose={() => setShowScanner(false)}>
+          <DocumentScannerModal
+            leadId={leadId}
+            leadName={leadName}
+            onClose={() => setShowScanner(false)}
+            onComplete={() => {
+              setShowScanner(false);
+              fetchAttachments();
+            }}
+          />
+        </ErrorBoundary>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && createPortal(

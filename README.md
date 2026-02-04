@@ -7,6 +7,7 @@ A comprehensive cost calculation application for smart technology solutions, mig
 - **Smart Calculator**: Multi-step wizard for calculating costs with role-based pricing
 - **Smart Scraper**: Web scraping for Google Maps business data extraction
 - **Lead Management**: CRM system with status tracking, notes, reminders, and route generation
+- **Document Scanner**: Mobile-first document scanning with automatic enhancement, edge detection, and PDF generation
 - **Admin Console**: Centralized management for pricing, configurations, and users
 - **Unified Dashboard**: Aggregated stats and tools from all components
 

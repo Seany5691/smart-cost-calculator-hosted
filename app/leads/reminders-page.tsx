@@ -66,6 +66,10 @@ export default function RemindersPage() {
   const [filterStatus, setFilterStatus] = useState<'active' | 'completed' | 'all'>('active');
   const [showType, setShowType] = useState<'all' | 'reminders' | 'events'>('all');
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [selectedCalendarUserId, setSelectedCalendarUserId] = useState<string | null>(null);
+  const [selectedCalendarOwnerName, setSelectedCalendarOwnerName] = useState<string | null>(null);
+  const [sharedCalendars, setSharedCalendars] = useState<any[]>([]);
+  const [sharedCalendarReminders, setSharedCalendarReminders] = useState<LeadReminder[]>([]);
 
   const fetchLeads = useCallback(async () => {
     try {
@@ -78,6 +82,40 @@ export default function RemindersPage() {
       }
     } catch (error) {
       console.error('Error fetching leads:', error);
+    }
+  }, [token]);
+
+  const fetchSharedCalendars = useCallback(async () => {
+    try {
+      const response = await fetch('/api/calendar/shared-with-me', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSharedCalendars(data.shared_calendars || []);
+      }
+    } catch (error) {
+      console.error('Error fetching shared calendars:', error);
+    }
+  }, [token]);
+
+  const fetchRemindersForCalendar = useCallback(async (userId?: string | null) => {
+    try {
+      let url = '/api/reminders';
+      if (userId) {
+        url += `?user_id=${userId}`;
+      }
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSharedCalendarReminders(data.reminders || []);
+      }
+    } catch (error) {
+      console.error('Error fetching reminders for calendar:', error);
     }
   }, [token]);
 
@@ -123,8 +161,16 @@ export default function RemindersPage() {
       fetchReminders();
       fetchCalendarEventsData();
       fetchLeads();
+      fetchSharedCalendars();
     }
-  }, [token, fetchReminders, fetchCalendarEventsData, fetchLeads]);
+  }, [token, fetchReminders, fetchCalendarEventsData, fetchLeads, fetchSharedCalendars]);
+
+  // Fetch reminders for selected calendar when it changes
+  useEffect(() => {
+    if (token) {
+      fetchRemindersForCalendar(selectedCalendarUserId);
+    }
+  }, [selectedCalendarUserId, token, fetchRemindersForCalendar]);
 
   // Update local reminders when store reminders change
   // Use useMemo to prevent unnecessary recalculations
@@ -424,19 +470,64 @@ export default function RemindersPage() {
         </p>
       </div>
 
+      {/* Shared Calendar Selector - At page level, above both calendar and list */}
+      {sharedCalendars.length > 0 && (
+        <div className="glass-card p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CalendarIcon className="w-5 h-5 text-emerald-400" />
+              <span className="text-white font-medium">
+                {selectedCalendarOwnerName 
+                  ? `Viewing ${selectedCalendarOwnerName}'s Calendar`
+                  : 'Viewing My Calendar'
+                }
+              </span>
+            </div>
+            <select
+              value={selectedCalendarUserId || ''}
+              onChange={(e) => {
+                const userId = e.target.value || null;
+                setSelectedCalendarUserId(userId);
+                if (userId) {
+                  const sharedCal = sharedCalendars.find(cal => cal.owner_user_id === userId);
+                  setSelectedCalendarOwnerName(sharedCal?.owner_name || sharedCal?.owner_username || null);
+                } else {
+                  setSelectedCalendarOwnerName(null);
+                }
+              }}
+              className="px-4 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 cursor-pointer hover:bg-white/15 transition-colors"
+            >
+              <option value="">📅 My Calendar</option>
+              {sharedCalendars.map(cal => (
+                <option key={cal.id} value={cal.owner_user_id}>
+                  📅 {cal.owner_name || cal.owner_username}'s Calendar
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
       {/* Advanced Calendar Component */}
       <div className="glass-card p-6 mb-6">
         <h3 className="text-xl font-semibold text-white mb-4">Calendar View</h3>
+        
         <AdvancedCalendar 
-          reminders={storeReminders}
+          reminders={selectedCalendarUserId ? sharedCalendarReminders : storeReminders}
           leads={leads}
+          selectedCalendarUserId={selectedCalendarUserId}
+          hideCalendarSelector={true}
           onLeadClick={(leadId) => {
             // Navigate to lead details or open modal
             window.location.href = `/leads?leadId=${leadId}`;
           }}
           onReminderUpdate={() => {
             // Refresh reminders when one is updated
-            fetchReminders();
+            if (selectedCalendarUserId) {
+              fetchRemindersForCalendar(selectedCalendarUserId);
+            } else {
+              fetchReminders();
+            }
             fetchCalendarEventsData();
           }}
         />

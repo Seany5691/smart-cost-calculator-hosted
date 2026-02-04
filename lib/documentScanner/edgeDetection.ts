@@ -59,12 +59,7 @@ export function gaussianBlur(imageData: ImageData): ImageData {
 
   // Create output buffer
   const outputData = new Uint8ClampedArray(width * height * 4);
-  const output: ImageData = {
-    width,
-    height,
-    data: outputData,
-    colorSpace: "srgb" as PredefinedColorSpace,
-  };
+  const output = new ImageData(outputData, width, height);
 
   const kernelSize = 5;
   const radius = 2; // (5 - 1) / 2

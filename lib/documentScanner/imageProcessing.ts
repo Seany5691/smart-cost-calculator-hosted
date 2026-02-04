@@ -484,14 +484,9 @@ export function applyConvolution(
   }
 
   // Create output ImageData
-  // Use a compatible approach that works in both browser and Node.js test environments
+  // Create a proper ImageData object using the ImageData constructor
   const outputData = new Uint8ClampedArray(width * height * 4);
-  const output: ImageData = {
-    width,
-    height,
-    data: outputData,
-    colorSpace: "srgb" as PredefinedColorSpace,
-  };
+  const output = new ImageData(outputData, width, height);
 
   // Calculate kernel radius (how many pixels to look in each direction)
   const radius = Math.floor(kernelSize / 2);
@@ -831,12 +826,7 @@ export function warpPerspective(
 
   // Create output ImageData
   const dstData = new Uint8ClampedArray(dstWidth * dstHeight * 4);
-  const output: ImageData = {
-    width: dstWidth,
-    height: dstHeight,
-    data: dstData,
-    colorSpace: "srgb" as PredefinedColorSpace,
-  };
+  const output = new ImageData(dstData, dstWidth, dstHeight);
 
   // Extract matrix elements
   const [h11, h12, h13, h21, h22, h23, h31, h32, h33] = matrix;

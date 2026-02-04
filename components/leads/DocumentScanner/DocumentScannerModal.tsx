@@ -465,17 +465,11 @@ export default function DocumentScannerModal({
         isProcessing: false,
       }));
 
-      console.log("Processing complete. Processed images:", processedImages.length);
-      console.log("First processed image:", processedImages[0]);
-
       // Check if any pages need manual crop
       const needsCrop = processedImages.filter((img) => img.markedForCrop);
 
-      console.log("Pages needing crop:", needsCrop.length);
-
       if (needsCrop.length > 0) {
         // Transition to crop phase
-        console.log("Transitioning to crop phase");
         setState((prev) => ({
           ...prev,
           currentPhase: "crop",
@@ -483,7 +477,6 @@ export default function DocumentScannerModal({
         }));
       } else {
         // Transition to naming phase
-        console.log("Transitioning to name phase");
         setState((prev) => ({
           ...prev,
           currentPhase: "name",

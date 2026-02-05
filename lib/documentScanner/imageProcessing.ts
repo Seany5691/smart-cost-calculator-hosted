@@ -951,8 +951,11 @@ export function applyPerspectiveTransform(
   imageData: ImageData,
   edges: EdgePoints,
 ): ImageData {
-  // Calculate target dimensions maintaining aspect ratio
-  // Width: average of top and bottom edge lengths
+  // A4 dimensions at 250 DPI (good balance between quality and file size)
+  const A4_WIDTH = 2100;
+  const A4_HEIGHT = 2970;
+
+  // Calculate current document dimensions
   const topWidth = Math.sqrt(
     Math.pow(edges.topRight.x - edges.topLeft.x, 2) +
       Math.pow(edges.topRight.y - edges.topLeft.y, 2),
@@ -961,9 +964,8 @@ export function applyPerspectiveTransform(
     Math.pow(edges.bottomRight.x - edges.bottomLeft.x, 2) +
       Math.pow(edges.bottomRight.y - edges.bottomLeft.y, 2),
   );
-  const targetWidth = Math.round((topWidth + bottomWidth) / 2);
+  const avgWidth = (topWidth + bottomWidth) / 2;
 
-  // Height: average of left and right edge lengths
   const leftHeight = Math.sqrt(
     Math.pow(edges.bottomLeft.x - edges.topLeft.x, 2) +
       Math.pow(edges.bottomLeft.y - edges.topLeft.y, 2),
@@ -972,9 +974,28 @@ export function applyPerspectiveTransform(
     Math.pow(edges.bottomRight.x - edges.topRight.x, 2) +
       Math.pow(edges.bottomRight.y - edges.topRight.y, 2),
   );
-  const targetHeight = Math.round((leftHeight + rightHeight) / 2);
+  const avgHeight = (leftHeight + rightHeight) / 2;
 
-  // Define destination corners as a perfect rectangle
+  // Determine if document is portrait or landscape
+  const isPortrait = avgHeight > avgWidth;
+
+  // Set target dimensions based on orientation
+  let targetWidth, targetHeight;
+  if (isPortrait) {
+    targetWidth = A4_WIDTH;
+    targetHeight = A4_HEIGHT;
+  } else {
+    targetWidth = A4_HEIGHT; // Swap for landscape
+    targetHeight = A4_WIDTH;
+  }
+
+  console.log("[Perspective Transform] Target A4 dimensions:", {
+    width: targetWidth,
+    height: targetHeight,
+    orientation: isPortrait ? "portrait" : "landscape",
+  });
+
+  // Define destination corners as a perfect rectangle (A4 proportions)
   const dstCorners: EdgePoints = {
     topLeft: { x: 0, y: 0 },
     topRight: { x: targetWidth, y: 0 },
@@ -1062,7 +1083,7 @@ export async function processImage(
     console.log("[Process Image] Edge detection result:", detectedEdges);
 
     // Step 4: Apply perspective transform if edges were detected
-    // This will straighten and crop the document
+    // This will straighten and crop the document to A4 proportions
     if (detectedEdges) {
       try {
         imageData = applyPerspectiveTransform(imageData, detectedEdges);
@@ -1079,17 +1100,18 @@ export async function processImage(
       }
     }
 
-    // Step 5: Enhance contrast by factor of 1.3 (reduced from 1.5 to avoid over-processing)
-    imageData = enhanceContrast(imageData, 1.3);
+    // Step 5: Enhance contrast by factor of 1.8 (increased for better text clarity)
+    imageData = enhanceContrast(imageData, 1.8);
 
-    // Step 6: Adjust brightness to target level of 200 (increased from 180 for brighter output)
-    imageData = adjustBrightness(imageData, 200);
+    // Step 6: Adjust brightness to target level of 220 (brighter for cleaner background)
+    imageData = adjustBrightness(imageData, 220);
 
-    // Step 7: Apply sharpening to improve text clarity
+    // Step 7: Apply sharpening TWICE for maximum text clarity
     imageData = sharpenImage(imageData);
+    imageData = sharpenImage(imageData); // Second pass for extra sharpness
 
     // Step 8: Convert ImageData back to Blob with MAXIMUM quality
-    const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.98); // Maximum quality
+    const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.98);
 
     // Step 9: Compress image to target size of 3MB (increased for better quality)
     const { compressImage } = await import("./imageCompression");

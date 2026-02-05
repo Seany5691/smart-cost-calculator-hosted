@@ -505,10 +505,76 @@ export default function DocumentScannerModal({
   };
 
   /**
-   * Handle continue from Final Review
-   * Requirements: 17.5
+   * Handle rotate image 90 degrees clockwise
+   * Requirements: Phase 2 - Rotation controls
    */
-  const handleContinueFromFinalReview = () => {
+  const handleRotateImage = async (imageId: string) => {
+    const image = state.images.find((img) => img.id === imageId) as ProcessedImage;
+    if (!image) return;
+
+    try {
+      // Create canvas to rotate image
+      const img = new Image();
+      img.src = image.processedDataUrl;
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      // Create canvas with swapped dimensions (90° rotation)
+      const canvas = document.createElement("canvas");
+      canvas.width = img.height;
+      canvas.height = img.width;
+
+      const ctx = canvas.getContext("2d")!;
+
+      // Rotate 90° clockwise
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((90 * Math.PI) / 180);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      // Convert to blob
+      const rotatedBlob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error("Failed to create blob"));
+          },
+          "image/jpeg",
+          0.95
+        );
+      });
+
+      // Convert to data URL
+      const rotatedDataUrl = await blobToDataUrl(rotatedBlob);
+
+      // Update image in state
+      setState((prev) => ({
+        ...prev,
+        images: prev.images.map((img) =>
+          img.id === imageId
+            ? {
+                ...img,
+                processedBlob: rotatedBlob,
+                processedDataUrl: rotatedDataUrl,
+              }
+            : img
+        ),
+      }));
+
+      toast.success("Image rotated", {
+        message: "Page rotated 90° clockwise",
+        section: "leads",
+      });
+    } catch (error) {
+      console.error("Failed to rotate image:", error);
+      toast.error("Rotation failed", {
+        message: "Failed to rotate image. Please try again.",
+        section: "leads",
+      });
+    }
+  };
     // Check if any pages need manual crop
     const needsCrop = state.images.filter((img) => img.markedForCrop);
 
@@ -820,6 +886,7 @@ export default function DocumentScannerModal({
             onMarkRetake={handleMarkRetake}
             onMarkCrop={handleMarkCrop}
             onDelete={handleDelete}
+            onRotate={handleRotateImage}
             onContinue={handleContinueFromFinalReview}
             onRetake={handleRetake}
           />

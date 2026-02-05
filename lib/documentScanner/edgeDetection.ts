@@ -276,11 +276,28 @@ export function detectDocumentEdges(
     return null;
   }
 
-  // Step 3: Find largest contour
-  let largestContour = contours[0];
+  // Step 3: Find largest contour that represents the PAGE (not internal features)
+  // Filter contours by minimum area (must be at least 30% of image)
+  const imageArea = width * height;
+  const minArea = imageArea * 0.3; // Page must be at least 30% of image
+  
+  const validContours = contours.filter(contour => {
+    const area = contourArea(contour);
+    return area >= minArea;
+  });
+
+  console.log(`[Edge Detection] Found ${validContours.length} valid contours (>30% of image)`);
+
+  if (validContours.length === 0) {
+    console.log("[Edge Detection] No valid page contours found");
+    return null;
+  }
+
+  // Find the largest valid contour (this should be the page)
+  let largestContour = validContours[0];
   let largestArea = contourArea(largestContour);
 
-  for (const contour of contours) {
+  for (const contour of validContours) {
     const area = contourArea(contour);
     if (area > largestArea) {
       largestArea = area;
@@ -288,7 +305,8 @@ export function detectDocumentEdges(
     }
   }
 
-  console.log(`[Edge Detection] Largest contour has ${largestContour.length} points, area: ${largestArea}`);
+  const areaPercentage = ((largestArea / imageArea) * 100).toFixed(1);
+  console.log(`[Edge Detection] Largest contour: ${largestContour.length} points, area: ${largestArea} (${areaPercentage}% of image)`);
 
   // Step 4: Approximate contour as polygon
   const perimeter = largestContour.length;

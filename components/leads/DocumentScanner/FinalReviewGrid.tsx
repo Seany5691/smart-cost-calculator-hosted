@@ -17,6 +17,7 @@ import {
   Crop,
   Trash2,
   RotateCcw,
+  RotateCw,
   CheckCircle2,
   AlertCircle,
   ArrowRight,
@@ -27,6 +28,7 @@ export default function FinalReviewGrid({
   onMarkRetake,
   onMarkCrop,
   onDelete,
+  onRotate,
   onContinue,
   onRetake,
 }: FinalReviewGridProps) {
@@ -327,6 +329,21 @@ export default function FinalReviewGrid({
                 role="group"
                 aria-label={`Actions for page ${image.pageNumber}`}
               >
+                {/* Rotate 90° */}
+                <button
+                  onClick={() => onRotate(image.id)}
+                  className="
+                    flex items-center justify-center px-2 py-2 rounded-md
+                    text-xs font-medium transition-colors
+                    bg-white/10 text-blue-300 hover:bg-blue-500/20 border border-blue-500/30
+                    min-h-[44px] sm:min-h-[40px]
+                  "
+                  title="Rotate 90° clockwise"
+                  aria-label={`Rotate page ${image.pageNumber} 90 degrees`}
+                >
+                  <RotateCw className="w-4 h-4" aria-hidden="true" />
+                </button>
+
                 {/* Mark for Retake */}
                 <button
                   onClick={() => onMarkRetake(image.id)}

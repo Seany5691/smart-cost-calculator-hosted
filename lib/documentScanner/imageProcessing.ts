@@ -955,7 +955,7 @@ export function applyPerspectiveTransform(
   const A4_WIDTH = 2100;
   const A4_HEIGHT = 2970;
 
-  // Calculate current document dimensions
+  // Calculate current document dimensions from detected corners
   const topWidth = Math.sqrt(
     Math.pow(edges.topRight.x - edges.topLeft.x, 2) +
       Math.pow(edges.topRight.y - edges.topLeft.y, 2),
@@ -976,29 +976,46 @@ export function applyPerspectiveTransform(
   );
   const avgHeight = (leftHeight + rightHeight) / 2;
 
-  // Determine if document is portrait or landscape
-  // Portrait: height > width (taller than wide)
-  // Landscape: width > height (wider than tall)
-  const isPortrait = avgHeight > avgWidth;
+  // Calculate aspect ratio
+  const aspectRatio = avgWidth / avgHeight;
+
+  // Determine orientation
+  // Portrait: height > width (aspect ratio < 1)
+  // Landscape: width > height (aspect ratio > 1)
+  // Use threshold to handle near-square documents
+  const isPortrait = aspectRatio < 0.9; // Less than 0.9 means clearly portrait
+  const isLandscape = aspectRatio > 1.1; // Greater than 1.1 means clearly landscape
 
   // Set target dimensions based on orientation
   let targetWidth, targetHeight;
+  
   if (isPortrait) {
+    // Portrait: use standard A4 portrait dimensions
     targetWidth = A4_WIDTH;
     targetHeight = A4_HEIGHT;
-  } else {
+  } else if (isLandscape) {
     // Landscape: swap dimensions
     targetWidth = A4_HEIGHT;
     targetHeight = A4_WIDTH;
+  } else {
+    // Near-square: use the larger dimension as height (assume portrait)
+    targetWidth = A4_WIDTH;
+    targetHeight = A4_HEIGHT;
   }
 
   console.log("[Perspective Transform] Document analysis:", {
     detectedWidth: avgWidth.toFixed(0),
     detectedHeight: avgHeight.toFixed(0),
-    aspectRatio: (avgWidth / avgHeight).toFixed(2),
-    orientation: isPortrait ? "portrait" : "landscape",
+    aspectRatio: aspectRatio.toFixed(3),
+    orientation: isPortrait ? "PORTRAIT" : isLandscape ? "LANDSCAPE" : "SQUARE",
     targetWidth,
     targetHeight,
+    corners: {
+      topLeft: `(${edges.topLeft.x.toFixed(0)}, ${edges.topLeft.y.toFixed(0)})`,
+      topRight: `(${edges.topRight.x.toFixed(0)}, ${edges.topRight.y.toFixed(0)})`,
+      bottomLeft: `(${edges.bottomLeft.x.toFixed(0)}, ${edges.bottomLeft.y.toFixed(0)})`,
+      bottomRight: `(${edges.bottomRight.x.toFixed(0)}, ${edges.bottomRight.y.toFixed(0)})`,
+    }
   });
 
   // Define destination corners as a perfect rectangle (A4 proportions)

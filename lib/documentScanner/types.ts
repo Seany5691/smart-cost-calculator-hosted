@@ -142,6 +142,7 @@ export interface FinalReviewGridProps {
   onMarkRetake: (imageId: string) => void; // Mark page for retake
   onMarkCrop: (imageId: string) => void; // Mark page for manual crop
   onDelete: (imageId: string) => void; // Delete page
+  onRotate: (imageId: string) => void; // Rotate page 90 degrees clockwise
   onContinue: () => void; // Continue to naming or crop adjustment
   onRetake: () => void; // Start retake mode
 }

@@ -977,6 +977,8 @@ export function applyPerspectiveTransform(
   const avgHeight = (leftHeight + rightHeight) / 2;
 
   // Determine if document is portrait or landscape
+  // Portrait: height > width (taller than wide)
+  // Landscape: width > height (wider than tall)
   const isPortrait = avgHeight > avgWidth;
 
   // Set target dimensions based on orientation
@@ -985,14 +987,18 @@ export function applyPerspectiveTransform(
     targetWidth = A4_WIDTH;
     targetHeight = A4_HEIGHT;
   } else {
-    targetWidth = A4_HEIGHT; // Swap for landscape
+    // Landscape: swap dimensions
+    targetWidth = A4_HEIGHT;
     targetHeight = A4_WIDTH;
   }
 
-  console.log("[Perspective Transform] Target A4 dimensions:", {
-    width: targetWidth,
-    height: targetHeight,
+  console.log("[Perspective Transform] Document analysis:", {
+    detectedWidth: avgWidth.toFixed(0),
+    detectedHeight: avgHeight.toFixed(0),
+    aspectRatio: (avgWidth / avgHeight).toFixed(2),
     orientation: isPortrait ? "portrait" : "landscape",
+    targetWidth,
+    targetHeight,
   });
 
   // Define destination corners as a perfect rectangle (A4 proportions)
@@ -1100,25 +1106,24 @@ export async function processImage(
       }
     }
 
-    // Step 5: Enhance contrast by factor of 1.8 (increased for better text clarity)
-    imageData = enhanceContrast(imageData, 1.8);
+    // Step 5: Enhance contrast by factor of 1.6 (balanced for good quality without over-processing)
+    imageData = enhanceContrast(imageData, 1.6);
 
-    // Step 6: Adjust brightness to target level of 220 (brighter for cleaner background)
-    imageData = adjustBrightness(imageData, 220);
+    // Step 6: Adjust brightness to target level of 210 (bright but not washed out)
+    imageData = adjustBrightness(imageData, 210);
 
-    // Step 7: Apply sharpening TWICE for maximum text clarity
+    // Step 7: Apply sharpening once for text clarity
     imageData = sharpenImage(imageData);
-    imageData = sharpenImage(imageData); // Second pass for extra sharpness
 
-    // Step 8: Convert ImageData back to Blob with MAXIMUM quality
-    const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.98);
+    // Step 8: Convert ImageData back to Blob with high quality
+    const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.95);
 
-    // Step 9: Compress image to target size of 3MB (increased for better quality)
+    // Step 9: Compress image to target size of 2MB (balanced for quality and file size)
     const { compressImage } = await import("./imageCompression");
     const compressedBlob = await compressImage(processedBlob, { 
-      maxSizeMB: 3,
-      maxWidthOrHeight: 2400, // Increased from 1920
-      quality: 0.95 // Increased quality
+      maxSizeMB: 2,
+      maxWidthOrHeight: 2100, // Match A4 width
+      quality: 0.92 // Good quality
     });
 
     // Step 10: Generate thumbnail after compression

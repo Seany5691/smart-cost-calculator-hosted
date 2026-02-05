@@ -1047,27 +1047,29 @@ export async function processImage(
     // Step 1: Load image into ImageData
     let imageData = await loadImageData(image.originalBlob);
 
+    // Store original dimensions for reference
+    const originalWidth = imageData.width;
+    const originalHeight = imageData.height;
+
     // Step 2: Convert to grayscale
     imageData = convertToGrayscale(imageData);
 
-    // Step 3: Enhance contrast by factor of 1.5
-    imageData = enhanceContrast(imageData, 1.5);
-
-    // Step 4: Adjust brightness to target level of 180
-    imageData = adjustBrightness(imageData, 180);
-
-    // Step 5: Apply sharpening to improve text clarity
-    imageData = sharpenImage(imageData);
-
-    // Step 6: Detect document edges using Canny edge detection
-    // Import edge detection function
+    // Step 3: Detect document edges BEFORE any transformations
+    // This works on the grayscale image for better edge detection
     const { detectDocumentEdges } = await import("./edgeDetection");
     const detectedEdges = detectDocumentEdges(imageData);
 
-    // Step 7: Apply perspective transform if edges were detected
+    console.log("[Process Image] Edge detection result:", detectedEdges);
+
+    // Step 4: Apply perspective transform if edges were detected
+    // This will straighten and crop the document
     if (detectedEdges) {
       try {
         imageData = applyPerspectiveTransform(imageData, detectedEdges);
+        console.log("[Process Image] Perspective transform applied, new dimensions:", {
+          width: imageData.width,
+          height: imageData.height
+        });
       } catch (error) {
         // If perspective transform fails, continue with original image
         console.warn(
@@ -1077,12 +1079,21 @@ export async function processImage(
       }
     }
 
-    // Step 8: Convert ImageData back to Blob
-    const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.85);
+    // Step 5: Enhance contrast by factor of 1.3 (reduced from 1.5 to avoid over-processing)
+    imageData = enhanceContrast(imageData, 1.3);
 
-    // Step 9: Compress image to target size of 1MB or less
+    // Step 6: Adjust brightness to target level of 200 (increased from 180 for brighter output)
+    imageData = adjustBrightness(imageData, 200);
+
+    // Step 7: Apply sharpening to improve text clarity
+    imageData = sharpenImage(imageData);
+
+    // Step 8: Convert ImageData back to Blob with HIGHER quality
+    const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.95); // Increased from 0.85
+
+    // Step 9: Compress image to target size of 2MB (increased from 1MB for better quality)
     const { compressImage } = await import("./imageCompression");
-    const compressedBlob = await compressImage(processedBlob);
+    const compressedBlob = await compressImage(processedBlob, { maxSizeMB: 2 }); // 2MB target
 
     // Step 10: Generate thumbnail after compression
     const { generateThumbnail } = await import("./imageCompression");
@@ -1092,10 +1103,21 @@ export async function processImage(
     const processedDataUrl = await blobToDataUrl(compressedBlob);
     const thumbnailDataUrl = await blobToDataUrl(thumbnailBlob);
 
-    // Calculate crop area from detected edges or use full image dimensions
+    // Calculate crop area - if perspective transform was applied, use full transformed dimensions
+    // Otherwise, use detected edges or full original dimensions
     let cropArea: CropArea;
-    if (detectedEdges) {
-      // Convert edge points to crop area
+    if (detectedEdges && imageData.width !== originalWidth) {
+      // Perspective transform was applied, so the image is already cropped
+      // Use full dimensions of the transformed image
+      cropArea = {
+        x: 0,
+        y: 0,
+        width: imageData.width,
+        height: imageData.height,
+      };
+      console.log("[Process Image] Using full transformed dimensions for crop");
+    } else if (detectedEdges) {
+      // Edges detected but transform failed, use detected edges for crop
       const minX = Math.min(
         detectedEdges.topLeft.x,
         detectedEdges.topRight.x,
@@ -1127,6 +1149,7 @@ export async function processImage(
         width: maxX - minX,
         height: maxY - minY,
       };
+      console.log("[Process Image] Using detected edges for crop");
     } else {
       // Use full image dimensions if no edges detected
       cropArea = {
@@ -1135,6 +1158,7 @@ export async function processImage(
         width: imageData.width,
         height: imageData.height,
       };
+      console.log("[Process Image] No edges detected, using full dimensions");
     }
 
     // Calculate processing time

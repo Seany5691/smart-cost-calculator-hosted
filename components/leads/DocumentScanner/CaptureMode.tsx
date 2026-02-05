@@ -199,7 +199,7 @@ export default function CaptureMode({
   };
 
   /**
-   * Start real-time edge detection
+   * Start real-time edge detection at 10 FPS (Phase 2 improvement)
    */
   const startEdgeDetection = () => {
     if (!videoRef.current || !overlayCanvasRef.current) return;
@@ -211,14 +211,14 @@ export default function CaptureMode({
     overlayCanvas.width = video.videoWidth;
     overlayCanvas.height = video.videoHeight;
 
-    // Run edge detection every 500ms (2 FPS for performance)
+    // Run edge detection every 100ms (10 FPS - Phase 2 improvement)
     detectionIntervalRef.current = window.setInterval(() => {
       detectEdgesInFrame();
-    }, 500);
+    }, 100);
   };
 
   /**
-   * Detect edges in current video frame
+   * Detect edges in current video frame (optimized for speed)
    */
   const detectEdgesInFrame = async () => {
     if (!videoRef.current || !canvasRef.current || !overlayCanvasRef.current) return;
@@ -227,38 +227,47 @@ export default function CaptureMode({
     const canvas = canvasRef.current;
     const overlayCanvas = overlayCanvasRef.current;
 
-    // Set canvas size to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Downsample for real-time detection (Phase 2 optimization)
+    const scale = 0.5; // Process at half resolution for speed
+    canvas.width = video.videoWidth * scale;
+    canvas.height = video.videoHeight * scale;
 
     const ctx = canvas.getContext("2d");
     const overlayCtx = overlayCanvas.getContext("2d");
     if (!ctx || !overlayCtx) return;
 
-    // Draw current frame to canvas
+    // Draw current frame to canvas (downsampled)
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     // Get image data
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    // Detect edges
+    // Detect edges (with downsampling already applied)
     try {
       const { detectDocumentEdges } = await import("@/lib/documentScanner/edgeDetection");
-      const edges = detectDocumentEdges(imageData);
+      const edges = detectDocumentEdges(imageData, false); // Don't downsample again
 
       if (edges) {
+        // Scale corners back to full resolution
+        const scaledEdges = {
+          topLeft: { x: edges.topLeft.x / scale, y: edges.topLeft.y / scale },
+          topRight: { x: edges.topRight.x / scale, y: edges.topRight.y / scale },
+          bottomRight: { x: edges.bottomRight.x / scale, y: edges.bottomRight.y / scale },
+          bottomLeft: { x: edges.bottomLeft.x / scale, y: edges.bottomLeft.y / scale },
+        };
+
         // Document detected!
         setState((prev) => ({
           ...prev,
-          detectedCorners: edges,
+          detectedCorners: scaledEdges,
           isDocumentDetected: true,
         }));
 
         // Draw overlay
-        drawEdgeOverlay(overlayCtx, edges, canvas.width, canvas.height);
+        drawEdgeOverlay(overlayCtx, scaledEdges, overlayCanvas.width, overlayCanvas.height);
 
-        // Reset stable frames counter (no auto-capture)
-        stableFramesRef.current = 0;
+        // Increment stable frames
+        stableFramesRef.current++;
       } else {
         // No document detected
         setState((prev) => ({
@@ -535,21 +544,36 @@ export default function CaptureMode({
                 Page {currentPageNumber} of {maxPages}
               </span>
             )}
-            {/* Document detection status */}
-            {state.isDocumentDetected && (
-              <div className="flex items-center gap-2 mt-2 text-emerald-400">
-                <CheckCircle className="w-4 h-4" />
-                <span className="text-sm">Document detected</span>
+            
+            {/* Enhanced Visual Feedback (Phase 2) */}
+            {state.isDocumentDetected ? (
+              <div className="flex items-center gap-2 mt-2 text-emerald-400 animate-pulse">
+                <CheckCircle className="w-5 h-5" />
+                <span className="text-sm font-semibold">Document detected - Ready to capture!</span>
+              </div>
+            ) : (
+              <div className="mt-2 text-sm text-amber-400">
+                <span>📄 Position document in frame</span>
               </div>
             )}
-            {/* Dark background tip */}
-            <div className="mt-2 text-xs text-white/80 bg-black/30 px-3 py-2 rounded-lg backdrop-blur-sm">
-              💡 Tip: Place documents on a dark background for better edge
-              detection
+            
+            {/* Smart Guidance Hints (Phase 2) */}
+            <div className="mt-2 space-y-1">
+              {!state.isDocumentDetected && (
+                <div className="text-xs text-white/80 bg-black/40 px-3 py-2 rounded-lg backdrop-blur-sm">
+                  💡 Place document on dark background for best results
+                </div>
+              )}
+              {state.isDocumentDetected && stableFramesRef.current < 3 && (
+                <div className="text-xs text-emerald-300 bg-emerald-900/40 px-3 py-2 rounded-lg backdrop-blur-sm">
+                  ✓ Hold steady for best quality
+                </div>
+              )}
             </div>
+            
             {/* Keyboard shortcuts hint */}
-            <span className="hidden md:block text-xs text-white/70 mt-1">
-              Enter to capture • Esc to finish • F for flash
+            <span className="hidden md:block text-xs text-white/70 mt-2">
+              ⌨️ Space/Enter to capture • Esc to finish • F for flash
             </span>
           </div>
 

@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { Camera, X, Zap, ZapOff } from "lucide-react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { Camera, X, Zap, ZapOff, CheckCircle } from "lucide-react";
 import { CaptureModeProps } from "@/lib/documentScanner/types";
 import { checkMemoryAvailable } from "@/lib/documentScanner/memoryManager";
 import { useToast } from "@/components/ui/Toast/useToast";
 
 /**
- * CaptureMode Component
+ * CaptureMode Component with Real-Time Edge Detection
  *
- * Camera interface for capturing document pages using device camera.
- * Handles camera initialization, capture functionality, and UI controls.
+ * Camera interface for capturing document pages with live edge detection overlay.
+ * Shows detected corners in real-time and can auto-capture when document is stable.
  *
  * Requirements:
  * - 1.1: Request camera access with environment-facing mode
@@ -19,7 +19,8 @@ import { useToast } from "@/components/ui/Toast/useToast";
  * - 1.4: Save images and increment page counter
  * - 1.6: Toggle camera flash
  * - 1.7: Handle camera errors with appropriate messages
- * - 15.1-15.3: Error handling for camera access
+ * - Real-time edge detection with visual overlay
+ * - Auto-capture when document is detected and stable
  */
 
 interface CameraModeState {
@@ -27,6 +28,14 @@ interface CameraModeState {
   error: string | null;
   flashEnabled: boolean;
   isCapturing: boolean;
+  detectedCorners: {
+    topLeft: { x: number; y: number };
+    topRight: { x: number; y: number };
+    bottomRight: { x: number; y: number };
+    bottomLeft: { x: number; y: number };
+  } | null;
+  isDocumentDetected: boolean;
+  autoCapture: boolean;
 }
 
 export default function CaptureMode({
@@ -40,6 +49,9 @@ export default function CaptureMode({
 }: CaptureModeProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+  const detectionIntervalRef = useRef<number | null>(null);
+  const stableFramesRef = useRef<number>(0);
   const { toast } = useToast();
 
   const [state, setState] = useState<CameraModeState>({
@@ -47,75 +59,72 @@ export default function CaptureMode({
     error: null,
     flashEnabled: false,
     isCapturing: false,
+    detectedCorners: null,
+    isDocumentDetected: false,
+    autoCapture: true, // Auto-capture enabled by default
   });
 
   /**
    * Initialize camera on component mount
-   * Requirements: 1.1, 1.2, 1.7, 15.1-15.3
    */
   useEffect(() => {
     initializeCamera();
 
-    // Handle orientation changes
-    const handleOrientationChange = () => {
-      // Re-initialize camera stream to adapt to new orientation
-      if (state.stream) {
-        // Small delay to allow orientation change to complete
-        setTimeout(() => {
-          if (videoRef.current && state.stream) {
-            // Ensure video element adapts to new orientation
-            videoRef.current.play().catch((err) => {
-              console.warn(
-                "Failed to resume video after orientation change:",
-                err,
-              );
-            });
-          }
-        }, 300);
-      }
-    };
-
     // Handle keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Enter or Space to capture
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         captureImage();
-      }
-      // Escape to finish capturing
-      else if (e.key === "Escape") {
+      } else if (e.key === "Escape") {
         e.preventDefault();
         onDone();
-      }
-      // F key to toggle flash
-      else if (e.key === "f" || e.key === "F") {
+      } else if (e.key === "f" || e.key === "F") {
         e.preventDefault();
         toggleFlash();
+      } else if (e.key === "a" || e.key === "A") {
+        e.preventDefault();
+        toggleAutoCapture();
       }
     };
 
-    // Listen for orientation changes
-    window.addEventListener("orientationchange", handleOrientationChange);
-    window.addEventListener("resize", handleOrientationChange);
-    // Listen for keyboard shortcuts
     window.addEventListener("keydown", handleKeyDown);
 
     // Cleanup on unmount
     return () => {
       releaseCamera();
-      window.removeEventListener("orientationchange", handleOrientationChange);
-      window.removeEventListener("resize", handleOrientationChange);
+      if (detectionIntervalRef.current) {
+        clearInterval(detectionIntervalRef.current);
+      }
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 
   /**
+   * Start edge detection when video is ready
+   */
+  useEffect(() => {
+    if (videoRef.current && state.stream) {
+      // Wait for video to be ready
+      const video = videoRef.current;
+      if (video.readyState >= 2) {
+        startEdgeDetection();
+      } else {
+        video.addEventListener("loadeddata", startEdgeDetection, { once: true });
+      }
+    }
+
+    return () => {
+      if (detectionIntervalRef.current) {
+        clearInterval(detectionIntervalRef.current);
+      }
+    };
+  }, [state.stream]);
+
+  /**
    * Initialize camera with MediaDevices API
-   * Requests environment-facing camera with high resolution
    */
   const initializeCamera = async () => {
     try {
-      // Check if mediaDevices is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setState((prev) => ({
           ...prev,
@@ -124,17 +133,15 @@ export default function CaptureMode({
         return;
       }
 
-      // Request camera access with environment-facing mode (rear camera)
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: "environment" }, // Prefer rear camera
-          width: { ideal: 1920 }, // High resolution
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
           height: { ideal: 1080 },
         },
         audio: false,
       });
 
-      // Set video stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
@@ -151,32 +158,22 @@ export default function CaptureMode({
         onCameraReady(releaseCamera);
       }
     } catch (error: any) {
-      // Handle specific camera errors
       let errorMessage = "Failed to access camera. Please try again.";
       let errorTitle = "Camera Error";
 
       if (error.name === "NotAllowedError") {
-        // User denied camera permission
         errorTitle = "Camera Access Denied";
         errorMessage =
           "Please enable camera permissions in your browser settings and reload the page.";
       } else if (error.name === "NotFoundError") {
-        // No camera found
         errorTitle = "No Camera Found";
         errorMessage = "Please ensure your device has a camera.";
       } else if (error.name === "NotReadableError") {
-        // Camera in use by another application
         errorTitle = "Camera In Use";
         errorMessage =
           "Please close other apps using the camera and try again.";
-      } else if (error.name === "OverconstrainedError") {
-        // Constraints not satisfied
-        errorTitle = "Camera Not Supported";
-        errorMessage =
-          "Camera does not support the required settings. Please try a different device.";
       }
 
-      // Show error toast
       toast.error(errorTitle, {
         message: errorMessage,
         section: "leads",
@@ -193,7 +190,6 @@ export default function CaptureMode({
 
   /**
    * Release camera stream and resources
-   * Requirements: Memory management
    */
   const releaseCamera = () => {
     if (state.stream) {
@@ -202,11 +198,158 @@ export default function CaptureMode({
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+    }
+  };
+
+  /**
+   * Start real-time edge detection
+   */
+  const startEdgeDetection = () => {
+    if (!videoRef.current || !overlayCanvasRef.current) return;
+
+    const video = videoRef.current;
+    const overlayCanvas = overlayCanvasRef.current;
+
+    // Set overlay canvas size to match video
+    overlayCanvas.width = video.videoWidth;
+    overlayCanvas.height = video.videoHeight;
+
+    // Run edge detection every 500ms (2 FPS for performance)
+    detectionIntervalRef.current = window.setInterval(() => {
+      detectEdgesInFrame();
+    }, 500);
+  };
+
+  /**
+   * Detect edges in current video frame
+   */
+  const detectEdgesInFrame = async () => {
+    if (!videoRef.current || !canvasRef.current || !overlayCanvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const overlayCanvas = overlayCanvasRef.current;
+
+    // Set canvas size to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    const overlayCtx = overlayCanvas.getContext("2d");
+    if (!ctx || !overlayCtx) return;
+
+    // Draw current frame to canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Get image data
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // Detect edges
+    try {
+      const { detectDocumentEdges } = await import("@/lib/documentScanner/edgeDetection");
+      const edges = detectDocumentEdges(imageData);
+
+      if (edges) {
+        // Document detected!
+        setState((prev) => ({
+          ...prev,
+          detectedCorners: edges,
+          isDocumentDetected: true,
+        }));
+
+        // Draw overlay
+        drawEdgeOverlay(overlayCtx, edges, canvas.width, canvas.height);
+
+        // Check if document is stable for auto-capture
+        stableFramesRef.current++;
+        if (state.autoCapture && stableFramesRef.current >= 3 && !state.isCapturing) {
+          // Document has been stable for 3 frames (1.5 seconds), auto-capture
+          console.log("[Auto-Capture] Document stable, capturing...");
+          captureImage();
+          stableFramesRef.current = 0;
+        }
+      } else {
+        // No document detected
+        setState((prev) => ({
+          ...prev,
+          detectedCorners: null,
+          isDocumentDetected: false,
+        }));
+
+        // Clear overlay
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        stableFramesRef.current = 0;
+      }
+    } catch (error) {
+      console.error("[Edge Detection] Error:", error);
+    }
+  };
+
+  /**
+   * Draw edge detection overlay on canvas
+   */
+  const drawEdgeOverlay = (
+    ctx: CanvasRenderingContext2D,
+    edges: {
+      topLeft: { x: number; y: number };
+      topRight: { x: number; y: number };
+      bottomRight: { x: number; y: number };
+      bottomLeft: { x: number; y: number };
+    },
+    width: number,
+    height: number,
+  ) => {
+    // Clear previous overlay
+    ctx.clearRect(0, 0, width, height);
+
+    // Draw semi-transparent overlay outside document
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.fillRect(0, 0, width, height);
+
+    // Cut out the document area
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    ctx.moveTo(edges.topLeft.x, edges.topLeft.y);
+    ctx.lineTo(edges.topRight.x, edges.topRight.y);
+    ctx.lineTo(edges.bottomRight.x, edges.bottomRight.y);
+    ctx.lineTo(edges.bottomLeft.x, edges.bottomLeft.y);
+    ctx.closePath();
+    ctx.fill();
+
+    // Reset composite operation
+    ctx.globalCompositeOperation = "source-over";
+
+    // Draw green border around document
+    ctx.strokeStyle = "#10b981"; // Emerald green
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(edges.topLeft.x, edges.topLeft.y);
+    ctx.lineTo(edges.topRight.x, edges.topRight.y);
+    ctx.lineTo(edges.bottomRight.x, edges.bottomRight.y);
+    ctx.lineTo(edges.bottomLeft.x, edges.bottomLeft.y);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Draw corner circles
+    const corners = [edges.topLeft, edges.topRight, edges.bottomRight, edges.bottomLeft];
+    corners.forEach((corner) => {
+      ctx.fillStyle = "#10b981";
+      ctx.beginPath();
+      ctx.arc(corner.x, corner.y, 12, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(corner.x, corner.y, 12, 0, 2 * Math.PI);
+      ctx.stroke();
+    });
   };
 
   /**
    * Toggle camera flash
-   * Requirements: 1.6
    */
   const toggleFlash = async () => {
     if (!state.stream) return;
@@ -231,27 +374,43 @@ export default function CaptureMode({
   };
 
   /**
+   * Toggle auto-capture mode
+   */
+  const toggleAutoCapture = () => {
+    setState((prev) => ({
+      ...prev,
+      autoCapture: !prev.autoCapture,
+    }));
+
+    toast.success(
+      state.autoCapture ? "Auto-capture disabled" : "Auto-capture enabled",
+      {
+        message: state.autoCapture
+          ? "Tap the camera button to capture manually"
+          : "Hold camera steady over document to auto-capture",
+        section: "leads",
+      }
+    );
+  };
+
+  /**
    * Capture image from video stream
-   * Requirements: 1.3, 1.4, 9.1, 9.2, 15.6
    */
   const captureImage = async () => {
     if (!videoRef.current || !canvasRef.current || state.isCapturing) return;
 
-    // Check if max pages reached
     if (currentPageNumber > maxPages) {
       setState((prev) => ({
         ...prev,
-        error: `Maximum of ${maxPages} pages reached. Please process current pages before capturing more.`,
+        error: `Maximum of ${maxPages} pages reached.`,
       }));
       return;
     }
 
-    // Check memory availability before capture
-    // Requirements: 9.1, 9.2, 15.6
     if (!checkMemoryAvailable()) {
       toast.warning("Memory Low", {
         message:
-          "Device memory is running low. Please process your current pages before capturing more to avoid losing your work.",
+          "Device memory is running low. Please process your current pages before capturing more.",
         section: "leads",
       });
       return;
@@ -263,11 +422,9 @@ export default function CaptureMode({
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
-      // Set canvas dimensions to video dimensions
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
-      // Draw video frame to canvas
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         throw new Error("Failed to get canvas context");
@@ -275,7 +432,6 @@ export default function CaptureMode({
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Convert canvas to blob (JPEG, high quality)
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(
           (blob) => {
@@ -286,23 +442,20 @@ export default function CaptureMode({
             }
           },
           "image/jpeg",
-          0.95, // High quality
+          0.95,
         );
       });
 
-      // Provide haptic feedback if supported
       if ("vibrate" in navigator) {
         navigator.vibrate(50);
       }
 
-      // Call onCapture callback with blob
       onCapture(blob);
 
       setState((prev) => ({ ...prev, isCapturing: false }));
     } catch (error) {
       console.error("Capture error:", error);
 
-      // Show error toast
       toast.error("Capture failed", {
         message: "Failed to capture image. Please try again.",
         section: "leads",
@@ -383,13 +536,20 @@ export default function CaptureMode({
         aria-label="Camera viewfinder for document scanning"
       />
 
+      {/* Edge detection overlay canvas */}
+      <canvas
+        ref={overlayCanvasRef}
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        aria-hidden="true"
+      />
+
       {/* Hidden canvas for capture */}
       <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
 
       {/* Top bar with gradient overlay */}
       <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-4 z-10">
         <div className="flex items-center justify-between">
-          {/* Page counter */}
+          {/* Page counter and status */}
           <div
             className="text-white font-medium"
             role="status"
@@ -406,14 +566,22 @@ export default function CaptureMode({
                 Page {currentPageNumber} of {maxPages}
               </span>
             )}
-            {/* Keyboard shortcuts hint */}
-            <span className="hidden md:block text-xs text-white/70 mt-1">
-              Press Enter to capture • Esc to finish • F for flash
-            </span>
+            {/* Document detection status */}
+            {state.isDocumentDetected && (
+              <div className="flex items-center gap-2 mt-2 text-emerald-400">
+                <CheckCircle className="w-4 h-4" />
+                <span className="text-sm">Document detected</span>
+              </div>
+            )}
             {/* Dark background tip */}
             <div className="mt-2 text-xs text-white/80 bg-black/30 px-3 py-2 rounded-lg backdrop-blur-sm">
-              💡 Tip: Place documents on a dark background for better edge detection
+              💡 Tip: Place documents on a dark background for better edge
+              detection
             </div>
+            {/* Keyboard shortcuts hint */}
+            <span className="hidden md:block text-xs text-white/70 mt-1">
+              Enter to capture • Esc to finish • F for flash • A for auto-capture
+            </span>
           </div>
 
           {/* Flash toggle */}
@@ -452,15 +620,37 @@ export default function CaptureMode({
           <button
             onClick={captureImage}
             disabled={state.isCapturing}
-            className="w-20 h-20 rounded-full bg-white border-4 border-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center touch-manipulation"
+            className={`w-20 h-20 rounded-full border-4 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center touch-manipulation ${
+              state.isDocumentDetected
+                ? "bg-emerald-500 border-emerald-400 hover:bg-emerald-600"
+                : "bg-white border-emerald-500 hover:bg-emerald-50"
+            }`}
             aria-label={`Capture page ${currentPageNumber}`}
             aria-disabled={state.isCapturing}
           >
-            <Camera className="w-10 h-10 text-emerald-600" aria-hidden="true" />
+            <Camera
+              className={`w-10 h-10 ${state.isDocumentDetected ? "text-white" : "text-emerald-600"}`}
+              aria-hidden="true"
+            />
           </button>
 
-          {/* Spacer for layout balance */}
-          <div className="w-32" aria-hidden="true" />
+          {/* Auto-capture toggle */}
+          <button
+            onClick={toggleAutoCapture}
+            className={`px-6 py-3 rounded-lg transition-colors font-medium min-h-[44px] ${
+              state.autoCapture
+                ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                : "bg-white/20 text-white hover:bg-white/30"
+            }`}
+            aria-label={
+              state.autoCapture
+                ? "Disable auto-capture"
+                : "Enable auto-capture"
+            }
+            aria-pressed={state.autoCapture}
+          >
+            {state.autoCapture ? "Auto" : "Manual"}
+          </button>
         </div>
       </div>
     </div>

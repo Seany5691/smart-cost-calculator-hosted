@@ -11,12 +11,83 @@ import { PDFDocument } from "pdf-lib";
 import { ProcessedImage } from "./types";
 
 /**
+ * Apply crop area to an image blob
+ *
+ * Creates a new image with only the cropped region
+ *
+ * @param blob - Image blob to crop
+ * @param cropArea - Crop region {x, y, width, height}
+ * @returns Cropped image as a new blob
+ */
+async function applyCropToBlob(
+  blob: Blob,
+  cropArea: { x: number; y: number; width: number; height: number },
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+
+    img.onload = () => {
+      try {
+        // Create canvas with crop dimensions
+        const canvas = document.createElement("canvas");
+        canvas.width = cropArea.width;
+        canvas.height = cropArea.height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          throw new Error("Failed to get canvas context");
+        }
+
+        // Draw cropped region
+        ctx.drawImage(
+          img,
+          cropArea.x,
+          cropArea.y,
+          cropArea.width,
+          cropArea.height,
+          0,
+          0,
+          cropArea.width,
+          cropArea.height,
+        );
+
+        // Convert to blob
+        canvas.toBlob(
+          (croppedBlob) => {
+            URL.revokeObjectURL(url);
+            if (croppedBlob) {
+              resolve(croppedBlob);
+            } else {
+              reject(new Error("Failed to create cropped blob"));
+            }
+          },
+          "image/jpeg",
+          0.95,
+        );
+      } catch (error) {
+        URL.revokeObjectURL(url);
+        reject(error);
+      }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Failed to load image"));
+    };
+
+    img.src = url;
+  });
+}
+
+/**
  * Generate a PDF document from processed images
  *
  * Creates a PDF with:
  * - Metadata (title, creator, producer, creation date)
  * - One page per image with dimensions matching the image
  * - Images embedded as JPEG at full page size
+ * - Applies crop areas if specified
  *
  * @param images - Array of processed images to include in PDF
  * @param documentName - Name for the PDF document (used in metadata)
@@ -42,8 +113,16 @@ export async function generatePDF(
   // Add each image as a page (Requirements 10.4, 10.5, 10.6)
   for (const image of images) {
     try {
+      // Apply crop area if specified and not full image
+      let imageToEmbed = image.processedBlob;
+      
+      if (image.cropArea) {
+        // Always apply crop if cropArea exists (it may have been manually adjusted)
+        imageToEmbed = await applyCropToBlob(image.processedBlob, image.cropArea);
+      }
+
       // Convert processed blob to array buffer
-      const imageBytes = await image.processedBlob.arrayBuffer();
+      const imageBytes = await imageToEmbed.arrayBuffer();
 
       // Embed image as JPEG (Requirement 10.4)
       const embeddedImage = await pdfDoc.embedJpg(imageBytes);

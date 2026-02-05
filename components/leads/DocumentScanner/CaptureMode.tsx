@@ -404,6 +404,10 @@ export default function CaptureMode({
             <span className="hidden md:block text-xs text-white/70 mt-1">
               Press Enter to capture • Esc to finish • F for flash
             </span>
+            {/* Dark background tip */}
+            <div className="mt-2 text-xs text-white/80 bg-black/30 px-3 py-2 rounded-lg backdrop-blur-sm">
+              💡 Tip: Place documents on a dark background for better edge detection
+            </div>
           </div>
 
           {/* Flash toggle */}

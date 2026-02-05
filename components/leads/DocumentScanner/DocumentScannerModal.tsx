@@ -11,15 +11,19 @@ import {
 } from "@/lib/documentScanner/types";
 import { blobToDataUrl } from "@/lib/documentScanner/imageProcessing";
 import { processBatch } from "@/lib/documentScanner/imageProcessing";
+import { getWorkerManager } from "@/lib/documentScanner/workerManager";
+import { getCurrentSettings } from "@/lib/documentScanner/qualitySettings";
 import { generatePDF } from "@/lib/documentScanner/pdfGenerator";
 import { uploadWithRetry } from "@/lib/documentScanner/upload";
 import { useToast } from "@/components/ui/Toast/useToast";
+import { QualityPreset, setQualityPreset } from "@/lib/documentScanner/qualitySettings";
 import CaptureMode from "./CaptureMode";
 import PreviewGrid from "./PreviewGrid";
 import ProcessingModal from "./ProcessingModal";
 import FinalReviewGrid from "./FinalReviewGrid";
 import CropAdjustment from "./CropAdjustment";
 import DocumentNaming from "./DocumentNaming";
+import QualityPresetSelector from "./QualityPresetSelector";
 
 /**
  * DocumentScannerModal - Main Container Component
@@ -49,6 +53,7 @@ interface ScannerState {
   };
   currentCropIndex: number;
   retakePageNumbers: number[];
+  qualityPreset: QualityPreset;
 }
 
 const SESSION_STORAGE_KEY = "document-scanner-session";
@@ -63,7 +68,7 @@ export default function DocumentScannerModal({
   const { toast } = useToast();
   const cameraCleanupRef = useRef<(() => void) | null>(null);
   const [state, setState] = useState<ScannerState>({
-    currentPhase: "capture",
+    currentPhase: "qualityPreset",
     images: [],
     documentName: "",
     error: null,
@@ -75,6 +80,7 @@ export default function DocumentScannerModal({
     },
     currentCropIndex: 0,
     retakePageNumbers: [],
+    qualityPreset: "auto",
   });
 
   /**
@@ -204,6 +210,27 @@ export default function DocumentScannerModal({
       } catch (error) {
         console.warn("Failed to revoke URL:", error);
       }
+    });
+  };
+
+  /**
+   * Handle quality preset selection
+   * Requirements: Phase 4 - Quality presets
+   */
+  const handleQualityPresetSelect = (preset: QualityPreset) => {
+    // Set the quality preset globally
+    setQualityPreset(preset);
+    
+    // Update state and transition to capture phase
+    setState((prev) => ({
+      ...prev,
+      qualityPreset: preset,
+      currentPhase: "capture",
+    }));
+
+    toast.success("Quality preset selected", {
+      message: `Using ${preset} quality preset`,
+      section: "leads",
     });
   };
 
@@ -426,7 +453,7 @@ export default function DocumentScannerModal({
 
   /**
    * Handle start processing
-   * Requirements: 8.1, 8.2, 17.5, 17.6
+   * Requirements: 8.1, 8.2, 17.5, 17.6, Phase 3 - Web Workers
    */
   const handleProcess = async () => {
     setState((prev) => ({
@@ -442,27 +469,59 @@ export default function DocumentScannerModal({
 
     try {
       const startTime = Date.now();
+      
+      // Get current quality settings
+      const settings = getCurrentSettings();
 
-      // Process images in batches
-      const processedImages = await processBatch(
-        state.images,
-        5,
-        (current, total) => {
-          // Calculate estimated time remaining
-          const elapsed = (Date.now() - startTime) / 1000;
-          const avgTimePerImage = elapsed / current;
-          const remaining = Math.ceil((total - current) * avgTimePerImage);
+      // Use Web Workers if enabled, otherwise fall back to main thread
+      let processedImages: ProcessedImage[];
+      
+      if (settings.useWebWorkers) {
+        console.log('[Document Scanner] Using Web Workers for processing');
+        const workerManager = getWorkerManager();
+        
+        processedImages = await workerManager.processBatch(
+          state.images,
+          (current, total) => {
+            // Calculate estimated time remaining
+            const elapsed = (Date.now() - startTime) / 1000;
+            const avgTimePerImage = elapsed / current;
+            const remaining = Math.ceil((total - current) * avgTimePerImage);
 
-          setState((prev) => ({
-            ...prev,
-            processingProgress: {
-              current,
-              total,
-              estimatedTimeRemaining: remaining,
-            },
-          }));
-        },
-      );
+            setState((prev) => ({
+              ...prev,
+              processingProgress: {
+                current,
+                total,
+                estimatedTimeRemaining: remaining,
+              },
+            }));
+          }
+        );
+      } else {
+        console.log('[Document Scanner] Using main thread for processing');
+        
+        // Process images in batches on main thread
+        processedImages = await processBatch(
+          state.images,
+          settings.batchSize,
+          (current, total) => {
+            // Calculate estimated time remaining
+            const elapsed = (Date.now() - startTime) / 1000;
+            const avgTimePerImage = elapsed / current;
+            const remaining = Math.ceil((total - current) * avgTimePerImage);
+
+            setState((prev) => ({
+              ...prev,
+              processingProgress: {
+                current,
+                total,
+                estimatedTimeRemaining: remaining,
+              },
+            }));
+          },
+        );
+      }
 
       // Update images with processed results
       setState((prev) => ({
@@ -575,6 +634,12 @@ export default function DocumentScannerModal({
       });
     }
   };
+
+  /**
+   * Handle continue from Final Review
+   * Requirements: Phase 2 - Final Review workflow
+   */
+  const handleContinueFromFinalReview = () => {
     // Check if any pages need manual crop
     const needsCrop = state.images.filter((img) => img.markedForCrop);
 
@@ -826,6 +891,15 @@ export default function DocumentScannerModal({
    */
   const renderPhase = () => {
     switch (state.currentPhase) {
+      case "qualityPreset":
+        return (
+          <QualityPresetSelector
+            onSelect={handleQualityPresetSelect}
+            onClose={handleCancel}
+            estimatedPages={5}
+          />
+        );
+
       case "capture":
         return (
           <CaptureMode

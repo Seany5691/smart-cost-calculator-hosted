@@ -35,6 +35,7 @@ interface CameraModeState {
     bottomLeft: { x: number; y: number };
   } | null;
   isDocumentDetected: boolean;
+  showTip: boolean;
 }
 
 export default function CaptureMode({
@@ -51,6 +52,7 @@ export default function CaptureMode({
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const detectionIntervalRef = useRef<number | null>(null);
   const stableFramesRef = useRef<number>(0);
+  const tipTimeoutRef = useRef<number | null>(null);
   const { toast } = useToast();
 
   const [state, setState] = useState<CameraModeState>({
@@ -60,6 +62,7 @@ export default function CaptureMode({
     isCapturing: false,
     detectedCorners: null,
     isDocumentDetected: false,
+    showTip: true, // Show tip initially
   });
 
   /**
@@ -67,6 +70,11 @@ export default function CaptureMode({
    */
   useEffect(() => {
     initializeCamera();
+
+    // Hide tip after 3 seconds
+    tipTimeoutRef.current = window.setTimeout(() => {
+      setState((prev) => ({ ...prev, showTip: false }));
+    }, 3000);
 
     // Handle keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -89,6 +97,9 @@ export default function CaptureMode({
       releaseCamera();
       if (detectionIntervalRef.current) {
         clearInterval(detectionIntervalRef.current);
+      }
+      if (tipTimeoutRef.current) {
+        clearTimeout(tipTimeoutRef.current);
       }
       window.removeEventListener("keydown", handleKeyDown);
     };
@@ -557,11 +568,11 @@ export default function CaptureMode({
               </div>
             )}
             
-            {/* Smart Guidance Hints (Phase 2) */}
+            {/* Smart Guidance Hints (Phase 2) - Tip disappears after 3 seconds */}
             <div className="mt-2 space-y-1">
-              {!state.isDocumentDetected && (
-                <div className="text-xs text-white/80 bg-black/40 px-3 py-2 rounded-lg backdrop-blur-sm">
-                  💡 Place document on dark background for best results
+              {state.showTip && !state.isDocumentDetected && (
+                <div className="text-xs text-white/80 bg-black/40 px-3 py-2 rounded-lg backdrop-blur-sm transition-opacity duration-500">
+                  💡 Tip: Place documents on a dark background for better edge detection
                 </div>
               )}
               {state.isDocumentDetected && stableFramesRef.current < 3 && (

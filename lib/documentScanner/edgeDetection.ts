@@ -375,8 +375,8 @@ export function detectDocumentEdges(
   );
 
   const area = docWidth * docHeight;
-  const imageArea = imageData.width * imageData.height;
-  const areaRatio = area / imageArea;
+  const totalImageArea = imageData.width * imageData.height;
+  const areaRatio = area / totalImageArea;
 
   console.log("[Edge Detection] Document dimensions:", {
     width: docWidth,

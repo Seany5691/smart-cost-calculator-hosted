@@ -483,9 +483,9 @@ export default function CropAdjustment({
   };
 
   return (
-    <div className="fixed inset-0 z-[10001] bg-black flex flex-col">
+    <div className="fixed inset-0 z-[10002] bg-gradient-to-br from-slate-900 to-emerald-900 flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-4 flex items-center justify-between">
+      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-4 flex items-center justify-between border-b border-emerald-500/30">
         <div>
           <h2 id="crop-adjustment-title" className="text-xl font-bold">
             Adjust Crop
@@ -502,7 +502,7 @@ export default function CropAdjustment({
       {/* Canvas Container */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto bg-gray-900 flex items-center justify-center p-4"
+        className="flex-1 overflow-auto bg-slate-900 flex items-center justify-center p-4"
         role="application"
         aria-labelledby="crop-adjustment-title"
         aria-describedby="crop-adjustment-instructions crop-adjustment-help"
@@ -527,7 +527,7 @@ export default function CropAdjustment({
 
       {/* Instructions */}
       <div
-        className="bg-gray-800 text-white p-3 text-center text-sm"
+        className="bg-slate-800/80 text-emerald-100 p-3 text-center text-sm border-t border-emerald-500/20 backdrop-blur-sm"
         role="status"
         aria-live="polite"
       >
@@ -542,13 +542,13 @@ export default function CropAdjustment({
 
       {/* Action Buttons */}
       <div
-        className="bg-gray-900 p-4 flex gap-3"
+        className="bg-slate-900/80 p-4 flex gap-3 border-t border-emerald-500/30 backdrop-blur-sm"
         role="group"
         aria-label="Crop adjustment actions"
       >
         <button
           onClick={handleReset}
-          className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors min-h-[44px]"
+          className="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors min-h-[44px] border border-emerald-500/30"
           aria-label="Reset crop to automatic detection"
         >
           <RotateCcw className="w-5 h-5" aria-hidden="true" />
@@ -557,7 +557,7 @@ export default function CropAdjustment({
 
         <button
           onClick={handleSkip}
-          className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors min-h-[44px]"
+          className="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors min-h-[44px] border border-emerald-500/30"
           aria-label="Skip manual crop and use automatic detection"
         >
           <SkipForward className="w-5 h-5" aria-hidden="true" />
@@ -566,7 +566,7 @@ export default function CropAdjustment({
 
         <button
           onClick={handleApply}
-          className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-all shadow-lg min-h-[44px]"
+          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-all shadow-lg min-h-[44px]"
           aria-label="Apply manual crop adjustments"
         >
           <Check className="w-5 h-5" aria-hidden="true" />

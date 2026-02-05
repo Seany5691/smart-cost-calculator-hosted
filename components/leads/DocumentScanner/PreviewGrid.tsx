@@ -253,19 +253,19 @@ export default function PreviewGrid({
   };
 
   return (
-    <div className="fixed inset-0 z-[10001] flex flex-col h-full bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="fixed inset-0 z-[10002] flex flex-col h-full bg-gradient-to-br from-slate-900 to-emerald-900">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-4 py-4 sm:px-6">
+      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 border-b border-emerald-500/30 px-4 py-4 sm:px-6">
         <div className="flex items-center justify-between">
           <div>
             <h2
               id="preview-grid-title"
-              className="text-xl font-bold text-slate-900"
+              className="text-xl font-bold text-white"
             >
               Review Pages
             </h2>
             <p
-              className="text-sm text-slate-600 mt-1"
+              className="text-sm text-emerald-100 mt-1"
               role="status"
               aria-live="polite"
               aria-atomic="true"
@@ -274,13 +274,13 @@ export default function PreviewGrid({
             </p>
             {/* Mobile swipe hint */}
             <p
-              className="text-xs text-slate-500 mt-1 sm:hidden"
+              className="text-xs text-emerald-200/70 mt-1 sm:hidden"
               aria-describedby="swipe-instructions"
             >
               💡 Swipe right to retake, left to delete
             </p>
             {/* Desktop keyboard shortcuts hint */}
-            <p className="text-xs text-slate-500 mt-1 hidden sm:block">
+            <p className="text-xs text-emerald-200/70 mt-1 hidden sm:block">
               ⌨️ Arrow keys to navigate • R to retake • C to crop • Delete to
               remove • Enter to process
             </p>
@@ -298,7 +298,7 @@ export default function PreviewGrid({
           >
             {markedForRetakeCount > 0 && (
               <div
-                className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-medium"
+                className="bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full text-xs font-medium border border-amber-500/30"
                 aria-label={`${markedForRetakeCount} ${markedForRetakeCount === 1 ? "page" : "pages"} marked for retake`}
               >
                 {markedForRetakeCount} to retake
@@ -306,7 +306,7 @@ export default function PreviewGrid({
             )}
             {markedForCropCount > 0 && (
               <div
-                className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium"
+                className="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs font-medium border border-blue-500/30"
                 aria-label={`${markedForCropCount} ${markedForCropCount === 1 ? "page" : "pages"} marked for manual crop`}
               >
                 {markedForCropCount} to crop
@@ -317,7 +317,7 @@ export default function PreviewGrid({
       </div>
 
       {/* Grid Container */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
         {/* Responsive Grid: 2 columns (mobile), 3 (tablet), 4 (desktop) */}
         <div
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
@@ -338,19 +338,19 @@ export default function PreviewGrid({
               onFocus={() => setFocusedImageIndex(index)}
               tabIndex={0}
               className={`
-                relative bg-white rounded-lg shadow-md overflow-hidden
-                transition-all duration-200 cursor-move
+                relative bg-slate-800/50 rounded-lg shadow-md overflow-hidden
+                transition-all duration-200 cursor-move border border-emerald-500/20
                 ${draggedIndex === index ? "opacity-50 scale-95" : ""}
                 ${dragOverIndex === index && draggedIndex !== index ? "ring-2 ring-emerald-500" : ""}
-                ${focusedImageIndex === index ? "ring-2 ring-blue-500 ring-offset-2" : ""}
-                hover:shadow-lg touch-manipulation
-                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                ${focusedImageIndex === index ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900" : ""}
+                hover:shadow-lg hover:border-emerald-500/40 touch-manipulation
+                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900
               `}
               role="listitem"
               aria-label={`Page ${image.pageNumber}${image.markedForRetake ? ", marked for retake" : ""}${image.markedForCrop ? ", marked for crop" : ""}${image.status === "error" ? ", error" : ""}`}
             >
               {/* Thumbnail Image */}
-              <div className="aspect-[3/4] bg-slate-100 relative">
+              <div className="aspect-[3/4] bg-slate-700 relative">
                 <img
                   src={image.originalDataUrl}
                   alt={`Page ${image.pageNumber} thumbnail`}
@@ -359,7 +359,7 @@ export default function PreviewGrid({
 
                 {/* Page Number Badge */}
                 <div
-                  className="absolute top-2 left-2 bg-slate-900/80 text-white px-2 py-1 rounded-md text-xs font-bold"
+                  className="absolute top-2 left-2 bg-emerald-600 text-white px-2 py-1 rounded-md text-xs font-bold shadow-lg"
                   aria-hidden="true"
                 >
                   {image.pageNumber}
@@ -371,7 +371,7 @@ export default function PreviewGrid({
 
               {/* Action Buttons */}
               <div
-                className="p-2 flex items-center justify-between gap-1 bg-slate-50"
+                className="p-2 flex items-center justify-between gap-1 bg-slate-800/80"
                 role="group"
                 aria-label={`Actions for page ${image.pageNumber}`}
               >
@@ -385,7 +385,7 @@ export default function PreviewGrid({
                     ${
                       image.markedForRetake
                         ? "bg-amber-500 text-white hover:bg-amber-600"
-                        : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                        : "bg-white/10 text-emerald-200 hover:bg-white/20 border border-emerald-500/30"
                     }
                   `}
                   title={
@@ -412,7 +412,7 @@ export default function PreviewGrid({
                     ${
                       image.markedForCrop
                         ? "bg-blue-500 text-white hover:bg-blue-600"
-                        : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                        : "bg-white/10 text-emerald-200 hover:bg-white/20 border border-emerald-500/30"
                     }
                   `}
                   title={image.markedForCrop ? "Unmark crop" : "Mark for crop"}
@@ -433,7 +433,7 @@ export default function PreviewGrid({
                   className="
                     flex items-center justify-center px-2 py-2 rounded-md
                     text-xs font-medium transition-colors
-                    bg-white text-red-600 hover:bg-red-50 border border-slate-200
+                    bg-white/10 text-red-400 hover:bg-red-500/20 border border-red-500/30
                     min-h-[44px] sm:min-h-[40px]
                   "
                   title="Delete page"
@@ -449,7 +449,7 @@ export default function PreviewGrid({
         {/* Empty State */}
         {images.length === 0 && (
           <div
-            className="flex flex-col items-center justify-center h-64 text-slate-400"
+            className="flex flex-col items-center justify-center h-64 text-emerald-300/50"
             role="status"
             aria-live="polite"
           >
@@ -461,7 +461,7 @@ export default function PreviewGrid({
       </div>
 
       {/* Action Bar */}
-      <div className="bg-white border-t border-slate-200 px-4 py-4 sm:px-6">
+      <div className="bg-slate-900/80 border-t border-emerald-500/30 px-4 py-4 sm:px-6 backdrop-blur-sm">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Retake Marked Pages Button */}
           {markedForRetakeCount > 0 && (
@@ -491,10 +491,10 @@ export default function PreviewGrid({
             disabled={images.length === 0}
             className="
               flex items-center justify-center gap-2 px-6 py-3 rounded-lg
-              bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium
-              hover:from-emerald-600 hover:to-emerald-700
-              active:from-emerald-700 active:to-emerald-800
-              disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed
+              bg-emerald-600 text-white font-medium
+              hover:bg-emerald-700
+              active:bg-emerald-800
+              disabled:bg-slate-600 disabled:cursor-not-allowed
               transition-all shadow-md hover:shadow-lg
               min-h-[44px]
             "

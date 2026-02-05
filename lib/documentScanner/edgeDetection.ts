@@ -550,7 +550,7 @@ export function findContours(edgeMap: ImageData): Contour[] {
  * 1. Take the largest contours (by area)
  * 2. For each contour, approximate it as a polygon with fewer vertices
  * 3. Check if the approximation has 4 vertices (quadrilateral)
- * 4. Verify the area is large enough (>= 10000 pixels)
+ * 4. Verify the area is large enough (>= 5000 pixels - reduced for better detection)
  * 5. Return the corner points ordered correctly
  *
  * The Douglas-Peucker algorithm is used to simplify contours by reducing
@@ -562,32 +562,37 @@ export function findContours(edgeMap: ImageData): Contour[] {
  * caller should use the full image dimensions instead.
  *
  * @param contours - Array of contours from findContours
- * @param minArea - Minimum area threshold (default 10000 pixels)
+ * @param minArea - Minimum area threshold (default 5000 pixels - reduced for better detection)
  * @returns EdgePoints defining the document corners, or null if not found
  *
  * Requirements: 6.5, 6.6, 6.7
  */
 export function findLargestRectangle(
   contours: Contour[],
-  minArea: number = 10000,
+  minArea: number = 5000, // Reduced from 10000 for better detection
 ): {
   topLeft: ContourPoint;
   topRight: ContourPoint;
   bottomRight: ContourPoint;
   bottomLeft: ContourPoint;
 } | null {
-  // Try the largest contours first
+  // Try the largest contours first with multiple epsilon values for better detection
+  const epsilonValues = [0.02, 0.03, 0.04, 0.05]; // Try multiple approximation levels
+  
   for (const contour of contours) {
     // Skip if area is too small
     if (contour.area < minArea) continue;
 
-    // Approximate the contour as a polygon with fewer vertices
-    const approx = approximatePolygon(contour.points, 0.02 * contour.area);
+    // Try different epsilon values to find a quadrilateral
+    for (const epsilon of epsilonValues) {
+      // Approximate the contour as a polygon with fewer vertices
+      const approx = approximatePolygon(contour.points, epsilon * Math.sqrt(contour.area));
 
-    // Check if it's a quadrilateral (4 vertices)
-    if (approx.length === 4) {
-      // Order the corners correctly
-      return orderCorners(approx);
+      // Check if it's a quadrilateral (4 vertices)
+      if (approx.length === 4) {
+        // Order the corners correctly
+        return orderCorners(approx);
+      }
     }
   }
 

@@ -36,6 +36,7 @@ export default function CaptureMode({
   maxPages,
   retakeMode = false,
   retakePageNumbers = [],
+  onCameraReady,
 }: CaptureModeProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -144,6 +145,11 @@ export default function CaptureMode({
         stream,
         error: null,
       }));
+
+      // Provide cleanup function to parent
+      if (onCameraReady) {
+        onCameraReady(releaseCamera);
+      }
     } catch (error: any) {
       // Handle specific camera errors
       let errorMessage = "Failed to access camera. Please try again.";
@@ -313,7 +319,7 @@ export default function CaptureMode({
   if (state.error) {
     return (
       <div
-        className="fixed inset-0 z-[10001] bg-black flex items-center justify-center p-6"
+        className="fixed inset-0 z-[10002] bg-black flex items-center justify-center p-6"
         role="dialog"
         aria-labelledby="camera-error-title"
         aria-describedby="camera-error-description"
@@ -366,7 +372,7 @@ export default function CaptureMode({
   }
 
   return (
-    <div className="fixed inset-0 z-[10001] bg-black">
+    <div className="fixed inset-0 z-[10002] bg-black">
       {/* Video stream */}
       <video
         ref={videoRef}

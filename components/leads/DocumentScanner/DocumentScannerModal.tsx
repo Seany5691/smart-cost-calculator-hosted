@@ -60,6 +60,7 @@ export default function DocumentScannerModal({
   onComplete,
 }: DocumentScannerModalProps) {
   const { toast } = useToast();
+  const cameraCleanupRef = useRef<(() => void) | null>(null);
   const [state, setState] = useState<ScannerState>({
     currentPhase: "capture",
     images: [],
@@ -99,6 +100,10 @@ export default function DocumentScannerModal({
    */
   useEffect(() => {
     return () => {
+      // Stop camera if it's running
+      if (cameraCleanupRef.current) {
+        cameraCleanupRef.current();
+      }
       cleanup();
     };
   }, []);
@@ -713,6 +718,10 @@ export default function DocumentScannerModal({
     );
 
     if (confirm) {
+      // Stop camera if it's running
+      if (cameraCleanupRef.current) {
+        cameraCleanupRef.current();
+      }
       onClose();
     }
   };
@@ -727,6 +736,10 @@ export default function DocumentScannerModal({
     );
 
     if (confirm) {
+      // Stop camera if it's running
+      if (cameraCleanupRef.current) {
+        cameraCleanupRef.current();
+      }
       clearSession();
       cleanup();
       onClose();
@@ -747,6 +760,9 @@ export default function DocumentScannerModal({
             currentPageNumber={state.images.length + 1}
             maxPages={MAX_PAGES}
             retakeMode={false}
+            onCameraReady={(cleanup) => {
+              cameraCleanupRef.current = cleanup;
+            }}
           />
         );
 
@@ -759,6 +775,9 @@ export default function DocumentScannerModal({
             maxPages={MAX_PAGES}
             retakeMode={true}
             retakePageNumbers={state.retakePageNumbers}
+            onCameraReady={(cleanup) => {
+              cameraCleanupRef.current = cleanup;
+            }}
           />
         );
 
@@ -820,7 +839,7 @@ export default function DocumentScannerModal({
       case "generate":
         return (
           <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10001] flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10002] flex items-center justify-center p-4"
             role="dialog"
             aria-labelledby="generating-title"
             aria-describedby="generating-description"

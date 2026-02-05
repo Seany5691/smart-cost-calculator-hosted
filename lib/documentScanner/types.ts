@@ -118,6 +118,7 @@ export interface CaptureModeProps {
   maxPages: number; // Maximum pages allowed
   retakeMode?: boolean; // Whether in retake mode
   retakePageNumbers?: number[]; // Page numbers being retaken
+  onCameraReady?: (cleanup: () => void) => void; // Callback with camera cleanup function
 }
 
 /**

@@ -17,6 +17,7 @@ import { useToast } from "@/components/ui/Toast/useToast";
 import CaptureMode from "./CaptureMode";
 import PreviewGrid from "./PreviewGrid";
 import ProcessingModal from "./ProcessingModal";
+import FinalReviewGrid from "./FinalReviewGrid";
 import CropAdjustment from "./CropAdjustment";
 import DocumentNaming from "./DocumentNaming";
 
@@ -209,7 +210,6 @@ export default function DocumentScannerModal({
   /**
    * Handle image capture from camera
    * Requirements: 1.4, 2.1, 2.2
-   * UPDATED: Process image immediately after capture for instant preview
    */
   const handleCapture = async (blob: Blob) => {
     try {
@@ -240,43 +240,12 @@ export default function DocumentScannerModal({
         markedForCrop: false,
       };
 
-      // Add to images array with "processing" status
+      // Add to images array
       setState((prev) => ({
         ...prev,
-        images: [...prev.images, { ...capturedImage, status: "processing" }],
+        images: [...prev.images, capturedImage],
         error: null,
       }));
-
-      // Process image immediately in background
-      try {
-        const { processImage } = await import("@/lib/documentScanner/imageProcessing");
-        const processedImage = await processImage(capturedImage);
-
-        // Update the image with processed result
-        setState((prev) => ({
-          ...prev,
-          images: prev.images.map((img) =>
-            img.id === id ? processedImage : img
-          ),
-        }));
-
-        console.log("[Capture] Image processed successfully:", processedImage.id);
-      } catch (processError) {
-        console.error("[Capture] Failed to process image:", processError);
-        
-        // Mark as error but keep the captured image
-        setState((prev) => ({
-          ...prev,
-          images: prev.images.map((img) =>
-            img.id === id ? { ...img, status: "error" } : img
-          ),
-        }));
-
-        toast.warning("Processing issue", {
-          message: "Image captured but processing failed. You can mark it for retake.",
-          section: "leads",
-        });
-      }
     } catch (error) {
       console.error("Failed to capture image:", error);
       toast.error("Capture failed", {
@@ -322,7 +291,7 @@ export default function DocumentScannerModal({
   };
 
   /**
-   * Handle mark page for manual crop
+   * Handle mark page for manual crop (only in Final Review)
    * Requirements: 3.6, 17.2
    */
   const handleMarkCrop = (imageId: string) => {
@@ -500,25 +469,8 @@ export default function DocumentScannerModal({
         ...prev,
         images: processedImages,
         isProcessing: false,
+        currentPhase: "finalReview", // Go to Final Review instead of checking for crops
       }));
-
-      // Check if any pages need manual crop
-      const needsCrop = processedImages.filter((img) => img.markedForCrop);
-
-      if (needsCrop.length > 0) {
-        // Transition to crop phase
-        setState((prev) => ({
-          ...prev,
-          currentPhase: "crop",
-          currentCropIndex: 0,
-        }));
-      } else {
-        // Transition to naming phase
-        setState((prev) => ({
-          ...prev,
-          currentPhase: "name",
-        }));
-      }
     } catch (error) {
       console.error("Processing failed:", error);
 
@@ -550,6 +502,30 @@ export default function DocumentScannerModal({
       currentPhase: "preview",
       isProcessing: false,
     }));
+  };
+
+  /**
+   * Handle continue from Final Review
+   * Requirements: 17.5
+   */
+  const handleContinueFromFinalReview = () => {
+    // Check if any pages need manual crop
+    const needsCrop = state.images.filter((img) => img.markedForCrop);
+
+    if (needsCrop.length > 0) {
+      // Transition to crop phase
+      setState((prev) => ({
+        ...prev,
+        currentPhase: "crop",
+        currentCropIndex: 0,
+      }));
+    } else {
+      // Transition to naming phase
+      setState((prev) => ({
+        ...prev,
+        currentPhase: "name",
+      }));
+    }
   };
 
   /**
@@ -818,7 +794,6 @@ export default function DocumentScannerModal({
           <PreviewGrid
             images={state.images}
             onMarkRetake={handleMarkRetake}
-            onMarkCrop={handleMarkCrop}
             onDelete={handleDelete}
             onReorder={handleReorder}
             onProcess={handleProcess}
@@ -835,6 +810,18 @@ export default function DocumentScannerModal({
               state.processingProgress.estimatedTimeRemaining
             }
             onCancel={handleCancelProcessing}
+          />
+        );
+
+      case "finalReview":
+        return (
+          <FinalReviewGrid
+            images={state.images as ProcessedImage[]}
+            onMarkRetake={handleMarkRetake}
+            onMarkCrop={handleMarkCrop}
+            onDelete={handleDelete}
+            onContinue={handleContinueFromFinalReview}
+            onRetake={handleRetake}
           />
         );
 

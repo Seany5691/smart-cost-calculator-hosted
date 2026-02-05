@@ -10,9 +10,10 @@
  */
 export type Phase =
   | "capture" // Camera interface for taking photos
-  | "preview" // Grid view of captured pages with actions
+  | "preview" // Grid view of captured pages with actions (RAW images)
   | "retake" // Re-capture specific marked pages
   | "process" // Batch image processing with progress
+  | "finalReview" // Review processed images before naming
   | "crop" // Manual adjustment for marked pages
   | "name" // Document naming input
   | "generate"; // PDF generation and upload
@@ -127,10 +128,21 @@ export interface CaptureModeProps {
 export interface PreviewGridProps {
   images: CapturedImage[]; // All captured images
   onMarkRetake: (imageId: string) => void; // Mark page for retake
-  onMarkCrop: (imageId: string) => void; // Mark page for manual crop
   onDelete: (imageId: string) => void; // Delete page
   onReorder: (fromIndex: number, toIndex: number) => void; // Reorder pages
   onProcess: () => void; // Start processing
+  onRetake: () => void; // Start retake mode
+}
+
+/**
+ * Props for FinalReviewGrid component
+ */
+export interface FinalReviewGridProps {
+  images: ProcessedImage[]; // All processed images
+  onMarkRetake: (imageId: string) => void; // Mark page for retake
+  onMarkCrop: (imageId: string) => void; // Mark page for manual crop
+  onDelete: (imageId: string) => void; // Delete page
+  onContinue: () => void; // Continue to naming or crop adjustment
   onRetake: () => void; // Start retake mode
 }
 

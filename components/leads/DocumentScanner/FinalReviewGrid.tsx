@@ -1,17 +1,17 @@
 /**
- * PreviewGrid Component
+ * FinalReviewGrid Component
  *
- * Displays captured pages as thumbnails in a responsive grid layout.
- * Provides actions for marking pages for retake/crop, deleting pages,
- * and reordering pages via drag-and-drop.
+ * Displays processed/cropped pages as thumbnails in a responsive grid layout.
+ * Shows the final processed images after auto edge detection and cropping.
+ * Provides actions for marking pages for retake/manual crop adjustment, and deleting pages.
  *
- * Requirements: 3.1, 3.2, 3.3, 3.5, 3.6, 3.7, 3.8, 14.1, 14.2, 14.3
+ * This is the final review step before naming the document.
  */
 
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { PreviewGridProps, CapturedImage } from "@/lib/documentScanner/types";
+import { FinalReviewGridProps, ProcessedImage } from "@/lib/documentScanner/types";
 import {
   Camera,
   Crop,
@@ -19,16 +19,17 @@ import {
   RotateCcw,
   CheckCircle2,
   AlertCircle,
+  ArrowRight,
 } from "lucide-react";
 
-export default function PreviewGrid({
+export default function FinalReviewGrid({
   images,
   onMarkRetake,
+  onMarkCrop,
   onDelete,
-  onReorder,
-  onProcess,
+  onContinue,
   onRetake,
-}: PreviewGridProps) {
+}: FinalReviewGridProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -40,6 +41,7 @@ export default function PreviewGrid({
   const markedForRetakeCount = images.filter(
     (img) => img.markedForRetake,
   ).length;
+  const markedForCropCount = images.filter((img) => img.markedForCrop).length;
 
   /**
    * Handle keyboard navigation
@@ -61,6 +63,13 @@ export default function PreviewGrid({
           onMarkRetake(images[focusedImageIndex].id);
         }
       }
+      // C key to mark for crop
+      else if (e.key === "c" || e.key === "C") {
+        e.preventDefault();
+        if (images[focusedImageIndex]) {
+          onMarkCrop(images[focusedImageIndex].id);
+        }
+      }
       // Delete key to delete
       else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
@@ -73,11 +82,11 @@ export default function PreviewGrid({
           }
         }
       }
-      // Enter key to process
+      // Enter key to continue
       else if (e.key === "Enter") {
         e.preventDefault();
         if (images.length > 0) {
-          onProcess();
+          onContinue();
         }
       }
     };
@@ -88,46 +97,10 @@ export default function PreviewGrid({
     images,
     focusedImageIndex,
     onMarkRetake,
+    onMarkCrop,
     onDelete,
-    onProcess,
+    onContinue,
   ]);
-
-  /**
-   * Handle drag start
-   */
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
-
-  /**
-   * Handle drag over
-   */
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    setDragOverIndex(index);
-  };
-
-  /**
-   * Handle drop
-   */
-  const handleDrop = (e: React.DragEvent, toIndex: number) => {
-    e.preventDefault();
-
-    if (draggedIndex !== null && draggedIndex !== toIndex) {
-      onReorder(draggedIndex, toIndex);
-    }
-
-    setDraggedIndex(null);
-    setDragOverIndex(null);
-  };
-
-  /**
-   * Handle drag end
-   */
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-    setDragOverIndex(null);
-  };
 
   /**
    * Handle touch start for swipe gestures
@@ -202,7 +175,7 @@ export default function PreviewGrid({
   /**
    * Get status indicator for an image
    */
-  const getStatusIndicator = (image: CapturedImage) => {
+  const getStatusIndicator = (image: ProcessedImage) => {
     if (image.status === "error") {
       return (
         <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1">
@@ -221,16 +194,21 @@ export default function PreviewGrid({
       );
     }
 
-    if (image.status === "processed") {
+    if (image.markedForCrop) {
       return (
-        <div className="absolute top-2 right-2 bg-emerald-500 text-white px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1">
-          <CheckCircle2 className="w-3 h-3" />
-          Ready
+        <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1">
+          <Crop className="w-3 h-3" />
+          Crop
         </div>
       );
     }
 
-    return null;
+    return (
+      <div className="absolute top-2 right-2 bg-emerald-500 text-white px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1">
+        <CheckCircle2 className="w-3 h-3" />
+        Ready
+      </div>
+    );
   };
 
   return (
@@ -240,10 +218,10 @@ export default function PreviewGrid({
         <div className="flex items-center justify-between">
           <div>
             <h2
-              id="preview-grid-title"
+              id="final-review-title"
               className="text-xl font-bold text-white"
             >
-              Review Pages
+              Final Review
             </h2>
             <p
               className="text-sm text-emerald-100 mt-1"
@@ -251,7 +229,7 @@ export default function PreviewGrid({
               aria-live="polite"
               aria-atomic="true"
             >
-              {images.length} {images.length === 1 ? "page" : "pages"} captured
+              {images.length} {images.length === 1 ? "page" : "pages"} processed
             </p>
             {/* Mobile swipe hint */}
             <p
@@ -262,8 +240,8 @@ export default function PreviewGrid({
             </p>
             {/* Desktop keyboard shortcuts hint */}
             <p className="text-xs text-emerald-200/70 mt-1 hidden sm:block">
-              ⌨️ Arrow keys to navigate • R to retake • Delete to
-              remove • Enter to process
+              ⌨️ Arrow keys to navigate • R to retake • C to crop • Delete to
+              remove • Enter to continue
             </p>
             <span id="swipe-instructions" className="sr-only">
               On mobile, swipe right on a page thumbnail to mark it for retake,
@@ -285,6 +263,14 @@ export default function PreviewGrid({
                 {markedForRetakeCount} to retake
               </div>
             )}
+            {markedForCropCount > 0 && (
+              <div
+                className="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs font-medium border border-blue-500/30"
+                aria-label={`${markedForCropCount} ${markedForCropCount === 1 ? "page" : "pages"} marked for manual crop`}
+              >
+                {markedForCropCount} to crop
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -295,16 +281,11 @@ export default function PreviewGrid({
         <div
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
           role="list"
-          aria-labelledby="preview-grid-title"
+          aria-labelledby="final-review-title"
         >
           {images.map((image, index) => (
             <div
               key={image.id}
-              draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDrop={(e) => handleDrop(e, index)}
-              onDragEnd={handleDragEnd}
               onTouchStart={(e) => handleTouchStart(e, image.id)}
               onTouchMove={handleTouchMove}
               onTouchEnd={(e) => handleTouchEnd(e, image.id)}
@@ -312,21 +293,19 @@ export default function PreviewGrid({
               tabIndex={0}
               className={`
                 relative bg-slate-800/50 rounded-lg shadow-md overflow-hidden
-                transition-all duration-200 cursor-move border border-emerald-500/20
-                ${draggedIndex === index ? "opacity-50 scale-95" : ""}
-                ${dragOverIndex === index && draggedIndex !== index ? "ring-2 ring-emerald-500" : ""}
+                transition-all duration-200 border border-emerald-500/20
                 ${focusedImageIndex === index ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900" : ""}
                 hover:shadow-lg hover:border-emerald-500/40 touch-manipulation
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900
               `}
               role="listitem"
-              aria-label={`Page ${image.pageNumber}${image.markedForRetake ? ", marked for retake" : ""}${image.status === "error" ? ", error" : ""}`}
+              aria-label={`Page ${image.pageNumber}${image.markedForRetake ? ", marked for retake" : ""}${image.markedForCrop ? ", marked for crop" : ""}${image.status === "error" ? ", error" : ""}`}
             >
-              {/* Thumbnail Image */}
+              {/* Thumbnail Image - Show PROCESSED image */}
               <div className="aspect-[3/4] bg-slate-700 relative">
                 <img
-                  src={image.originalDataUrl}
-                  alt={`Page ${image.pageNumber} thumbnail`}
+                  src={image.processedDataUrl}
+                  alt={`Page ${image.pageNumber} processed thumbnail`}
                   className="w-full h-full object-cover"
                 />
 
@@ -375,6 +354,31 @@ export default function PreviewGrid({
                   <span className="hidden sm:inline">Retake</span>
                 </button>
 
+                {/* Mark for Crop */}
+                <button
+                  onClick={() => onMarkCrop(image.id)}
+                  className={`
+                    flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-md
+                    text-xs font-medium transition-colors
+                    min-h-[44px] sm:min-h-[40px]
+                    ${
+                      image.markedForCrop
+                        ? "bg-blue-500 text-white hover:bg-blue-600"
+                        : "bg-white/10 text-emerald-200 hover:bg-white/20 border border-emerald-500/30"
+                    }
+                  `}
+                  title={image.markedForCrop ? "Unmark crop" : "Mark for crop"}
+                  aria-label={
+                    image.markedForCrop
+                      ? `Unmark page ${image.pageNumber} for manual crop`
+                      : `Mark page ${image.pageNumber} for manual crop`
+                  }
+                  aria-pressed={image.markedForCrop}
+                >
+                  <Crop className="w-4 h-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Crop</span>
+                </button>
+
                 {/* Delete */}
                 <button
                   onClick={() => onDelete(image.id)}
@@ -402,7 +406,7 @@ export default function PreviewGrid({
             aria-live="polite"
           >
             <Camera className="w-16 h-16 mb-4" aria-hidden="true" />
-            <p className="text-lg font-medium">No pages captured yet</p>
+            <p className="text-lg font-medium">No pages processed yet</p>
             <p className="text-sm">Start capturing to see your pages here</p>
           </div>
         )}
@@ -433,9 +437,9 @@ export default function PreviewGrid({
           {/* Spacer */}
           <div className="flex-1" aria-hidden="true" />
 
-          {/* Process All Pages Button */}
+          {/* Continue Button */}
           <button
-            onClick={onProcess}
+            onClick={onContinue}
             disabled={images.length === 0}
             className="
               flex items-center justify-center gap-2 px-6 py-3 rounded-lg
@@ -446,11 +450,11 @@ export default function PreviewGrid({
               transition-all shadow-md hover:shadow-lg
               min-h-[44px]
             "
-            aria-label={`Process all ${images.length} ${images.length === 1 ? "page" : "pages"}`}
+            aria-label={`Continue to ${markedForCropCount > 0 ? "crop adjustment" : "naming"}`}
             aria-disabled={images.length === 0}
           >
-            <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
-            Process All Pages
+            <ArrowRight className="w-5 h-5" aria-hidden="true" />
+            Continue
           </button>
         </div>
       </div>

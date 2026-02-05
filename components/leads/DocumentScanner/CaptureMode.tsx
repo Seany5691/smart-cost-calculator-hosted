@@ -35,7 +35,6 @@ interface CameraModeState {
     bottomLeft: { x: number; y: number };
   } | null;
   isDocumentDetected: boolean;
-  autoCapture: boolean;
 }
 
 export default function CaptureMode({
@@ -61,7 +60,6 @@ export default function CaptureMode({
     isCapturing: false,
     detectedCorners: null,
     isDocumentDetected: false,
-    autoCapture: true, // Auto-capture enabled by default
   });
 
   /**
@@ -81,9 +79,6 @@ export default function CaptureMode({
       } else if (e.key === "f" || e.key === "F") {
         e.preventDefault();
         toggleFlash();
-      } else if (e.key === "a" || e.key === "A") {
-        e.preventDefault();
-        toggleAutoCapture();
       }
     };
 
@@ -262,14 +257,8 @@ export default function CaptureMode({
         // Draw overlay
         drawEdgeOverlay(overlayCtx, edges, canvas.width, canvas.height);
 
-        // Check if document is stable for auto-capture
-        stableFramesRef.current++;
-        if (state.autoCapture && stableFramesRef.current >= 3 && !state.isCapturing) {
-          // Document has been stable for 3 frames (1.5 seconds), auto-capture
-          console.log("[Auto-Capture] Document stable, capturing...");
-          captureImage();
-          stableFramesRef.current = 0;
-        }
+        // Reset stable frames counter (no auto-capture)
+        stableFramesRef.current = 0;
       } else {
         // No document detected
         setState((prev) => ({
@@ -371,26 +360,6 @@ export default function CaptureMode({
     } catch (error) {
       console.error("Flash toggle error:", error);
     }
-  };
-
-  /**
-   * Toggle auto-capture mode
-   */
-  const toggleAutoCapture = () => {
-    setState((prev) => ({
-      ...prev,
-      autoCapture: !prev.autoCapture,
-    }));
-
-    toast.success(
-      state.autoCapture ? "Auto-capture disabled" : "Auto-capture enabled",
-      {
-        message: state.autoCapture
-          ? "Tap the camera button to capture manually"
-          : "Hold camera steady over document to auto-capture",
-        section: "leads",
-      }
-    );
   };
 
   /**
@@ -580,7 +549,7 @@ export default function CaptureMode({
             </div>
             {/* Keyboard shortcuts hint */}
             <span className="hidden md:block text-xs text-white/70 mt-1">
-              Enter to capture • Esc to finish • F for flash • A for auto-capture
+              Enter to capture • Esc to finish • F for flash
             </span>
           </div>
 
@@ -634,23 +603,8 @@ export default function CaptureMode({
             />
           </button>
 
-          {/* Auto-capture toggle */}
-          <button
-            onClick={toggleAutoCapture}
-            className={`px-6 py-3 rounded-lg transition-colors font-medium min-h-[44px] ${
-              state.autoCapture
-                ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                : "bg-white/20 text-white hover:bg-white/30"
-            }`}
-            aria-label={
-              state.autoCapture
-                ? "Disable auto-capture"
-                : "Enable auto-capture"
-            }
-            aria-pressed={state.autoCapture}
-          >
-            {state.autoCapture ? "Auto" : "Manual"}
-          </button>
+          {/* Spacer for layout balance */}
+          <div className="w-32" aria-hidden="true" />
         </div>
       </div>
     </div>

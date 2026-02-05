@@ -52,7 +52,7 @@ async function applyCropToBlob(
           cropArea.height,
         );
 
-        // Convert to blob
+        // Convert to blob with maximum quality
         canvas.toBlob(
           (croppedBlob) => {
             URL.revokeObjectURL(url);
@@ -63,7 +63,7 @@ async function applyCropToBlob(
             }
           },
           "image/jpeg",
-          0.95,
+          0.98, // Maximum quality for PDF
         );
       } catch (error) {
         URL.revokeObjectURL(url);

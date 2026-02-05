@@ -209,6 +209,7 @@ export default function DocumentScannerModal({
   /**
    * Handle image capture from camera
    * Requirements: 1.4, 2.1, 2.2
+   * UPDATED: Process image immediately after capture for instant preview
    */
   const handleCapture = async (blob: Blob) => {
     try {
@@ -239,12 +240,43 @@ export default function DocumentScannerModal({
         markedForCrop: false,
       };
 
-      // Add to images array
+      // Add to images array with "processing" status
       setState((prev) => ({
         ...prev,
-        images: [...prev.images, capturedImage],
+        images: [...prev.images, { ...capturedImage, status: "processing" }],
         error: null,
       }));
+
+      // Process image immediately in background
+      try {
+        const { processImage } = await import("@/lib/documentScanner/imageProcessing");
+        const processedImage = await processImage(capturedImage);
+
+        // Update the image with processed result
+        setState((prev) => ({
+          ...prev,
+          images: prev.images.map((img) =>
+            img.id === id ? processedImage : img
+          ),
+        }));
+
+        console.log("[Capture] Image processed successfully:", processedImage.id);
+      } catch (processError) {
+        console.error("[Capture] Failed to process image:", processError);
+        
+        // Mark as error but keep the captured image
+        setState((prev) => ({
+          ...prev,
+          images: prev.images.map((img) =>
+            img.id === id ? { ...img, status: "error" } : img
+          ),
+        }));
+
+        toast.warning("Processing issue", {
+          message: "Image captured but processing failed. You can mark it for retake.",
+          section: "leads",
+        });
+      }
     } catch (error) {
       console.error("Failed to capture image:", error);
       toast.error("Capture failed", {

@@ -1088,12 +1088,16 @@ export async function processImage(
     // Step 7: Apply sharpening to improve text clarity
     imageData = sharpenImage(imageData);
 
-    // Step 8: Convert ImageData back to Blob with HIGHER quality
-    const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.95); // Increased from 0.85
+    // Step 8: Convert ImageData back to Blob with MAXIMUM quality
+    const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.98); // Maximum quality
 
-    // Step 9: Compress image to target size of 2MB (increased from 1MB for better quality)
+    // Step 9: Compress image to target size of 3MB (increased for better quality)
     const { compressImage } = await import("./imageCompression");
-    const compressedBlob = await compressImage(processedBlob, { maxSizeMB: 2 }); // 2MB target
+    const compressedBlob = await compressImage(processedBlob, { 
+      maxSizeMB: 3,
+      maxWidthOrHeight: 2400, // Increased from 1920
+      quality: 0.95 // Increased quality
+    });
 
     // Step 10: Generate thumbnail after compression
     const { generateThumbnail } = await import("./imageCompression");

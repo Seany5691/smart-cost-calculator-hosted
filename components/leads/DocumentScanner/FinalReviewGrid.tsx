@@ -23,7 +23,7 @@ import {
   ArrowRight,
   Settings,
 } from "lucide-react";
-import AdaptiveThresholdTuner, { AdaptiveThresholdSettings } from "./AdaptiveThresholdTuner";
+import UnsharpMaskTuner, { UnsharpMaskSettings } from "./UnsharpMaskTuner";
 
 export default function FinalReviewGrid({
   images,
@@ -41,7 +41,7 @@ export default function FinalReviewGrid({
   const [swipedImageId, setSwipedImageId] = useState<string | null>(null);
   const [focusedImageIndex, setFocusedImageIndex] = useState<number>(0);
   const [showTuner, setShowTuner] = useState(false);
-  const [tunerSettings, setTunerSettings] = useState<AdaptiveThresholdSettings | null>(null);
+  const [tunerSettings, setTunerSettings] = useState<UnsharpMaskSettings | null>(null);
 
   // Count marked pages
   const markedForRetakeCount = images.filter(
@@ -217,16 +217,16 @@ export default function FinalReviewGrid({
     );
   };
 
-  const handleTunerApply = (settings: AdaptiveThresholdSettings) => {
+  const handleTunerApply = (settings: UnsharpMaskSettings) => {
     setTunerSettings(settings);
-    console.log("Adaptive threshold settings applied:", settings);
+    console.log("Unsharp mask settings applied:", settings);
     // Settings will be used during processing
   };
 
   return (
     <>
       {showTuner && images.length > 0 && (
-        <AdaptiveThresholdTuner
+        <UnsharpMaskTuner
           originalBlob={images[0].originalBlob}
           onClose={() => setShowTuner(false)}
           onApply={handleTunerApply}

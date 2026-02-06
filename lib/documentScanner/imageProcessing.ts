@@ -752,6 +752,95 @@ export function sharpenImage(imageData: ImageData): ImageData {
 }
 
 /**
+ * Apply unsharp mask for gentle text enhancement
+ *
+ * Unsharp masking is a professional technique that enhances edges and details
+ * without the harsh artifacts of simple sharpening. It works by:
+ * 1. Creating a blurred version of the image
+ * 2. Subtracting the blur from the original (creates a "mask" of edges)
+ * 3. Adding the mask back to the original with a strength factor
+ *
+ * This provides:
+ * - Gentle edge enhancement for text clarity
+ * - No harsh artifacts or halos
+ * - Natural-looking results
+ * - Better than simple sharpening kernels
+ *
+ * @param imageData - ImageData to enhance
+ * @param amount - Strength of the effect (1.0-3.0, default 1.5)
+ * @param radius - Blur radius for the mask (0.5-2.0, default 1.0)
+ * @returns New ImageData with unsharp mask applied
+ */
+export function applyUnsharpMask(
+  imageData: ImageData,
+  amount: number = 1.5,
+  radius: number = 1.0,
+): ImageData {
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+
+  // Create output ImageData
+  const outputData = new Uint8ClampedArray(width * height * 4);
+  const output = new ImageData(outputData, width, height);
+
+  // Step 1: Create a simple box blur (approximation of Gaussian blur)
+  const blurredData = new Uint8ClampedArray(width * height * 4);
+  const kernelSize = Math.max(3, Math.floor(radius * 2) * 2 + 1); // Ensure odd size
+  const kernelRadius = Math.floor(kernelSize / 2);
+
+  // Apply box blur
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sumR = 0, sumG = 0, sumB = 0, count = 0;
+
+      // Sample neighborhood
+      for (let ky = -kernelRadius; ky <= kernelRadius; ky++) {
+        for (let kx = -kernelRadius; kx <= kernelRadius; kx++) {
+          const pixelY = clamp(y + ky, 0, height - 1);
+          const pixelX = clamp(x + kx, 0, width - 1);
+          const idx = (pixelY * width + pixelX) * 4;
+
+          sumR += data[idx];
+          sumG += data[idx + 1];
+          sumB += data[idx + 2];
+          count++;
+        }
+      }
+
+      const outputIdx = (y * width + x) * 4;
+      blurredData[outputIdx] = sumR / count;
+      blurredData[outputIdx + 1] = sumG / count;
+      blurredData[outputIdx + 2] = sumB / count;
+      blurredData[outputIdx + 3] = data[outputIdx + 3]; // Copy alpha
+    }
+  }
+
+  // Step 2: Create unsharp mask and apply
+  for (let i = 0; i < data.length; i += 4) {
+    // For each RGB channel
+    for (let channel = 0; channel < 3; channel++) {
+      const original = data[i + channel];
+      const blurred = blurredData[i + channel];
+      
+      // Calculate the mask (difference between original and blurred)
+      const mask = original - blurred;
+      
+      // Add the mask back to the original with the specified amount
+      const enhanced = original + (mask * amount);
+      
+      // Clamp to valid range
+      outputData[i + channel] = clamp(Math.round(enhanced), 0, 255);
+    }
+    
+    // Copy alpha channel
+    outputData[i + 3] = data[i + 3];
+  }
+
+  return output;
+}
+
+/**
  * Point interface for perspective transform
  */
 interface Point {
@@ -1313,21 +1402,21 @@ export async function processImage(
     // imageData = reduceNoise(imageData, 3);
     console.log("[Process Image] Skipping noise reduction");
 
-    // 4b: Enhance contrast (HARDCODED: 100 = 2x contrast)
-    imageData = enhanceContrast(imageData, 2.0);
-    console.log("[Process Image] Contrast enhanced (factor 2.0)");
+    // 4b: Enhance contrast (OPTIMIZED: 130 = 2.3x contrast)
+    imageData = enhanceContrast(imageData, 2.3);
+    console.log("[Process Image] Contrast enhanced (factor 2.3)");
 
-    // 4c: Adjust brightness (HARDCODED: 30 = target 158)
+    // 4c: Adjust brightness (OPTIMIZED: 30 = target 158)
     imageData = adjustBrightness(imageData, 158);
     console.log("[Process Image] Brightness adjusted (target 158)");
 
-    // 4d: Apply adaptive thresholding (TESTING - will be configured)
+    // 4d: Skip adaptive threshold - makes text unclear and cartoonish
     // imageData = applyAdaptiveThreshold(imageData, 15, 10);
-    console.log("[Process Image] Skipping adaptive threshold - testing optimal settings");
+    console.log("[Process Image] Skipping adaptive threshold - causes cartoonish effect");
 
-    // 4e: Skip sharpening (HARDCODED: 0 = no sharpening, breaks the image)
-    // imageData = sharpenImage(imageData);
-    console.log("[Process Image] Skipping sharpening (breaks image)");
+    // 4e: Apply gentle unsharp mask for text clarity (better than simple sharpening)
+    imageData = applyUnsharpMask(imageData, 1.5, 1.0);
+    console.log("[Process Image] Gentle unsharp mask applied for text clarity");
     
     console.log("[Process Image] Enhancement complete");
 

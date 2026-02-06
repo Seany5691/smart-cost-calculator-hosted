@@ -140,13 +140,6 @@ export default function CaptureMode({
           height: { ideal: 2160, min: 1080 },
           // Request best quality settings
           aspectRatio: { ideal: 16/9 },
-          // Focus mode for document scanning
-          focusMode: { ideal: "continuous" }, // Continuous autofocus
-          // Request manual focus control if available
-          advanced: [
-            { focusMode: "continuous" },
-            { focusMode: "manual" },
-          ],
         },
         audio: false,
       });

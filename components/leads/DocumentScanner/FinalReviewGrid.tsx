@@ -21,9 +21,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  Settings,
 } from "lucide-react";
-import UnsharpMaskTuner, { UnsharpMaskSettings } from "./UnsharpMaskTuner";
 
 export default function FinalReviewGrid({
   images,
@@ -40,8 +38,6 @@ export default function FinalReviewGrid({
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [swipedImageId, setSwipedImageId] = useState<string | null>(null);
   const [focusedImageIndex, setFocusedImageIndex] = useState<number>(0);
-  const [showTuner, setShowTuner] = useState(false);
-  const [tunerSettings, setTunerSettings] = useState<UnsharpMaskSettings | null>(null);
 
   // Count marked pages
   const markedForRetakeCount = images.filter(
@@ -217,23 +213,8 @@ export default function FinalReviewGrid({
     );
   };
 
-  const handleTunerApply = (settings: UnsharpMaskSettings) => {
-    setTunerSettings(settings);
-    console.log("Unsharp mask settings applied:", settings);
-    // Settings will be used during processing
-  };
-
   return (
-    <>
-      {showTuner && images.length > 0 && (
-        <UnsharpMaskTuner
-          originalBlob={images[0].originalBlob}
-          onClose={() => setShowTuner(false)}
-          onApply={handleTunerApply}
-        />
-      )}
-
-      <div className="fixed inset-0 z-[10002] flex flex-col h-full bg-gradient-to-br from-slate-900 to-emerald-900">
+    <div className="fixed inset-0 z-[10002] flex flex-col h-full bg-gradient-to-br from-slate-900 to-emerald-900">
       {/* Header */}
       <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 border-b border-emerald-500/30 px-4 py-4 sm:px-6">
         <div className="flex items-center justify-between">
@@ -451,24 +432,6 @@ export default function FinalReviewGrid({
       {/* Action Bar */}
       <div className="bg-slate-900/80 border-t border-emerald-500/30 px-4 py-4 sm:px-6 backdrop-blur-sm">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* Enhancement Tuner Button */}
-          <button
-            onClick={() => setShowTuner(true)}
-            disabled={images.length === 0}
-            className="
-              flex items-center justify-center gap-2 px-6 py-3 rounded-lg
-              bg-blue-600 text-white font-medium
-              hover:bg-blue-700 active:bg-blue-800
-              disabled:bg-slate-600 disabled:cursor-not-allowed
-              transition-colors shadow-md hover:shadow-lg
-              min-h-[44px]
-            "
-            aria-label="Tune enhancement settings"
-          >
-            <Settings className="w-5 h-5" aria-hidden="true" />
-            Tune Settings
-          </button>
-
           {/* Retake Marked Pages Button */}
           {markedForRetakeCount > 0 && (
             <button
@@ -513,6 +476,5 @@ export default function FinalReviewGrid({
         </div>
       </div>
     </div>
-    </>
   );
 }

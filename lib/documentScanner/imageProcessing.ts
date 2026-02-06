@@ -287,6 +287,152 @@ export function clamp(
 }
 
 /**
+ * Apply median filter for noise reduction
+ *
+ * Reduces noise in the image by replacing each pixel with the median value
+ * of its neighborhood. This is particularly effective for "salt and pepper"
+ * noise while preserving edges better than Gaussian blur.
+ *
+ * The median filter:
+ * - Sorts pixel values in a neighborhood
+ * - Replaces center pixel with the median value
+ * - Preserves edges while removing noise
+ * - Essential before sharpening to avoid amplifying noise
+ *
+ * @param imageData - ImageData to denoise
+ * @param kernelSize - Size of the median filter kernel (default 3)
+ * @returns New ImageData with noise reduced
+ *
+ * Requirements: "Magic" filter enhancement
+ */
+export function reduceNoise(
+  imageData: ImageData,
+  kernelSize: number = 3,
+): ImageData {
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+
+  // Create output ImageData
+  const outputData = new Uint8ClampedArray(width * height * 4);
+  const output = new ImageData(outputData, width, height);
+
+  const radius = Math.floor(kernelSize / 2);
+
+  // Process each pixel
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      // Collect neighborhood values for each channel
+      const rValues: number[] = [];
+      const gValues: number[] = [];
+      const bValues: number[] = [];
+
+      // Sample neighborhood
+      for (let ky = -radius; ky <= radius; ky++) {
+        for (let kx = -radius; kx <= radius; kx++) {
+          const pixelY = clamp(y + ky, 0, height - 1);
+          const pixelX = clamp(x + kx, 0, width - 1);
+          const idx = (pixelY * width + pixelX) * 4;
+
+          rValues.push(data[idx]);
+          gValues.push(data[idx + 1]);
+          bValues.push(data[idx + 2]);
+        }
+      }
+
+      // Sort and find median
+      rValues.sort((a, b) => a - b);
+      gValues.sort((a, b) => a - b);
+      bValues.sort((a, b) => a - b);
+
+      const medianIdx = Math.floor(rValues.length / 2);
+      const outputIdx = (y * width + x) * 4;
+
+      outputData[outputIdx] = rValues[medianIdx];
+      outputData[outputIdx + 1] = gValues[medianIdx];
+      outputData[outputIdx + 2] = bValues[medianIdx];
+      outputData[outputIdx + 3] = data[(y * width + x) * 4 + 3]; // Copy alpha
+    }
+  }
+
+  return output;
+}
+
+/**
+ * Apply adaptive thresholding for crisp text
+ *
+ * Converts grayscale image to high-contrast black and white using adaptive
+ * thresholding. This makes text extremely crisp and clear, perfect for
+ * document scanning.
+ *
+ * Adaptive thresholding:
+ * - Calculates local threshold for each pixel based on neighborhood
+ * - Handles varying lighting conditions across the document
+ * - Makes text pure black and background pure white
+ * - Essential for the "Magic" filter effect
+ *
+ * @param imageData - ImageData to threshold (should be grayscale)
+ * @param blockSize - Size of neighborhood for local threshold (default 15)
+ * @param constant - Constant subtracted from mean (default 10)
+ * @returns New ImageData with adaptive thresholding applied
+ *
+ * Requirements: "Magic" filter enhancement
+ */
+export function applyAdaptiveThreshold(
+  imageData: ImageData,
+  blockSize: number = 15,
+  constant: number = 10,
+): ImageData {
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+
+  // Create output ImageData
+  const outputData = new Uint8ClampedArray(width * height * 4);
+  const output = new ImageData(outputData, width, height);
+
+  const radius = Math.floor(blockSize / 2);
+
+  // Process each pixel
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      // Calculate local mean in neighborhood
+      let sum = 0;
+      let count = 0;
+
+      for (let ky = -radius; ky <= radius; ky++) {
+        for (let kx = -radius; kx <= radius; kx++) {
+          const pixelY = clamp(y + ky, 0, height - 1);
+          const pixelX = clamp(x + kx, 0, width - 1);
+          const idx = (pixelY * width + pixelX) * 4;
+
+          sum += data[idx]; // Use red channel (grayscale, so R=G=B)
+          count++;
+        }
+      }
+
+      const localMean = sum / count;
+      const threshold = localMean - constant;
+
+      // Get current pixel value
+      const currentIdx = (y * width + x) * 4;
+      const pixelValue = data[currentIdx];
+
+      // Apply threshold: if pixel > threshold, make it white, else black
+      const outputIdx = (y * width + x) * 4;
+      const newValue = pixelValue > threshold ? 255 : 0;
+
+      outputData[outputIdx] = newValue;
+      outputData[outputIdx + 1] = newValue;
+      outputData[outputIdx + 2] = newValue;
+      outputData[outputIdx + 3] = 255; // Full opacity
+    }
+  }
+
+  return output;
+}
+
+/**
  * Enhance image contrast using linear contrast stretch
  *
  * Applies a linear contrast enhancement to make dark pixels darker and
@@ -300,7 +446,7 @@ export function clamp(
  * 4. Clamping results to valid pixel range (0-255)
  *
  * A factor of 1.0 leaves the image unchanged.
- * A factor > 1.0 increases contrast (recommended: 1.5 for documents).
+ * A factor > 1.0 increases contrast (recommended: 2.0 for "Magic" filter).
  * A factor < 1.0 decreases contrast.
  *
  * Formula: newValue = midpoint + (oldValue - midpoint) * factor
@@ -312,19 +458,19 @@ export function clamp(
  * - Creates more professional-looking scans
  *
  * @param imageData - ImageData to enhance (modified in place)
- * @param factor - Contrast enhancement factor (default 1.5)
+ * @param factor - Contrast enhancement factor (default 2.0 for "Magic" filter)
  * @returns The same ImageData object with enhanced contrast
  *
  * @example
  * const imageData = await loadImageData(blob);
  * convertToGrayscale(imageData);
- * enhanceContrast(imageData, 1.5); // Increase contrast by 50%
+ * enhanceContrast(imageData, 2.0); // Aggressive contrast for crisp text
  *
- * Requirements: 5.2
+ * Requirements: 5.2, "Magic" filter enhancement
  */
 export function enhanceContrast(
   imageData: ImageData,
-  factor: number = 1.5,
+  factor: number = 2.0,
 ): ImageData {
   const data = imageData.data;
   const midpoint = 128; // Middle of 0-255 range
@@ -363,10 +509,11 @@ export function enhanceContrast(
  * 3. Adding this difference to every pixel value
  * 4. Clamping results to valid pixel range (0-255)
  *
- * For document scanning, a target of 180 (on 0-255 scale) provides:
- * - Bright enough background to appear white/near-white
- * - Dark enough text to remain readable with good contrast
+ * For document scanning, a target of 220 (on 0-255 scale) provides:
+ * - Very bright background to appear pure white
+ * - Excellent contrast with dark text
  * - Optimal balance for OCR and visual quality
+ * - Professional "Magic" filter appearance
  *
  * This adjustment is essential because:
  * - Documents may be captured in varying lighting conditions
@@ -377,20 +524,20 @@ export function enhanceContrast(
  * The function modifies ImageData in place for performance.
  *
  * @param imageData - ImageData to adjust (modified in place)
- * @param target - Target brightness level (0-255, default 180)
+ * @param target - Target brightness level (0-255, default 220 for "Magic" filter)
  * @returns The same ImageData object with adjusted brightness
  *
  * @example
  * const imageData = await loadImageData(blob);
  * convertToGrayscale(imageData);
- * enhanceContrast(imageData, 1.5);
- * adjustBrightness(imageData, 180); // Normalize to target brightness
+ * enhanceContrast(imageData, 2.0);
+ * adjustBrightness(imageData, 220); // Bright white background
  *
- * Requirements: 5.3
+ * Requirements: 5.3, "Magic" filter enhancement
  */
 export function adjustBrightness(
   imageData: ImageData,
-  target: number = 180,
+  target: number = 220,
 ): ImageData {
   const data = imageData.data;
 
@@ -557,47 +704,50 @@ export function applyConvolution(
  * - Compensating for slight camera blur
  *
  * The function uses a 3x3 sharpening kernel that:
- * - Emphasizes the center pixel (weight: 5)
- * - Subtracts from the surrounding pixels (weight: -1 each)
- * - Creates an "unsharp mask" effect that enhances edges
+ * - Strongly emphasizes the center pixel (weight: 9 for "Magic" filter)
+ * - Subtracts from all surrounding pixels (weight: -1 each)
+ * - Creates a strong "unsharp mask" effect for crisp text
  *
- * The kernel pattern:
+ * The enhanced kernel pattern for "Magic" filter:
  * ```
- *  0  -1   0
- * -1   5  -1
- *  0  -1   0
+ * -1  -1  -1
+ * -1   9  -1
+ * -1  -1  -1
  * ```
  *
- * This kernel is normalized (sum = 1) so it doesn't change overall brightness,
- * only enhances local contrast at edges. The cross pattern (not including
- * diagonals) provides good edge enhancement without introducing too much noise.
+ * This stronger kernel (sum = 1) provides:
+ * - More aggressive edge enhancement
+ * - Crisper text, even small fonts
+ * - Better definition of fine details
+ * - Professional "Magic" filter appearance
  *
- * The sharpening is applied after grayscale conversion, contrast enhancement,
- * and brightness adjustment to work with optimally prepared pixel values.
+ * The sharpening is applied after noise reduction to avoid amplifying noise,
+ * and after contrast/brightness adjustment for optimal results.
  *
  * @param imageData - ImageData to sharpen
- * @returns New ImageData with sharpening applied
+ * @returns New ImageData with strong sharpening applied
  *
  * @example
  * const imageData = await loadImageData(blob);
  * convertToGrayscale(imageData);
- * enhanceContrast(imageData, 1.5);
- * adjustBrightness(imageData, 180);
- * const sharpened = sharpenImage(imageData); // Enhance text edges
+ * const denoised = reduceNoise(imageData);
+ * enhanceContrast(denoised, 2.0);
+ * adjustBrightness(denoised, 220);
+ * const sharpened = sharpenImage(denoised); // Crisp "Magic" filter
  *
- * Requirements: 5.4
+ * Requirements: 5.4, "Magic" filter enhancement
  */
 export function sharpenImage(imageData: ImageData): ImageData {
-  // 3x3 sharpening kernel (unsharp mask)
-  // Center pixel is emphasized, surrounding pixels are subtracted
-  // This enhances edges and fine details
+  // 3x3 strong sharpening kernel for "Magic" filter
+  // Center pixel is strongly emphasized, all surrounding pixels subtracted
+  // This creates very crisp text and clear details
   const sharpenKernel = [
-    [0, -1, 0],
-    [-1, 5, -1],
-    [0, -1, 0],
+    [-1, -1, -1],
+    [-1,  9, -1],
+    [-1, -1, -1],
   ];
 
-  // Apply convolution with the sharpening kernel
+  // Apply convolution with the strong sharpening kernel
   // Divisor is 1 (sum of kernel values) so no additional normalization needed
   return applyConvolution(imageData, sharpenKernel);
 }
@@ -1038,18 +1188,29 @@ export function applyPerspectiveTransform(
  *
  * This is the main entry point for image processing. It takes a raw captured
  * image and applies all enhancement operations in sequence to produce a
- * high-quality, professional-looking document scan.
+ * high-quality, professional-looking document scan with CamScanner-style
+ * "Magic" filter enhancement.
  *
  * Processing pipeline:
  * 1. Load image into ImageData
  * 2. Convert to grayscale (simplifies processing, reduces file size)
- * 3. Enhance contrast (makes text darker, background whiter)
- * 4. Adjust brightness (normalizes lighting conditions)
- * 5. Sharpen image (improves text clarity)
- * 6. Detect document edges (find document boundaries)
- * 7. Apply perspective transform (straighten skewed documents)
- * 8. Compress image (reduce file size to ~1MB)
- * 9. Generate thumbnail (create low-res preview)
+ * 3. Detect document edges and apply perspective transform (straighten)
+ * 4. Apply "Magic" filter enhancement:
+ *    a. Reduce noise (median filter to prevent amplifying noise)
+ *    b. Adaptive thresholding (optional - for extremely crisp text)
+ *    c. Enhance contrast aggressively (factor 2.0 for crisp text)
+ *    d. Adjust brightness (target 220 for bright white background)
+ *    e. Strong sharpening (enhanced kernel for clear small text)
+ * 5. Convert to blob with high quality
+ * 6. Compress image (reduce file size to ~2MB)
+ * 7. Generate thumbnail (create low-res preview)
+ *
+ * The "Magic" filter enhancement makes scanned documents look professional:
+ * - Crisp, clear text (even small fonts)
+ * - Bright white background
+ * - High contrast for readability
+ * - Reduced noise and artifacts
+ * - Sharp edges and details
  *
  * The function tracks processing time and returns a ProcessedImage with all
  * fields populated, including the processed blob, thumbnail, detected edges,
@@ -1080,7 +1241,7 @@ export function applyPerspectiveTransform(
  * console.log(`Processed in ${processed.processingTime}ms`);
  * console.log(`File size: ${processed.fileSize} bytes`);
  *
- * Requirements: 5.1-5.8
+ * Requirements: 5.1-5.8, "Magic" filter enhancement
  */
 export async function processImage(
   image: CapturedImage,
@@ -1142,23 +1303,37 @@ export async function processImage(
 
     console.log("[Process Image] Final edges:", detectedEdges ? "Yes" : "No");
 
-    // Step 4: Enhance contrast by factor of 1.6
-    imageData = enhanceContrast(imageData, 1.6);
-    console.log("[Process Image] Contrast enhanced");
+    // Step 4: Apply "Magic" filter enhancement pipeline
+    console.log("[Process Image] Applying 'Magic' filter enhancement...");
+    
+    // 4a: Reduce noise before sharpening (prevents amplifying noise)
+    imageData = reduceNoise(imageData, 3);
+    console.log("[Process Image] Noise reduction applied");
 
-    // Step 5: Adjust brightness to target level of 210
-    imageData = adjustBrightness(imageData, 210);
-    console.log("[Process Image] Brightness adjusted");
+    // 4b: Apply adaptive thresholding for crisp text (optional - can be toggled)
+    // Uncomment the line below for extremely crisp black/white text
+    // imageData = applyAdaptiveThreshold(imageData, 15, 10);
+    // console.log("[Process Image] Adaptive thresholding applied");
 
-    // Step 6: Apply sharpening once for text clarity
+    // 4c: Enhance contrast aggressively (factor 2.0 for "Magic" filter)
+    imageData = enhanceContrast(imageData, 2.0);
+    console.log("[Process Image] Contrast enhanced (factor 2.0)");
+
+    // 4d: Adjust brightness to bright white background (target 220)
+    imageData = adjustBrightness(imageData, 220);
+    console.log("[Process Image] Brightness adjusted (target 220)");
+
+    // 4e: Apply strong sharpening for clear text
     imageData = sharpenImage(imageData);
-    console.log("[Process Image] Sharpening applied");
+    console.log("[Process Image] Strong sharpening applied");
+    
+    console.log("[Process Image] 'Magic' filter enhancement complete");
 
-    // Step 7: Convert ImageData back to Blob with high quality
+    // Step 5: Convert ImageData back to Blob with high quality
     const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.95);
     console.log("[Process Image] Converted to blob");
 
-    // Step 8: Compress image to target size of 2MB
+    // Step 6: Compress image to target size of 2MB
     const { compressImage } = await import("./imageCompression");
     const compressedBlob = await compressImage(processedBlob, { 
       maxSizeMB: 2,
@@ -1167,7 +1342,7 @@ export async function processImage(
     });
     console.log("[Process Image] Compressed to", compressedBlob.size, "bytes");
 
-    // Step 9: Generate thumbnail after compression
+    // Step 7: Generate thumbnail after compression
     const { generateThumbnail } = await import("./imageCompression");
     const thumbnailBlob = await generateThumbnail(compressedBlob, 200, 300);
     console.log("[Process Image] Thumbnail generated");

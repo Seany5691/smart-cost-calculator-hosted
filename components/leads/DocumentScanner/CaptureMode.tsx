@@ -135,8 +135,18 @@ export default function CaptureMode({
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          // Request maximum resolution for sharp images
+          width: { ideal: 3840, min: 1920 }, // 4K ideal, 1080p minimum
+          height: { ideal: 2160, min: 1080 },
+          // Request best quality settings
+          aspectRatio: { ideal: 16/9 },
+          // Focus mode for document scanning
+          focusMode: { ideal: "continuous" }, // Continuous autofocus
+          // Request manual focus control if available
+          advanced: [
+            { focusMode: "continuous" },
+            { focusMode: "manual" },
+          ],
         },
         audio: false,
       });
@@ -521,9 +531,10 @@ export default function CaptureMode({
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       // INSTANT CAPTURE: Use toDataURL() for immediate response (synchronous)
-      console.log("[Capture] Converting to data URL (INSTANT)");
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
-      console.log("[Capture] ✓ Data URL created instantly");
+      // MAXIMUM QUALITY: 0.98 for sharp, clear images
+      console.log("[Capture] Converting to data URL (INSTANT, MAX QUALITY)");
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.98);
+      console.log("[Capture] ✓ Data URL created instantly at maximum quality");
 
       // Haptic feedback
       if ("vibrate" in navigator) {

@@ -1414,24 +1414,24 @@ export async function processImage(
     // imageData = applyAdaptiveThreshold(imageData, 15, 10);
     console.log("[Process Image] Skipping adaptive threshold - causes cartoonish effect");
 
-    // 4e: Apply gentle unsharp mask for text clarity (better than simple sharpening)
-    imageData = applyUnsharpMask(imageData, 1.5, 1.0);
-    console.log("[Process Image] Gentle unsharp mask applied for text clarity");
+    // 4e: Skip unsharp mask - focus on camera quality instead
+    // imageData = applyUnsharpMask(imageData, 1.5, 1.0);
+    console.log("[Process Image] Skipping unsharp mask - relying on camera quality");
     
     console.log("[Process Image] Enhancement complete");
 
-    // Step 5: Convert ImageData back to Blob with high quality
-    const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.95);
-    console.log("[Process Image] Converted to blob");
+    // Step 5: Convert ImageData back to Blob with MAXIMUM quality
+    const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.98);
+    console.log("[Process Image] Converted to blob at maximum quality");
 
-    // Step 6: Compress image to target size of 2MB
+    // Step 6: Compress image with HIGHER quality settings to preserve camera sharpness
     const { compressImage } = await import("./imageCompression");
     const compressedBlob = await compressImage(processedBlob, { 
-      maxSizeMB: 2,
-      maxWidthOrHeight: 2100,
-      quality: 0.92
+      maxSizeMB: 3, // Increased from 2MB to preserve quality
+      maxWidthOrHeight: 3840, // Support 4K resolution
+      quality: 0.95 // Increased from 0.92 to preserve sharpness
     });
-    console.log("[Process Image] Compressed to", compressedBlob.size, "bytes");
+    console.log("[Process Image] Compressed to", compressedBlob.size, "bytes (high quality)");
 
     // Step 7: Generate thumbnail after compression
     const { generateThumbnail } = await import("./imageCompression");

@@ -355,6 +355,7 @@ export default function CaptureMode({
   /**
    * Validate that locked corners are still valid
    * Checks if document is still present at locked position
+   * STRICT: Only unlocks if document is completely removed
    */
   const validateLockedCorners = async (
     imageData: ImageData,
@@ -366,6 +367,8 @@ export default function CaptureMode({
     },
     scale: number
   ): Promise<boolean> => {
+    const { width, height, data } = imageData;
+    
     // Scale corners to match imageData resolution
     const scaledCorners = {
       topLeft: { x: lockedCorners.topLeft.x * scale, y: lockedCorners.topLeft.y * scale },
@@ -374,13 +377,50 @@ export default function CaptureMode({
       bottomLeft: { x: lockedCorners.bottomLeft.x * scale, y: lockedCorners.bottomLeft.y * scale },
     };
 
-    // Check if background around corners is still contrasting
-    return validateBackgroundAroundCorners(imageData, scaledCorners, 1.0);
+    // Check if document center is still white/light (document still present)
+    const centerX = (scaledCorners.topLeft.x + scaledCorners.topRight.x + scaledCorners.bottomLeft.x + scaledCorners.bottomRight.x) / 4;
+    const centerY = (scaledCorners.topLeft.y + scaledCorners.topRight.y + scaledCorners.bottomLeft.y + scaledCorners.bottomRight.y) / 4;
+    
+    // Sample center brightness
+    const sampleSize = 20;
+    let centerBrightness = 0;
+    let centerCount = 0;
+    
+    for (let dy = -sampleSize; dy <= sampleSize; dy++) {
+      for (let dx = -sampleSize; dx <= sampleSize; dx++) {
+        const px = Math.floor(centerX + dx);
+        const py = Math.floor(centerY + dy);
+        
+        if (px >= 0 && px < width && py >= 0 && py < height) {
+          const idx = (py * width + px) * 4;
+          const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+          centerBrightness += brightness;
+          centerCount++;
+        }
+      }
+    }
+    
+    const avgCenterBrightness = centerCount > 0 ? centerBrightness / centerCount : 0;
+    
+    // If center is dark (< 100), document is gone - unlock
+    if (avgCenterBrightness < 100) {
+      console.log(`[Lock Validation] Document removed - center brightness: ${avgCenterBrightness.toFixed(0)}`);
+      return false;
+    }
+    
+    // Document still present, stay locked!
+    return true;
   };
+
 
   /**
    * Validate that background around corners contrasts with document
    * Returns true if background is different color from document (good for detection)
+   */
+  /**
+   * Validate that background around corners contrasts with document
+   * Checks INSIDE edge (should be white) and OUTSIDE edge (should be dark)
+   * Returns true if all 4 corners have good inside/outside contrast
    */
   const validateBackgroundAroundCorners = async (
     imageData: ImageData,
@@ -394,8 +434,9 @@ export default function CaptureMode({
   ): Promise<boolean> => {
     const { width, height, data } = imageData;
     
-    // Sample size for checking background (in scaled pixels)
-    const sampleSize = 20;
+    // Sample size for checking (in scaled pixels)
+    const sampleSize = 15;
+    const edgeOffset = 10; // Distance from corner to sample inside/outside
     
     // Helper to get average brightness in a region
     const getAverageBrightness = (x: number, y: number, size: number): number => {
@@ -419,41 +460,78 @@ export default function CaptureMode({
       return count > 0 ? total / count : 0;
     };
     
-    // Sample document center (should be white/light)
-    const centerX = (corners.topLeft.x + corners.topRight.x + corners.bottomLeft.x + corners.bottomRight.x) / 4;
-    const centerY = (corners.topLeft.y + corners.topRight.y + corners.bottomLeft.y + corners.bottomRight.y) / 4;
-    const documentBrightness = getAverageBrightness(centerX, centerY, sampleSize);
-    
-    // Sample background outside each corner (should be dark)
+    // Check each corner: inside should be white, outside should be dark
     const cornerChecks = [
-      { name: 'topLeft', x: corners.topLeft.x - sampleSize * 2, y: corners.topLeft.y - sampleSize * 2 },
-      { name: 'topRight', x: corners.topRight.x + sampleSize * 2, y: corners.topRight.y - sampleSize * 2 },
-      { name: 'bottomLeft', x: corners.bottomLeft.x - sampleSize * 2, y: corners.bottomLeft.y + sampleSize * 2 },
-      { name: 'bottomRight', x: corners.bottomRight.x + sampleSize * 2, y: corners.bottomRight.y + sampleSize * 2 },
+      {
+        name: 'topLeft',
+        corner: corners.topLeft,
+        insideX: corners.topLeft.x + edgeOffset,
+        insideY: corners.topLeft.y + edgeOffset,
+        outsideX: corners.topLeft.x - edgeOffset,
+        outsideY: corners.topLeft.y - edgeOffset,
+      },
+      {
+        name: 'topRight',
+        corner: corners.topRight,
+        insideX: corners.topRight.x - edgeOffset,
+        insideY: corners.topRight.y + edgeOffset,
+        outsideX: corners.topRight.x + edgeOffset,
+        outsideY: corners.topRight.y - edgeOffset,
+      },
+      {
+        name: 'bottomLeft',
+        corner: corners.bottomLeft,
+        insideX: corners.bottomLeft.x + edgeOffset,
+        insideY: corners.bottomLeft.y - edgeOffset,
+        outsideX: corners.bottomLeft.x - edgeOffset,
+        outsideY: corners.bottomLeft.y + edgeOffset,
+      },
+      {
+        name: 'bottomRight',
+        corner: corners.bottomRight,
+        insideX: corners.bottomRight.x - edgeOffset,
+        insideY: corners.bottomRight.y - edgeOffset,
+        outsideX: corners.bottomRight.x + edgeOffset,
+        outsideY: corners.bottomRight.y + edgeOffset,
+      },
     ];
     
     let validCorners = 0;
     
-    for (const corner of cornerChecks) {
+    for (const check of cornerChecks) {
       // Skip if outside image bounds
-      if (corner.x < 0 || corner.x >= width || corner.y < 0 || corner.y >= height) {
+      if (
+        check.insideX < 0 || check.insideX >= width ||
+        check.insideY < 0 || check.insideY >= height ||
+        check.outsideX < 0 || check.outsideX >= width ||
+        check.outsideY < 0 || check.outsideY >= height
+      ) {
         continue;
       }
       
-      const backgroundBrightness = getAverageBrightness(corner.x, corner.y, sampleSize);
-      const contrast = Math.abs(documentBrightness - backgroundBrightness);
+      const insideBrightness = getAverageBrightness(check.insideX, check.insideY, sampleSize);
+      const outsideBrightness = getAverageBrightness(check.outsideX, check.outsideY, sampleSize);
       
-      // Need at least 80 brightness difference (on 0-255 scale)
-      if (contrast > 80) {
+      // Inside should be bright (white document), outside should be dark (background)
+      const insideIsWhite = insideBrightness > 150; // White threshold
+      const outsideIsDark = outsideBrightness < 100; // Dark threshold
+      const contrast = insideBrightness - outsideBrightness;
+      
+      if (insideIsWhite && outsideIsDark && contrast > 80) {
         validCorners++;
+        console.log(`[Corner Validation] ${check.name}: ✓ inside=${insideBrightness.toFixed(0)}, outside=${outsideBrightness.toFixed(0)}, contrast=${contrast.toFixed(0)}`);
+      } else {
+        console.log(`[Corner Validation] ${check.name}: ✗ inside=${insideBrightness.toFixed(0)}, outside=${outsideBrightness.toFixed(0)}, contrast=${contrast.toFixed(0)}`);
       }
     }
     
-    // Need at least 3 out of 4 corners to have good contrast
-    const isValid = validCorners >= 3;
+    // Need ALL 4 corners to be valid for locking
+    const isValid = validCorners === 4;
     
     if (!isValid) {
-      console.log(`[Background Validation] Only ${validCorners}/4 corners have good contrast`);
+      console.log(`[Background Validation] Only ${validCorners}/4 corners valid - need all 4 to lock`);
+    } else {
+      console.log(`[Background Validation] ✓ All 4 corners valid - LOCKING!`);
     }
     
     return isValid;

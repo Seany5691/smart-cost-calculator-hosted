@@ -1318,13 +1318,13 @@ export async function processImage(
     // imageData = applyAdaptiveThreshold(imageData, 15, 10);
     // console.log("[Process Image] Adaptive thresholding applied");
 
-    // 4c: Enhance contrast MODERATELY (factor 1.4 for clear text)
-    imageData = enhanceContrast(imageData, 1.4);
-    console.log("[Process Image] Contrast enhanced (factor 1.4)");
+    // 4c: Enhance contrast GENTLY (factor 1.2 for clear text without inversion)
+    imageData = enhanceContrast(imageData, 1.2);
+    console.log("[Process Image] Contrast enhanced (factor 1.2)");
 
-    // 4d: Adjust brightness to SAFE level (target 160 - keeps text black)
-    imageData = adjustBrightness(imageData, 160);
-    console.log("[Process Image] Brightness adjusted (target 160)");
+    // 4d: Adjust brightness to BRIGHT level (target 190 - bright background)
+    imageData = adjustBrightness(imageData, 190);
+    console.log("[Process Image] Brightness adjusted (target 190)");
 
     // 4e: Apply MODERATE sharpening for clear text
     imageData = sharpenImage(imageData);

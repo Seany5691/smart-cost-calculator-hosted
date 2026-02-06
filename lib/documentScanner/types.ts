@@ -9,7 +9,6 @@
  * Workflow phases for the document scanner
  */
 export type Phase =
-  | "qualityPreset" // Quality preset selection (Phase 4)
   | "capture" // Camera interface for taking photos
   | "preview" // Grid view of captured pages with actions (RAW images)
   | "retake" // Re-capture specific marked pages

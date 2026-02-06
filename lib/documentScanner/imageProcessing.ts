@@ -1313,10 +1313,9 @@ export async function processImage(
     // imageData = reduceNoise(imageData, 3);
     console.log("[Process Image] Skipping noise reduction to preserve text clarity");
 
-    // 4b: Apply adaptive thresholding for crisp text (optional - can be toggled)
-    // Uncomment the line below for extremely crisp black/white text
-    // imageData = applyAdaptiveThreshold(imageData, 15, 10);
-    // console.log("[Process Image] Adaptive thresholding applied");
+    // 4b: Apply adaptive thresholding for crisp text
+    imageData = applyAdaptiveThreshold(imageData, 15, 10);
+    console.log("[Process Image] Adaptive thresholding applied");
 
     // 4c: Enhance contrast GENTLY (factor 1.2 for clear text without inversion)
     imageData = enhanceContrast(imageData, 1.2);

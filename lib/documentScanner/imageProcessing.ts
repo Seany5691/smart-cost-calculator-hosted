@@ -738,16 +738,15 @@ export function applyConvolution(
  * Requirements: 5.4, "Magic" filter enhancement
  */
 export function sharpenImage(imageData: ImageData): ImageData {
-  // 3x3 strong sharpening kernel for "Magic" filter
-  // Center pixel is strongly emphasized, all surrounding pixels subtracted
-  // This creates very crisp text and clear details
+  // 3x3 GENTLE sharpening kernel for readable documents
+  // Less aggressive than "Magic" filter - preserves readability
   const sharpenKernel = [
-    [-1, -1, -1],
-    [-1,  9, -1],
-    [-1, -1, -1],
+    [ 0, -1,  0],
+    [-1,  5, -1],
+    [ 0, -1,  0],
   ];
 
-  // Apply convolution with the strong sharpening kernel
+  // Apply convolution with the gentle sharpening kernel
   // Divisor is 1 (sum of kernel values) so no additional normalization needed
   return applyConvolution(imageData, sharpenKernel);
 }
@@ -1307,31 +1306,31 @@ export async function processImage(
     // No edge detection needed - document is already in frame
     let detectedEdges = undefined;
 
-    // Step 4: Apply "Magic" filter enhancement pipeline
-    console.log("[Process Image] Applying 'Magic' filter enhancement...");
+    // Step 4: Apply GENTLE enhancement pipeline for readable documents
+    console.log("[Process Image] Applying gentle enhancement for readability...");
     
-    // 4a: Reduce noise before sharpening (prevents amplifying noise)
-    imageData = reduceNoise(imageData, 3);
-    console.log("[Process Image] Noise reduction applied");
+    // 4a: Skip noise reduction - it blurs text
+    // imageData = reduceNoise(imageData, 3);
+    console.log("[Process Image] Skipping noise reduction to preserve text clarity");
 
     // 4b: Apply adaptive thresholding for crisp text (optional - can be toggled)
     // Uncomment the line below for extremely crisp black/white text
     // imageData = applyAdaptiveThreshold(imageData, 15, 10);
     // console.log("[Process Image] Adaptive thresholding applied");
 
-    // 4c: Enhance contrast aggressively (factor 2.0 for "Magic" filter)
-    imageData = enhanceContrast(imageData, 2.0);
-    console.log("[Process Image] Contrast enhanced (factor 2.0)");
+    // 4c: Enhance contrast GENTLY (factor 1.3 for readable text)
+    imageData = enhanceContrast(imageData, 1.3);
+    console.log("[Process Image] Contrast enhanced gently (factor 1.3)");
 
-    // 4d: Adjust brightness to bright white background (target 220)
-    imageData = adjustBrightness(imageData, 220);
-    console.log("[Process Image] Brightness adjusted (target 220)");
+    // 4d: Adjust brightness to readable level (target 180 - not too bright)
+    imageData = adjustBrightness(imageData, 180);
+    console.log("[Process Image] Brightness adjusted (target 180)");
 
-    // 4e: Apply strong sharpening for clear text
+    // 4e: Apply GENTLE sharpening for clear text
     imageData = sharpenImage(imageData);
-    console.log("[Process Image] Strong sharpening applied");
+    console.log("[Process Image] Gentle sharpening applied");
     
-    console.log("[Process Image] 'Magic' filter enhancement complete");
+    console.log("[Process Image] Enhancement complete");
 
     // Step 5: Convert ImageData back to Blob with high quality
     const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.95);

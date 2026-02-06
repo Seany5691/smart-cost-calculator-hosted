@@ -1313,7 +1313,7 @@ export async function processImage(
     // imageData = reduceNoise(imageData, 3);
     console.log("[Process Image] Skipping noise reduction to preserve text clarity");
 
-    // 4b: Apply adaptive thresholding FIRST on raw grayscale (before any brightness/contrast)
+    // 4b: Apply adaptive thresholding ONLY on raw grayscale
     imageData = applyAdaptiveThreshold(imageData, 15, 10);
     console.log("[Process Image] Adaptive thresholding applied on raw grayscale");
 
@@ -1325,9 +1325,9 @@ export async function processImage(
     // imageData = adjustBrightness(imageData, 190);
     console.log("[Process Image] Skipping brightness - adaptive threshold handles this");
 
-    // 4e: Apply MODERATE sharpening for clear text
-    imageData = sharpenImage(imageData);
-    console.log("[Process Image] Moderate sharpening applied");
+    // 4e: Skip sharpening - testing with ONLY adaptive threshold
+    // imageData = sharpenImage(imageData);
+    console.log("[Process Image] Skipping sharpening - testing adaptive threshold only");
     
     console.log("[Process Image] Enhancement complete");
 

@@ -1077,7 +1077,8 @@ export function removeShadowsFast(
       outputData[i * 4 + 2] = originalValue;
     } else {
       // Normalize: (original / shadow) * target_brightness
-      const normalized = (originalValue / shadowValue) * 200;
+      // Use 220 instead of 200 to make backgrounds brighter after shadow removal
+      const normalized = (originalValue / shadowValue) * 220;
       const clamped = clamp(Math.round(normalized), 0, 255);
 
       outputData[i * 4] = clamped;
@@ -1724,8 +1725,9 @@ export async function processImage(
     console.log("[Process Image] Brightness adjusted (target 158)");
 
     // 4e: Apply white boost to make backgrounds pure white while preserving text
-    imageData = applyWhiteBoost(imageData, 200, 0.8);
-    console.log("[Process Image] White boost applied (threshold 200, strength 0.8)");
+    // Lower threshold (180 instead of 200) to catch backgrounds after shadow removal
+    imageData = applyWhiteBoost(imageData, 180, 0.9);
+    console.log("[Process Image] White boost applied (threshold 180, strength 0.9)");
 
     // 4f: Skip adaptive threshold - makes text unclear and cartoonish
     // imageData = applyAdaptiveThreshold(imageData, 15, 10);

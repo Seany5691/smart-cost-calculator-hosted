@@ -1306,8 +1306,8 @@ export async function processImage(
     // No edge detection needed - document is already in frame
     let detectedEdges = undefined;
 
-    // Step 4: Apply OPTIMIZED enhancement pipeline for readable documents
-    console.log("[Process Image] Applying optimized enhancement for readability...");
+    // Step 4: Apply BALANCED enhancement pipeline for readable documents
+    console.log("[Process Image] Applying balanced enhancement for readability...");
     
     // 4a: Skip noise reduction - it blurs text
     // imageData = reduceNoise(imageData, 3);
@@ -1318,13 +1318,13 @@ export async function processImage(
     // imageData = applyAdaptiveThreshold(imageData, 15, 10);
     // console.log("[Process Image] Adaptive thresholding applied");
 
-    // 4c: Enhance contrast MODERATELY (factor 1.5 for clear text)
-    imageData = enhanceContrast(imageData, 1.5);
-    console.log("[Process Image] Contrast enhanced (factor 1.5)");
+    // 4c: Enhance contrast MODERATELY (factor 1.4 for clear text)
+    imageData = enhanceContrast(imageData, 1.4);
+    console.log("[Process Image] Contrast enhanced (factor 1.4)");
 
-    // 4d: Adjust brightness to optimal level (target 190 - bright but not washed out)
-    imageData = adjustBrightness(imageData, 190);
-    console.log("[Process Image] Brightness adjusted (target 190)");
+    // 4d: Adjust brightness to SAFE level (target 160 - keeps text black)
+    imageData = adjustBrightness(imageData, 160);
+    console.log("[Process Image] Brightness adjusted (target 160)");
 
     // 4e: Apply MODERATE sharpening for clear text
     imageData = sharpenImage(imageData);

@@ -1307,27 +1307,27 @@ export async function processImage(
     let detectedEdges = undefined;
 
     // Step 4: Apply BALANCED enhancement pipeline for readable documents
-    console.log("[Process Image] Testing with NO enhancements - raw grayscale only...");
+    console.log("[Process Image] Applying OPTIMIZED enhancement settings...");
     
     // 4a: Skip noise reduction - it blurs text
     // imageData = reduceNoise(imageData, 3);
     console.log("[Process Image] Skipping noise reduction");
 
-    // 4b: Skip adaptive thresholding - testing raw grayscale
+    // 4b: Enhance contrast (HARDCODED: 100 = 2x contrast)
+    imageData = enhanceContrast(imageData, 2.0);
+    console.log("[Process Image] Contrast enhanced (factor 2.0)");
+
+    // 4c: Adjust brightness (HARDCODED: 30 = target 158)
+    imageData = adjustBrightness(imageData, 158);
+    console.log("[Process Image] Brightness adjusted (target 158)");
+
+    // 4d: Apply adaptive thresholding (TESTING - will be configured)
     // imageData = applyAdaptiveThreshold(imageData, 15, 10);
-    console.log("[Process Image] Skipping adaptive threshold - testing raw grayscale");
+    console.log("[Process Image] Skipping adaptive threshold - testing optimal settings");
 
-    // 4c: Skip contrast enhancement
-    // imageData = enhanceContrast(imageData, 1.2);
-    console.log("[Process Image] Skipping contrast");
-
-    // 4d: Skip brightness adjustment
-    // imageData = adjustBrightness(imageData, 190);
-    console.log("[Process Image] Skipping brightness");
-
-    // 4e: Skip sharpening
+    // 4e: Skip sharpening (HARDCODED: 0 = no sharpening, breaks the image)
     // imageData = sharpenImage(imageData);
-    console.log("[Process Image] Skipping sharpening");
+    console.log("[Process Image] Skipping sharpening (breaks image)");
     
     console.log("[Process Image] Enhancement complete");
 

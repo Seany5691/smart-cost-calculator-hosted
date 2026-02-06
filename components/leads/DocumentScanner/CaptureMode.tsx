@@ -675,16 +675,36 @@ export default function CaptureMode({
   };
 
   /**
-   * Capture image from video stream WITH LOCKED corners - CROP IMMEDIATELY
+   * Capture image from video stream - INSTANT CAPTURE
+   * 
+   * CRITICAL: This function captures INSTANTLY using toDataURL() for immediate response.
+   * - Uses toDataURL() instead of toBlob() for instant capture (no async wait)
+   * - Converts to blob in background after capture completes
+   * - If corners detected: Crops to detected area
+   * - If no corners: Captures full frame
+   * - Never blocks or waits - button responds immediately
    */
-  const captureImage = async () => {
-    if (!videoRef.current || !canvasRef.current || state.isCapturing) return;
+  const captureImage = () => {
+    // Only check if already capturing - nothing else should block
+    if (state.isCapturing) {
+      console.log("[Capture] Already capturing, ignoring duplicate click");
+      return;
+    }
+
+    if (!videoRef.current || !canvasRef.current) {
+      console.error("[Capture] Video or canvas ref not available");
+      toast.error("Camera not ready", {
+        message: "Please wait for camera to initialize.",
+        section: "leads",
+      });
+      return;
+    }
 
     if (currentPageNumber > maxPages) {
-      setState((prev) => ({
-        ...prev,
-        error: `Maximum of ${maxPages} pages reached.`,
-      }));
+      toast.warning("Maximum pages reached", {
+        message: `Maximum of ${maxPages} pages reached.`,
+        section: "leads",
+      });
       return;
     }
 
@@ -697,25 +717,32 @@ export default function CaptureMode({
       return;
     }
 
+    // Set capturing state IMMEDIATELY
     setState((prev) => ({ ...prev, isCapturing: true }));
+    console.log("[Capture] 📸 CAPTURE BUTTON PRESSED - INSTANT CAPTURE");
 
     try {
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
+      // Ensure video is ready
+      if (video.readyState < 2) {
+        throw new Error("Video not ready");
+      }
+
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
-      const ctx = canvas.getContext("2d");
+      const ctx = canvas.getContext("2d", { willReadFrequently: false });
       if (!ctx) {
         throw new Error("Failed to get canvas context");
       }
 
-      // Draw full frame first
+      // Draw full frame IMMEDIATELY
+      console.log("[Capture] Drawing video frame to canvas");
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       // Use LOCKED corners if available (preferred), otherwise use detected corners
-      // Convert locked corners structure to simple corners object
       let cornersToUse = null;
       if (state.lockedCorners.topLeft && state.lockedCorners.topRight && 
           state.lockedCorners.bottomLeft && state.lockedCorners.bottomRight) {
@@ -725,106 +752,117 @@ export default function CaptureMode({
           bottomRight: state.lockedCorners.bottomRight,
           bottomLeft: state.lockedCorners.bottomLeft,
         };
+        console.log("[Capture] Using LOCKED corners");
       } else if (state.detectedCorners) {
         cornersToUse = state.detectedCorners;
+        console.log("[Capture] Using detected corners");
+      } else {
+        console.log("[Capture] No corners detected, capturing full frame");
       }
 
-      // If we have corners, crop to that area IMMEDIATELY
+      let finalCanvas = canvas;
+      let finalCorners = cornersToUse;
+
+      // If we have corners, crop to that area
       if (cornersToUse) {
-        const isLocked = state.lockedCorners.topLeft?.locked;
-        console.log(`[Capture] Cropping to ${isLocked ? 'LOCKED' : 'detected'} area immediately`);
+        console.log("[Capture] Cropping to detected area");
         
         const corners = cornersToUse;
         
         // Calculate bounding box
-        const minX = Math.min(corners.topLeft.x, corners.topRight.x, corners.bottomLeft.x, corners.bottomRight.x);
-        const maxX = Math.max(corners.topLeft.x, corners.topRight.x, corners.bottomLeft.x, corners.bottomRight.x);
-        const minY = Math.min(corners.topLeft.y, corners.topRight.y, corners.bottomLeft.y, corners.bottomRight.y);
-        const maxY = Math.max(corners.topLeft.y, corners.topRight.y, corners.bottomLeft.y, corners.bottomRight.y);
+        const minX = Math.max(0, Math.min(corners.topLeft.x, corners.topRight.x, corners.bottomLeft.x, corners.bottomRight.x));
+        const maxX = Math.min(canvas.width, Math.max(corners.topLeft.x, corners.topRight.x, corners.bottomLeft.x, corners.bottomRight.x));
+        const minY = Math.max(0, Math.min(corners.topLeft.y, corners.topRight.y, corners.bottomLeft.y, corners.bottomRight.y));
+        const maxY = Math.min(canvas.height, Math.max(corners.topLeft.y, corners.topRight.y, corners.bottomLeft.y, corners.bottomRight.y));
         
         const cropWidth = maxX - minX;
         const cropHeight = maxY - minY;
         
-        // Create new canvas for cropped image
-        const croppedCanvas = document.createElement('canvas');
-        croppedCanvas.width = cropWidth;
-        croppedCanvas.height = cropHeight;
-        const croppedCtx = croppedCanvas.getContext('2d')!;
-        
-        // Draw cropped area
-        croppedCtx.drawImage(
-          canvas,
-          minX, minY, cropWidth, cropHeight,
-          0, 0, cropWidth, cropHeight
-        );
-        
-        // Use cropped canvas for blob
-        const blob = await new Promise<Blob>((resolve, reject) => {
-          croppedCanvas.toBlob(
-            (blob) => {
-              if (blob) {
-                resolve(blob);
-              } else {
-                reject(new Error("Failed to create blob from canvas"));
-              }
-            },
-            "image/jpeg",
-            0.95,
+        // Validate crop dimensions
+        if (cropWidth < 100 || cropHeight < 100) {
+          console.warn("[Capture] Crop area too small, using full frame");
+          finalCorners = null;
+        } else {
+          // Create new canvas for cropped image
+          const croppedCanvas = document.createElement('canvas');
+          croppedCanvas.width = cropWidth;
+          croppedCanvas.height = cropHeight;
+          const croppedCtx = croppedCanvas.getContext('2d', { willReadFrequently: false });
+          
+          if (!croppedCtx) {
+            throw new Error("Failed to get cropped canvas context");
+          }
+          
+          // Draw cropped area
+          croppedCtx.drawImage(
+            canvas,
+            minX, minY, cropWidth, cropHeight,
+            0, 0, cropWidth, cropHeight
           );
-        });
-
-        if ("vibrate" in navigator) {
-          navigator.vibrate(50);
+          
+          finalCanvas = croppedCanvas;
+          console.log("[Capture] ✓ Cropped to", cropWidth, "x", cropHeight);
         }
-
-        // Pass blob AND corners to capture handler
-        onCapture(blob, cornersToUse);
-
-        // After capture, unlock corners so user can capture next document
-        setState((prev) => ({ 
-          ...prev, 
-          isCapturing: false,
-          isLocked: false,
-          lockedCorners: {
-            topLeft: null,
-            topRight: null,
-            bottomRight: null,
-            bottomLeft: null,
-          },
-          detectedCorners: null,
-          isDocumentDetected: false,
-        }));
-      } else {
-        // No corners detected, capture full frame
-        console.log("[Capture] No corners detected, capturing full frame");
-        
-        const blob = await new Promise<Blob>((resolve, reject) => {
-          canvas.toBlob(
-            (blob) => {
-              if (blob) {
-                resolve(blob);
-              } else {
-                reject(new Error("Failed to create blob from canvas"));
-              }
-            },
-            "image/jpeg",
-            0.95,
-          );
-        });
-
-        if ("vibrate" in navigator) {
-          navigator.vibrate(50);
-        }
-
-        onCapture(blob, null);
-
-        setState((prev) => ({ ...prev, isCapturing: false }));
       }
+
+      // INSTANT CAPTURE: Use toDataURL() for immediate response (synchronous)
+      console.log("[Capture] Converting to data URL (INSTANT)");
+      const dataUrl = finalCanvas.toDataURL("image/jpeg", 0.92);
+      console.log("[Capture] ✓ Data URL created instantly");
+
+      // Haptic feedback
+      if ("vibrate" in navigator) {
+        navigator.vibrate(50);
+      }
+
+      // Convert to blob in background (async, doesn't block)
+      console.log("[Capture] Converting to blob in background...");
+      const convertToBlob = async () => {
+        try {
+          // Convert data URL to blob
+          const response = await fetch(dataUrl);
+          const blob = await response.blob();
+          console.log("[Capture] ✓ Blob created:", blob.size, "bytes");
+          
+          // Call capture handler with blob
+          onCapture(blob, finalCorners);
+        } catch (error) {
+          console.error("[Capture] Blob conversion failed:", error);
+          toast.error("Capture failed", {
+            message: "Failed to save image. Please try again.",
+            section: "leads",
+          });
+        }
+      };
+
+      // Start background conversion (don't await)
+      convertToBlob();
+
+      // After capture, unlock corners so user can capture next document
+      setState((prev) => ({ 
+        stream: prev.stream,
+        error: prev.error,
+        flashEnabled: prev.flashEnabled,
+        isCapturing: false,
+        lockedCorners: {
+          topLeft: null,
+          topRight: null,
+          bottomRight: null,
+          bottomLeft: null,
+        },
+        detectedCorners: null,
+        isDocumentDetected: false,
+        isLocked: false,
+        showTip: prev.showTip,
+      }));
+
+      console.log("[Capture] ✓ CAPTURE COMPLETE (instant response)");
+
     } catch (error) {
-      console.error("Capture error:", error);
+      console.error("[Capture] ✗ Capture failed:", error);
 
       toast.error("Capture failed", {
-        message: "Failed to capture image. Please try again.",
+        message: error instanceof Error ? error.message : "Failed to capture image. Please try again.",
         section: "leads",
       });
 

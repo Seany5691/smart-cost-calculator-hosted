@@ -738,16 +738,16 @@ export function applyConvolution(
  * Requirements: 5.4, "Magic" filter enhancement
  */
 export function sharpenImage(imageData: ImageData): ImageData {
-  // 3x3 GENTLE sharpening kernel for readable documents
-  // Less aggressive than "Magic" filter - preserves readability
+  // 3x3 MODERATE sharpening kernel for readable documents
+  // Balanced between gentle and aggressive - good for text clarity
   const sharpenKernel = [
-    [ 0, -1,  0],
-    [-1,  5, -1],
-    [ 0, -1,  0],
+    [-1, -1, -1],
+    [-1,  7, -1],
+    [-1, -1, -1],
   ];
 
-  // Apply convolution with the gentle sharpening kernel
-  // Divisor is 1 (sum of kernel values) so no additional normalization needed
+  // Apply convolution with the moderate sharpening kernel
+  // Divisor is -1 (sum of kernel values) so we normalize
   return applyConvolution(imageData, sharpenKernel);
 }
 
@@ -1306,8 +1306,8 @@ export async function processImage(
     // No edge detection needed - document is already in frame
     let detectedEdges = undefined;
 
-    // Step 4: Apply GENTLE enhancement pipeline for readable documents
-    console.log("[Process Image] Applying gentle enhancement for readability...");
+    // Step 4: Apply OPTIMIZED enhancement pipeline for readable documents
+    console.log("[Process Image] Applying optimized enhancement for readability...");
     
     // 4a: Skip noise reduction - it blurs text
     // imageData = reduceNoise(imageData, 3);
@@ -1318,17 +1318,17 @@ export async function processImage(
     // imageData = applyAdaptiveThreshold(imageData, 15, 10);
     // console.log("[Process Image] Adaptive thresholding applied");
 
-    // 4c: Enhance contrast GENTLY (factor 1.3 for readable text)
-    imageData = enhanceContrast(imageData, 1.3);
-    console.log("[Process Image] Contrast enhanced gently (factor 1.3)");
+    // 4c: Enhance contrast MODERATELY (factor 1.5 for clear text)
+    imageData = enhanceContrast(imageData, 1.5);
+    console.log("[Process Image] Contrast enhanced (factor 1.5)");
 
-    // 4d: Adjust brightness to readable level (target 180 - not too bright)
-    imageData = adjustBrightness(imageData, 180);
-    console.log("[Process Image] Brightness adjusted (target 180)");
+    // 4d: Adjust brightness to optimal level (target 190 - bright but not washed out)
+    imageData = adjustBrightness(imageData, 190);
+    console.log("[Process Image] Brightness adjusted (target 190)");
 
-    // 4e: Apply GENTLE sharpening for clear text
+    // 4e: Apply MODERATE sharpening for clear text
     imageData = sharpenImage(imageData);
-    console.log("[Process Image] Gentle sharpening applied");
+    console.log("[Process Image] Moderate sharpening applied");
     
     console.log("[Process Image] Enhancement complete");
 

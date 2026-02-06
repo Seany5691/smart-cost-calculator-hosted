@@ -1263,62 +1263,49 @@ export async function processImage(
     imageData = convertToGrayscale(imageData);
     console.log("[Process Image] Converted to grayscale");
 
-    // Step 3: Get document edges - use stored corners from capture
-    let detectedEdges = image.detectedCorners;
-
-    if (detectedEdges) {
-      console.log("[Process Image] Using corners from capture (already cropped)");
-      
-      // Image is already cropped to the green box, so we can skip perspective transform
-      // Just resize to A4 proportions
-      console.log("[Process Image] Skipping perspective transform (already cropped on capture)");
-    } else {
-      // Step 3b: Fallback to edge detection if no corners from capture
-      console.log("[Process Image] No corners from capture, detecting edges WITHIN FRAME...");
-      
-      // Calculate frame boundaries (matching capture mode: center 80%, A4 proportions)
-      const frameWidth = originalWidth * 0.8;
-      const frameHeight = frameWidth * 1.414; // A4 ratio
-      const frameX = Math.floor((originalWidth - frameWidth) / 2);
-      const frameY = Math.floor((originalHeight - frameHeight) / 2);
-      
-      const frameBounds = {
-        x: frameX,
-        y: frameY,
-        width: Math.floor(frameWidth),
-        height: Math.floor(frameHeight)
-      };
-      
-      console.log("[Process Image] Frame bounds:", frameBounds);
-      console.log("[Process Image] ONLY looking for document corners INSIDE this frame");
-      
-      const { detectDocumentByColorWithinFrame } = await import("./colorSegmentation");
-      const colorDetectedEdges = detectDocumentByColorWithinFrame(imageData, frameBounds);
-      detectedEdges = colorDetectedEdges || undefined;
-      
-      if (!detectedEdges) {
-        // Final fallback to contour detection (also within frame)
-        console.log("[Process Image] Color detection failed, trying contour detection within frame...");
-        const { detectDocumentEdges } = await import("./edgeDetection");
-        const contourDetectedEdges = detectDocumentEdges(imageData);
-        detectedEdges = contourDetectedEdges || undefined;
-      }
-      
-      // Apply perspective transform if edges were detected
-      if (detectedEdges) {
-        try {
-          imageData = applyPerspectiveTransform(imageData, detectedEdges);
-          console.log("[Process Image] Perspective transform applied, new dimensions:", {
-            width: imageData.width,
-            height: imageData.height
-          });
-        } catch (error) {
-          console.warn("Perspective transform failed, using original image:", error);
-        }
-      }
-    }
-
-    console.log("[Process Image] Final edges:", detectedEdges ? "Yes" : "No");
+    // Step 3: SIMPLE APPROACH - Just crop to frame boundaries
+    // No complex edge detection - user already positioned document in frame
+    console.log("[Process Image] Using SIMPLE frame crop approach...");
+    
+    // Calculate frame boundaries (matching capture mode: center 80%, A4 proportions)
+    const frameWidth = Math.floor(originalWidth * 0.8);
+    const frameHeight = Math.floor(frameWidth * 1.414); // A4 ratio
+    const frameX = Math.floor((originalWidth - frameWidth) / 2);
+    const frameY = Math.floor((originalHeight - frameHeight) / 2);
+    
+    console.log("[Process Image] Frame boundaries:", {
+      x: frameX,
+      y: frameY,
+      width: frameWidth,
+      height: frameHeight
+    });
+    
+    // Create canvas to crop to frame
+    const canvas = document.createElement("canvas");
+    canvas.width = frameWidth;
+    canvas.height = frameHeight;
+    const ctx = canvas.getContext("2d")!;
+    
+    // Put current imageData on a temp canvas
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = originalWidth;
+    tempCanvas.height = originalHeight;
+    const tempCtx = tempCanvas.getContext("2d")!;
+    tempCtx.putImageData(imageData, 0, 0);
+    
+    // Draw only the frame region to the new canvas
+    ctx.drawImage(
+      tempCanvas,
+      frameX, frameY, frameWidth, frameHeight,  // Source region (frame)
+      0, 0, frameWidth, frameHeight              // Destination (full canvas)
+    );
+    
+    // Get the cropped imageData
+    imageData = ctx.getImageData(0, 0, frameWidth, frameHeight);
+    console.log("[Process Image] Cropped to frame:", imageData.width, "x", imageData.height);
+    
+    // No edge detection needed - document is already in frame
+    let detectedEdges = undefined;
 
     // Step 4: Apply "Magic" filter enhancement pipeline
     console.log("[Process Image] Applying 'Magic' filter enhancement...");

@@ -113,13 +113,9 @@ export async function generatePDF(
   // Add each image as a page (Requirements 10.4, 10.5, 10.6)
   for (const image of images) {
     try {
-      // Apply crop area if specified and not full image
-      let imageToEmbed = image.processedBlob;
-      
-      if (image.cropArea) {
-        // Always apply crop if cropArea exists (it may have been manually adjusted)
-        imageToEmbed = await applyCropToBlob(image.processedBlob, image.cropArea);
-      }
+      // Use the processed blob directly - no additional cropping
+      // The image has already been cropped to frame during processing
+      const imageToEmbed = image.processedBlob;
 
       // Convert processed blob to array buffer
       const imageBytes = await imageToEmbed.arrayBuffer();
@@ -140,6 +136,12 @@ export async function generatePDF(
       const pageWidth = isPortrait ? A4_WIDTH : A4_HEIGHT;
       const pageHeight = isPortrait ? A4_HEIGHT : A4_WIDTH;
 
+      console.log(`[PDF Generator] Page ${image.pageNumber}:`, {
+        imageSize: `${width}x${height}`,
+        orientation: isPortrait ? "portrait" : "landscape",
+        pageSize: `${pageWidth}x${pageHeight}`
+      });
+
       // Create page with A4 dimensions (Requirement 10.5)
       const page = pdfDoc.addPage([pageWidth, pageHeight]);
 
@@ -151,6 +153,8 @@ export async function generatePDF(
         width: pageWidth,
         height: pageHeight,
       });
+      
+      console.log(`[PDF Generator] Page ${image.pageNumber} added successfully`);
     } catch (error) {
       console.error(`Failed to add page ${image.pageNumber} to PDF:`, error);
       throw new Error(

@@ -470,7 +470,7 @@ export function applyAdaptiveThreshold(
  */
 export function enhanceContrast(
   imageData: ImageData,
-  factor: number = 2.0,
+  factor: number = 1.2,
 ): ImageData {
   const data = imageData.data;
   const midpoint = 128; // Middle of 0-255 range
@@ -537,7 +537,7 @@ export function enhanceContrast(
  */
 export function adjustBrightness(
   imageData: ImageData,
-  target: number = 220,
+  target: number = 190,
 ): ImageData {
   const data = imageData.data;
 

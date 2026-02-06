@@ -841,6 +841,58 @@ export function applyUnsharpMask(
 }
 
 /**
+ * Apply white boost to make bright backgrounds pure white
+ *
+ * This function specifically targets bright pixels (document background)
+ * and pushes them to pure white, while leaving darker pixels (text) unchanged.
+ * Unlike adaptive threshold which is binary (pure black or pure white),
+ * this preserves the gradations in text while cleaning up the background.
+ *
+ * The algorithm:
+ * 1. For each pixel, check if it's above a threshold (e.g., 200)
+ * 2. If yes, push it towards 255 (pure white) with a strength factor
+ * 3. If no, leave it alone (preserves text)
+ *
+ * This is perfect for documents because:
+ * - White/light backgrounds become pure white
+ * - Black text stays black
+ * - Gray text stays gray (readable)
+ * - White text on black backgrounds is preserved
+ *
+ * @param imageData - ImageData to process
+ * @param threshold - Brightness level above which pixels are boosted (default 200)
+ * @param strength - How aggressively to boost (0.0-1.0, default 0.8)
+ * @returns ImageData with white backgrounds boosted
+ */
+export function applyWhiteBoost(
+  imageData: ImageData,
+  threshold: number = 200,
+  strength: number = 0.8,
+): ImageData {
+  const data = imageData.data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    // Get pixel brightness (for grayscale, R=G=B)
+    const brightness = data[i];
+
+    // Only boost pixels above threshold (bright backgrounds)
+    if (brightness >= threshold) {
+      // Calculate how much to boost towards 255
+      const boost = (255 - brightness) * strength;
+      const newValue = brightness + boost;
+
+      // Apply to all RGB channels
+      data[i] = clamp(Math.round(newValue), 0, 255);
+      data[i + 1] = clamp(Math.round(newValue), 0, 255);
+      data[i + 2] = clamp(Math.round(newValue), 0, 255);
+    }
+    // Pixels below threshold (text) are left unchanged
+  }
+
+  return imageData;
+}
+
+/**
  * Point interface for perspective transform
  */
 interface Point {
@@ -1410,11 +1462,15 @@ export async function processImage(
     imageData = adjustBrightness(imageData, 158);
     console.log("[Process Image] Brightness adjusted (target 158)");
 
-    // 4d: Skip adaptive threshold - makes text unclear and cartoonish
-    // imageData = applyAdaptiveThreshold(imageData, 15, 10);
-    console.log("[Process Image] Skipping adaptive threshold - causes cartoonish effect");
+    // 4d: Apply white boost to make backgrounds pure white while preserving text
+    imageData = applyWhiteBoost(imageData, 200, 0.8);
+    console.log("[Process Image] White boost applied (threshold 200, strength 0.8)");
 
-    // 4e: Skip unsharp mask - focus on camera quality instead
+    // 4e: Skip adaptive threshold - makes text unclear and cartoonish
+    // imageData = applyAdaptiveThreshold(imageData, 15, 10);
+    console.log("[Process Image] Skipping adaptive threshold - using white boost instead");
+
+    // 4f: Skip unsharp mask - focus on camera quality instead
     // imageData = applyUnsharpMask(imageData, 1.5, 1.0);
     console.log("[Process Image] Skipping unsharp mask - relying on camera quality");
     

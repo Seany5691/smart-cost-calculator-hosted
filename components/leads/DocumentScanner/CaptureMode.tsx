@@ -252,8 +252,8 @@ export default function CaptureMode({
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const { width, height, data } = imageData;
 
-    // Define frame area (center 70% of screen, A4 proportions)
-    const frameWidth = width * 0.7;
+    // Define frame area (center 80% of screen, A4 proportions) - BIGGER FRAME
+    const frameWidth = width * 0.8;
     const frameHeight = frameWidth * 1.414; // A4 ratio (1:1.414)
     const frameX = (width - frameWidth) / 2;
     const frameY = (height - frameHeight) / 2;
@@ -279,8 +279,8 @@ export default function CaptureMode({
 
     const avgBrightness = sampleCount > 0 ? totalBrightness / sampleCount : 0;
 
-    // Simple rule: If average brightness > 150, there's likely a white document
-    const documentPresent = avgBrightness > 150;
+    // MORE LENIENT: If average brightness > 120, there's likely a white document
+    const documentPresent = avgBrightness > 120;
 
     // Update state if changed
     if (documentPresent !== state.documentPresent) {
@@ -307,8 +307,8 @@ export default function CaptureMode({
     // Clear previous overlay
     ctx.clearRect(0, 0, width, height);
 
-    // Define frame dimensions (center 70% of screen, A4 proportions)
-    const frameWidth = width * 0.7;
+    // Define frame dimensions (center 80% of screen, A4 proportions) - BIGGER FRAME
+    const frameWidth = width * 0.8;
     const frameHeight = frameWidth * 1.414; // A4 ratio
     const frameX = (width - frameWidth) / 2;
     const frameY = (height - frameHeight) / 2;

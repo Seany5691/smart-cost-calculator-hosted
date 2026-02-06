@@ -26,6 +26,282 @@ interface EdgePoints {
 }
 
 /**
+ * Detect document using color segmentation ONLY WITHIN CAPTURE FRAME
+ * This ensures we only look for corners inside the green frame from capture mode
+ * 
+ * @param imageData - Full captured image
+ * @param frameBounds - Optional frame boundaries {x, y, width, height} from capture mode
+ * @returns EdgePoints or null
+ */
+export function detectDocumentByColorWithinFrame(
+  imageData: ImageData,
+  frameBounds?: { x: number; y: number; width: number; height: number }
+): EdgePoints | null {
+  console.log("[Color Segmentation] Starting detection within frame...");
+  const startTime = performance.now();
+
+  const { width, height, data } = imageData;
+
+  // If no frame bounds provided, use center 80% (matching capture mode)
+  const frame = frameBounds || {
+    x: Math.floor(width * 0.1),
+    y: Math.floor((height - (width * 0.8 * 1.414)) / 2),
+    width: Math.floor(width * 0.8),
+    height: Math.floor(width * 0.8 * 1.414)
+  };
+
+  console.log("[Color Segmentation] Frame bounds:", frame);
+  console.log("[Color Segmentation] Only looking for document INSIDE this frame");
+
+  // Step 1: Analyze colors ONLY within frame
+  const colorAnalysis = analyzeColorsWithinFrame(data, width, height, frame);
+  
+  if (!colorAnalysis) {
+    console.log("[Color Segmentation] Could not determine document color within frame");
+    return null;
+  }
+
+  console.log("[Color Segmentation] Document color:", colorAnalysis.documentColor);
+  console.log("[Color Segmentation] Background color:", colorAnalysis.backgroundColor);
+
+  // Step 2: Create binary mask ONLY within frame
+  const mask = createColorMaskWithinFrame(data, width, height, frame, colorAnalysis.documentColor, colorAnalysis.threshold);
+
+  // Step 3: Apply morphological operations to clean up mask
+  const cleanedMask = cleanMask(mask, width, height);
+
+  // Step 4: Find largest connected component (the document) WITHIN FRAME
+  const documentMask = findLargestComponentWithinFrame(cleanedMask, width, height, frame);
+
+  if (!documentMask) {
+    console.log("[Color Segmentation] No document found within frame");
+    return null;
+  }
+
+  // Step 5: Find convex hull of document
+  const documentPoints = maskToPoints(documentMask, width, height);
+  
+  if (documentPoints.length < 4) {
+    console.log("[Color Segmentation] Not enough points for document");
+    return null;
+  }
+
+  const hull = convexHull(documentPoints);
+
+  // Step 6: Extract 4 extreme points as corners
+  const corners = findExtremePoints(hull);
+
+  // Step 7: Order corners properly
+  const orderedCorners = orderCorners(corners);
+
+  // Validate corners are within frame
+  if (!validateCornersWithinFrame(orderedCorners, frame, width, height)) {
+    console.log("[Color Segmentation] Corners outside frame - invalid");
+    return null;
+  }
+
+  const elapsed = performance.now() - startTime;
+  console.log(`[Color Segmentation] Completed in ${elapsed.toFixed(0)}ms`);
+
+  return orderedCorners;
+}
+
+/**
+ * Analyze colors ONLY within the specified frame
+ */
+function analyzeColorsWithinFrame(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  frame: { x: number; y: number; width: number; height: number }
+): {
+  documentColor: number;
+  backgroundColor: number;
+  threshold: number;
+} | null {
+  // Sample pixels from different regions WITHIN FRAME
+  const sampleSize = 100;
+
+  // Sample from center of frame (likely document)
+  const centerSamples: number[] = [];
+  for (let i = 0; i < sampleSize / 2; i++) {
+    const x = Math.floor(frame.x + frame.width * 0.3 + Math.random() * frame.width * 0.4);
+    const y = Math.floor(frame.y + frame.height * 0.3 + Math.random() * frame.height * 0.4);
+    const idx = (y * width + x) * 4;
+    const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+    centerSamples.push(brightness);
+  }
+
+  // Sample from edges of frame (likely background or document edges)
+  const edgeSamples: number[] = [];
+  for (let i = 0; i < sampleSize / 2; i++) {
+    let x, y;
+    const edge = Math.floor(Math.random() * 4);
+    if (edge === 0) { // Top of frame
+      x = Math.floor(frame.x + Math.random() * frame.width);
+      y = Math.floor(frame.y + Math.random() * frame.height * 0.1);
+    } else if (edge === 1) { // Right of frame
+      x = Math.floor(frame.x + frame.width * 0.9 + Math.random() * frame.width * 0.1);
+      y = Math.floor(frame.y + Math.random() * frame.height);
+    } else if (edge === 2) { // Bottom of frame
+      x = Math.floor(frame.x + Math.random() * frame.width);
+      y = Math.floor(frame.y + frame.height * 0.9 + Math.random() * frame.height * 0.1);
+    } else { // Left of frame
+      x = Math.floor(frame.x + Math.random() * frame.width * 0.1);
+      y = Math.floor(frame.y + Math.random() * frame.height);
+    }
+    const idx = (y * width + x) * 4;
+    const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+    edgeSamples.push(brightness);
+  }
+
+  // Calculate average brightness for each region
+  const centerAvg = centerSamples.reduce((a, b) => a + b, 0) / centerSamples.length;
+  const edgeAvg = edgeSamples.reduce((a, b) => a + b, 0) / edgeSamples.length;
+
+  // Document should be brighter than background
+  if (centerAvg <= edgeAvg + 20) {
+    // Not enough contrast
+    return null;
+  }
+
+  // Threshold is midpoint between document and background
+  const threshold = (centerAvg + edgeAvg) / 2;
+
+  return {
+    documentColor: centerAvg,
+    backgroundColor: edgeAvg,
+    threshold,
+  };
+}
+
+/**
+ * Create binary mask ONLY within frame
+ */
+function createColorMaskWithinFrame(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  frame: { x: number; y: number; width: number; height: number },
+  documentColor: number,
+  threshold: number
+): Uint8Array {
+  const mask = new Uint8Array(width * height);
+
+  // Only process pixels within frame
+  for (let y = frame.y; y < frame.y + frame.height && y < height; y++) {
+    for (let x = frame.x; x < frame.x + frame.width && x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+
+      // Pixel is part of document if brightness is above threshold
+      mask[y * width + x] = brightness >= threshold ? 255 : 0;
+    }
+  }
+
+  return mask;
+}
+
+/**
+ * Find largest connected component WITHIN FRAME
+ */
+function findLargestComponentWithinFrame(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  frame: { x: number; y: number; width: number; height: number }
+): Uint8Array | null {
+  const visited = new Uint8Array(width * height);
+  let largestComponent: Uint8Array | null = null;
+  let largestSize = 0;
+
+  // Flood fill to find connected components
+  function floodFill(startX: number, startY: number): Uint8Array {
+    const component = new Uint8Array(width * height);
+    const stack: Point[] = [{ x: startX, y: startY }];
+    let size = 0;
+
+    while (stack.length > 0) {
+      const { x, y } = stack.pop()!;
+      const idx = y * width + x;
+
+      // Must be within frame
+      if (x < frame.x || x >= frame.x + frame.width || y < frame.y || y >= frame.y + frame.height) continue;
+      if (x < 0 || x >= width || y < 0 || y >= height) continue;
+      if (visited[idx] || mask[idx] === 0) continue;
+
+      visited[idx] = 1;
+      component[idx] = 255;
+      size++;
+
+      // Check 4-connected neighbors
+      stack.push({ x: x + 1, y });
+      stack.push({ x: x - 1, y });
+      stack.push({ x, y: y + 1 });
+      stack.push({ x, y: y - 1 });
+    }
+
+    return size > 0 ? component : new Uint8Array(0);
+  }
+
+  // Find all components WITHIN FRAME
+  for (let y = frame.y; y < frame.y + frame.height && y < height; y++) {
+    for (let x = frame.x; x < frame.x + frame.width && x < width; x++) {
+      const idx = y * width + x;
+      if (mask[idx] === 255 && !visited[idx]) {
+        const component = floodFill(x, y);
+        const size = component.reduce((sum, val) => sum + (val === 255 ? 1 : 0), 0);
+
+        if (size > largestSize) {
+          largestSize = size;
+          largestComponent = component;
+        }
+      }
+    }
+  }
+
+  // Component must be at least 20% of frame area
+  const frameArea = frame.width * frame.height;
+  const minSize = frameArea * 0.2;
+  if (largestSize < minSize) {
+    return null;
+  }
+
+  console.log(`[Color Segmentation] Found component: ${largestSize} pixels (${((largestSize / frameArea) * 100).toFixed(1)}% of frame)`);
+
+  return largestComponent;
+}
+
+/**
+ * Validate that corners are within frame boundaries
+ */
+function validateCornersWithinFrame(
+  corners: EdgePoints,
+  frame: { x: number; y: number; width: number; height: number },
+  width: number,
+  height: number
+): boolean {
+  // Check all corners are within frame (with small tolerance)
+  const tolerance = 50; // Allow 50 pixels outside frame
+  const minX = frame.x - tolerance;
+  const maxX = frame.x + frame.width + tolerance;
+  const minY = frame.y - tolerance;
+  const maxY = frame.y + frame.height + tolerance;
+
+  const allCorners = [corners.topLeft, corners.topRight, corners.bottomLeft, corners.bottomRight];
+  
+  for (const corner of allCorners) {
+    if (corner.x < minX || corner.x > maxX || corner.y < minY || corner.y > maxY) {
+      console.log(`[Color Segmentation] Corner outside frame: (${corner.x}, ${corner.y})`);
+      return false;
+    }
+  }
+
+  // Also validate using existing validation
+  return validateCorners(corners, width, height);
+}
+
+/**
  * Detect document using color segmentation
  * Optimized for white/light documents on dark backgrounds
  */

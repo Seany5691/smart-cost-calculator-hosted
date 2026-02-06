@@ -1274,14 +1274,31 @@ export async function processImage(
       console.log("[Process Image] Skipping perspective transform (already cropped on capture)");
     } else {
       // Step 3b: Fallback to edge detection if no corners from capture
-      console.log("[Process Image] No corners from capture, detecting edges...");
-      const { detectDocumentByColor } = await import("./colorSegmentation");
-      const colorDetectedEdges = detectDocumentByColor(imageData);
+      console.log("[Process Image] No corners from capture, detecting edges WITHIN FRAME...");
+      
+      // Calculate frame boundaries (matching capture mode: center 80%, A4 proportions)
+      const frameWidth = originalWidth * 0.8;
+      const frameHeight = frameWidth * 1.414; // A4 ratio
+      const frameX = Math.floor((originalWidth - frameWidth) / 2);
+      const frameY = Math.floor((originalHeight - frameHeight) / 2);
+      
+      const frameBounds = {
+        x: frameX,
+        y: frameY,
+        width: Math.floor(frameWidth),
+        height: Math.floor(frameHeight)
+      };
+      
+      console.log("[Process Image] Frame bounds:", frameBounds);
+      console.log("[Process Image] ONLY looking for document corners INSIDE this frame");
+      
+      const { detectDocumentByColorWithinFrame } = await import("./colorSegmentation");
+      const colorDetectedEdges = detectDocumentByColorWithinFrame(imageData, frameBounds);
       detectedEdges = colorDetectedEdges || undefined;
       
       if (!detectedEdges) {
-        // Final fallback to contour detection
-        console.log("[Process Image] Color detection failed, trying contour detection...");
+        // Final fallback to contour detection (also within frame)
+        console.log("[Process Image] Color detection failed, trying contour detection within frame...");
         const { detectDocumentEdges } = await import("./edgeDetection");
         const contourDetectedEdges = detectDocumentEdges(imageData);
         detectedEdges = contourDetectedEdges || undefined;

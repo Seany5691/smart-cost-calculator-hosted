@@ -130,15 +130,26 @@ export async function generatePDF(
       // Get image dimensions (Requirement 10.5)
       const { width, height } = embeddedImage.scale(1);
 
-      // Create page with image dimensions (Requirement 10.5)
-      const page = pdfDoc.addPage([width, height]);
+      // Create A4 page (standard size) instead of image dimensions
+      // A4 at 72 DPI: 595 x 842 points (portrait)
+      const A4_WIDTH = 595;
+      const A4_HEIGHT = 842;
+      
+      // Determine if image is portrait or landscape
+      const isPortrait = height > width;
+      const pageWidth = isPortrait ? A4_WIDTH : A4_HEIGHT;
+      const pageHeight = isPortrait ? A4_HEIGHT : A4_WIDTH;
 
-      // Draw image at full page size (Requirement 10.6)
+      // Create page with A4 dimensions (Requirement 10.5)
+      const page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+      // Draw image stretched to FULL PAGE (Requirement 10.6)
+      // This ensures the image fills the entire PDF page from corner to corner
       page.drawImage(embeddedImage, {
         x: 0,
         y: 0,
-        width,
-        height,
+        width: pageWidth,
+        height: pageHeight,
       });
     } catch (error) {
       console.error(`Failed to add page ${image.pageNumber} to PDF:`, error);

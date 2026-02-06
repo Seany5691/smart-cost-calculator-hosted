@@ -52,7 +52,7 @@ export default function CaptureMode({
   const [state, setState] = useState<CameraModeState>({
     stream: null,
     error: null,
-    flashEnabled: false,
+    flashEnabled: true, // Flash enabled by default
     isCapturing: false,
     documentPresent: false,
     showTip: true, // Show tip initially
@@ -135,9 +135,9 @@ export default function CaptureMode({
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
-          // Request maximum resolution for sharp images
-          width: { ideal: 3840, min: 1920 }, // 4K ideal, 1080p minimum
-          height: { ideal: 2160, min: 1080 },
+          // Request 1440p (2K) for good quality with better performance than 4K
+          width: { ideal: 2560, min: 1920 }, // 1440p ideal, 1080p minimum
+          height: { ideal: 1440, min: 1080 },
           // Request best quality settings
           aspectRatio: { ideal: 16/9 },
         },
@@ -193,8 +193,22 @@ export default function CaptureMode({
   /**
    * Release camera stream and resources
    */
-  const releaseCamera = () => {
+  const releaseCamera = async () => {
     if (state.stream) {
+      // Turn off flash before releasing
+      try {
+        const track = state.stream.getVideoTracks()[0];
+        const capabilities = track.getCapabilities() as any;
+        if (capabilities.torch && state.flashEnabled) {
+          await track.applyConstraints({
+            advanced: [{ torch: false } as any],
+          });
+        }
+      } catch (error) {
+        console.error("Error turning off flash:", error);
+      }
+
+      // Stop all tracks
       state.stream.getTracks().forEach((track) => track.stop());
     }
     if (videoRef.current) {

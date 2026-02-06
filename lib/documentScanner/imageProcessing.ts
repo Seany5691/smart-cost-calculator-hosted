@@ -841,6 +841,82 @@ export function applyUnsharpMask(
 }
 
 /**
+ * Remove shadows from document images
+ *
+ * Shadows are a common problem in document scanning. This function
+ * removes shadows by:
+ * 1. Creating a heavily blurred version of the image (shadow map)
+ * 2. Dividing the original by the shadow map to normalize lighting
+ * 3. Scaling back to proper brightness range
+ *
+ * This technique is called "background subtraction" or "illumination correction"
+ * and is very effective at removing uneven lighting and shadows.
+ *
+ * @param imageData - ImageData to process
+ * @returns ImageData with shadows removed
+ */
+export function removeShadows(imageData: ImageData): ImageData {
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+
+  // Step 1: Create a heavily blurred version (shadow map)
+  // This captures the overall lighting/shadow pattern
+  const blurRadius = Math.max(width, height) / 20; // Adaptive blur based on image size
+  const shadowMap = new Uint8ClampedArray(width * height);
+
+  // Apply large box blur to create shadow map
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sum = 0;
+      let count = 0;
+
+      // Sample a large neighborhood
+      const radius = Math.floor(blurRadius);
+      for (let ky = -radius; ky <= radius; ky += 2) { // Step by 2 for performance
+        for (let kx = -radius; kx <= radius; kx += 2) {
+          const pixelY = clamp(y + ky, 0, height - 1);
+          const pixelX = clamp(x + kx, 0, width - 1);
+          const idx = (pixelY * width + pixelX) * 4;
+          sum += data[idx]; // Use red channel (grayscale)
+          count++;
+        }
+      }
+
+      shadowMap[y * width + x] = sum / count;
+    }
+  }
+
+  // Step 2: Divide original by shadow map to remove shadows
+  const outputData = new Uint8ClampedArray(width * height * 4);
+  const output = new ImageData(outputData, width, height);
+
+  for (let i = 0; i < width * height; i++) {
+    const originalValue = data[i * 4];
+    const shadowValue = shadowMap[i];
+
+    // Avoid division by zero
+    if (shadowValue < 1) {
+      outputData[i * 4] = originalValue;
+      outputData[i * 4 + 1] = originalValue;
+      outputData[i * 4 + 2] = originalValue;
+    } else {
+      // Normalize: (original / shadow) * target_brightness
+      const normalized = (originalValue / shadowValue) * 200;
+      const clamped = clamp(Math.round(normalized), 0, 255);
+
+      outputData[i * 4] = clamped;
+      outputData[i * 4 + 1] = clamped;
+      outputData[i * 4 + 2] = clamped;
+    }
+
+    outputData[i * 4 + 3] = 255; // Alpha
+  }
+
+  return output;
+}
+
+/**
  * Apply white boost to make bright backgrounds pure white
  *
  * This function specifically targets bright pixels (document background)
@@ -1450,27 +1526,31 @@ export async function processImage(
     // Step 4: Apply BALANCED enhancement pipeline for readable documents
     console.log("[Process Image] Applying OPTIMIZED enhancement settings...");
     
-    // 4a: Skip noise reduction - it blurs text
+    // 4a: Remove shadows first (before other enhancements)
+    imageData = removeShadows(imageData);
+    console.log("[Process Image] Shadows removed");
+
+    // 4b: Skip noise reduction - it blurs text
     // imageData = reduceNoise(imageData, 3);
     console.log("[Process Image] Skipping noise reduction");
 
-    // 4b: Enhance contrast (OPTIMIZED: 130 = 2.3x contrast)
+    // 4c: Enhance contrast (OPTIMIZED: 130 = 2.3x contrast)
     imageData = enhanceContrast(imageData, 2.3);
     console.log("[Process Image] Contrast enhanced (factor 2.3)");
 
-    // 4c: Adjust brightness (OPTIMIZED: 30 = target 158)
+    // 4d: Adjust brightness (OPTIMIZED: 30 = target 158)
     imageData = adjustBrightness(imageData, 158);
     console.log("[Process Image] Brightness adjusted (target 158)");
 
-    // 4d: Apply white boost to make backgrounds pure white while preserving text
+    // 4e: Apply white boost to make backgrounds pure white while preserving text
     imageData = applyWhiteBoost(imageData, 200, 0.8);
     console.log("[Process Image] White boost applied (threshold 200, strength 0.8)");
 
-    // 4e: Skip adaptive threshold - makes text unclear and cartoonish
+    // 4f: Skip adaptive threshold - makes text unclear and cartoonish
     // imageData = applyAdaptiveThreshold(imageData, 15, 10);
     console.log("[Process Image] Skipping adaptive threshold - using white boost instead");
 
-    // 4f: Skip unsharp mask - focus on camera quality instead
+    // 4g: Skip unsharp mask - focus on camera quality instead
     // imageData = applyUnsharpMask(imageData, 1.5, 1.0);
     console.log("[Process Image] Skipping unsharp mask - relying on camera quality");
     

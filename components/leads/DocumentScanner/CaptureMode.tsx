@@ -329,24 +329,53 @@ export default function CaptureMode({
           bottomLeft: { x: edges.bottomLeft.x / scale, y: edges.bottomLeft.y / scale },
         };
 
-        // Validate and lock corners progressively
-        await lockCornersProgressively(imageData, edges, scaledEdges, scale);
+        // SIMPLE APPROACH: Just check if corners are in frame, then LOCK IMMEDIATELY
+        const allCornersInFrame = 
+          scaledEdges.topLeft.x > 20 && scaledEdges.topLeft.x < overlayCanvas.width - 20 &&
+          scaledEdges.topLeft.y > 20 && scaledEdges.topLeft.y < overlayCanvas.height - 20 &&
+          scaledEdges.topRight.x > 20 && scaledEdges.topRight.x < overlayCanvas.width - 20 &&
+          scaledEdges.topRight.y > 20 && scaledEdges.topRight.y < overlayCanvas.height - 20 &&
+          scaledEdges.bottomLeft.x > 20 && scaledEdges.bottomLeft.x < overlayCanvas.width - 20 &&
+          scaledEdges.bottomLeft.y > 20 && scaledEdges.bottomLeft.y < overlayCanvas.height - 20 &&
+          scaledEdges.bottomRight.x > 20 && scaledEdges.bottomRight.x < overlayCanvas.width - 20 &&
+          scaledEdges.bottomRight.y > 20 && scaledEdges.bottomRight.y < overlayCanvas.height - 20;
 
-        // Draw overlay with current lock status
-        const displayCorners = {
-          topLeft: state.lockedCorners.topLeft || scaledEdges.topLeft,
-          topRight: state.lockedCorners.topRight || scaledEdges.topRight,
-          bottomRight: state.lockedCorners.bottomRight || scaledEdges.bottomRight,
-          bottomLeft: state.lockedCorners.bottomLeft || scaledEdges.bottomLeft,
-        };
-        
-        const allLocked = 
-          state.lockedCorners.topLeft?.locked &&
-          state.lockedCorners.topRight?.locked &&
-          state.lockedCorners.bottomRight?.locked &&
-          state.lockedCorners.bottomLeft?.locked;
-        
-        drawEdgeOverlay(overlayCtx, displayCorners, overlayCanvas.width, overlayCanvas.height, allLocked);
+        if (allCornersInFrame) {
+          // ALL CORNERS IN FRAME - LOCK THEM ALL IMMEDIATELY
+          console.log("[Simple Lock] All corners in frame - LOCKING ALL NOW");
+          
+          setState((prev) => ({
+            stream: prev.stream,
+            error: prev.error,
+            flashEnabled: prev.flashEnabled,
+            isCapturing: prev.isCapturing,
+            lockedCorners: {
+              topLeft: { x: scaledEdges.topLeft.x, y: scaledEdges.topLeft.y, locked: true },
+              topRight: { x: scaledEdges.topRight.x, y: scaledEdges.topRight.y, locked: true },
+              bottomRight: { x: scaledEdges.bottomRight.x, y: scaledEdges.bottomRight.y, locked: true },
+              bottomLeft: { x: scaledEdges.bottomLeft.x, y: scaledEdges.bottomLeft.y, locked: true },
+            },
+            detectedCorners: scaledEdges,
+            isDocumentDetected: true,
+            isLocked: true,
+            showTip: prev.showTip,
+          }));
+          
+          // Draw green overlay immediately
+          drawEdgeOverlay(overlayCtx, scaledEdges, overlayCanvas.width, overlayCanvas.height, true);
+        } else {
+          // Some corners out of frame - show amber overlay but don't lock
+          console.log("[Simple Lock] Some corners out of frame - showing amber");
+          
+          setState((prev) => ({
+            ...prev,
+            detectedCorners: scaledEdges,
+            isDocumentDetected: true,
+            isLocked: false,
+          }));
+          
+          drawEdgeOverlay(overlayCtx, scaledEdges, overlayCanvas.width, overlayCanvas.height, false);
+        }
       } else {
         // No document detected
         setState((prev) => ({
@@ -363,185 +392,6 @@ export default function CaptureMode({
     } catch (error) {
       console.error("[Edge Detection] Error:", error);
     }
-  };
-
-  /**
-   * Lock corners progressively - each corner locks independently
-   * Once a corner is validated, it stays locked even with camera movement
-   */
-  const lockCornersProgressively = async (
-    imageData: ImageData,
-    detectedCorners: {
-      topLeft: { x: number; y: number };
-      topRight: { x: number; y: number };
-      bottomRight: { x: number; y: number };
-      bottomLeft: { x: number; y: number };
-    },
-    scaledCorners: {
-      topLeft: { x: number; y: number };
-      topRight: { x: number; y: number };
-      bottomRight: { x: number; y: number };
-      bottomLeft: { x: number; y: number };
-    },
-    scale: number
-  ) => {
-    const cornerNames: Array<'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'> = 
-      ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'];
-    
-    const newLockedCorners = { ...state.lockedCorners };
-    let lockStatusChanged = false;
-
-    for (const cornerName of cornerNames) {
-      // Skip if already locked
-      if (newLockedCorners[cornerName]?.locked) {
-        continue;
-      }
-
-      // Validate this corner
-      const isValid = await validateSingleCorner(
-        imageData,
-        detectedCorners[cornerName],
-        cornerName
-      );
-
-      if (isValid) {
-        // Lock this corner!
-        newLockedCorners[cornerName] = {
-          x: scaledCorners[cornerName].x,
-          y: scaledCorners[cornerName].y,
-          locked: true,
-        };
-        lockStatusChanged = true;
-        console.log(`[Progressive Lock] ✓ ${cornerName} LOCKED at (${scaledCorners[cornerName].x.toFixed(0)}, ${scaledCorners[cornerName].y.toFixed(0)})`);
-      }
-    }
-
-    // Update state if any corners changed
-    if (lockStatusChanged) {
-      const allLocked = 
-        newLockedCorners.topLeft?.locked &&
-        newLockedCorners.topRight?.locked &&
-        newLockedCorners.bottomRight?.locked &&
-        newLockedCorners.bottomLeft?.locked;
-
-      setState((prev) => ({
-        stream: prev.stream,
-        error: prev.error,
-        flashEnabled: prev.flashEnabled,
-        isCapturing: prev.isCapturing,
-        lockedCorners: newLockedCorners,
-        detectedCorners: scaledCorners,
-        isDocumentDetected: true as boolean,
-        isLocked: allLocked as boolean,
-        showTip: prev.showTip,
-      }));
-
-      if (allLocked) {
-        console.log("[Progressive Lock] 🔒 ALL 4 CORNERS LOCKED!");
-      }
-    }
-  };
-
-  /**
-   * Validate a single corner - check inside (white) and outside (dark)
-   * Also ensures corner is within frame bounds
-   */
-  const validateSingleCorner = async (
-    imageData: ImageData,
-    corner: { x: number; y: number },
-    cornerName: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
-  ): Promise<boolean> => {
-    const { width, height, data } = imageData;
-    const sampleSize = 10; // Smaller sample for faster validation
-    const edgeOffset = 8; // Smaller offset
-
-    // CRITICAL: Check if corner is within frame bounds (with margin)
-    const margin = 20; // Corners must be at least 20px inside frame
-    if (
-      corner.x < margin || corner.x >= width - margin ||
-      corner.y < margin || corner.y >= height - margin
-    ) {
-      console.log(`[Corner Validation] ${cornerName}: ✗ Out of frame bounds (${corner.x.toFixed(0)}, ${corner.y.toFixed(0)})`);
-      return false;
-    }
-
-    // Helper to get average brightness
-    const getAverageBrightness = (x: number, y: number, size: number): number => {
-      let total = 0;
-      let count = 0;
-      
-      for (let dy = -size; dy <= size; dy += 2) { // Sample every 2 pixels for speed
-        for (let dx = -size; dx <= size; dx += 2) {
-          const px = Math.floor(x + dx);
-          const py = Math.floor(y + dy);
-          
-          if (px >= 0 && px < width && py >= 0 && py < height) {
-            const idx = (py * width + px) * 4;
-            const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-            total += brightness;
-            count++;
-          }
-        }
-      }
-      
-      return count > 0 ? total / count : 0;
-    };
-
-    // Calculate inside and outside positions based on corner
-    let insideX, insideY, outsideX, outsideY;
-    
-    switch (cornerName) {
-      case 'topLeft':
-        insideX = corner.x + edgeOffset;
-        insideY = corner.y + edgeOffset;
-        outsideX = corner.x - edgeOffset;
-        outsideY = corner.y - edgeOffset;
-        break;
-      case 'topRight':
-        insideX = corner.x - edgeOffset;
-        insideY = corner.y + edgeOffset;
-        outsideX = corner.x + edgeOffset;
-        outsideY = corner.y - edgeOffset;
-        break;
-      case 'bottomLeft':
-        insideX = corner.x + edgeOffset;
-        insideY = corner.y - edgeOffset;
-        outsideX = corner.x - edgeOffset;
-        outsideY = corner.y + edgeOffset;
-        break;
-      case 'bottomRight':
-        insideX = corner.x - edgeOffset;
-        insideY = corner.y - edgeOffset;
-        outsideX = corner.x + edgeOffset;
-        outsideY = corner.y + edgeOffset;
-        break;
-    }
-
-    // Check bounds for sample points
-    if (
-      insideX < 0 || insideX >= width ||
-      insideY < 0 || insideY >= height ||
-      outsideX < 0 || outsideX >= width ||
-      outsideY < 0 || outsideY >= height
-    ) {
-      return false;
-    }
-
-    const insideBrightness = getAverageBrightness(insideX, insideY, sampleSize);
-    const outsideBrightness = getAverageBrightness(outsideX, outsideY, sampleSize);
-    
-    // More lenient thresholds for locking
-    const insideIsWhite = insideBrightness > 140; // Lowered from 150
-    const outsideIsDark = outsideBrightness < 110; // Raised from 100
-    const contrast = insideBrightness - outsideBrightness;
-    
-    const isValid = insideIsWhite && outsideIsDark && contrast > 60; // Lowered from 80
-    
-    if (isValid) {
-      console.log(`[Corner Validation] ${cornerName}: ✓ VALID - inside=${insideBrightness.toFixed(0)}, outside=${outsideBrightness.toFixed(0)}, contrast=${contrast.toFixed(0)}`);
-    }
-    
-    return isValid;
   };
 
   /**

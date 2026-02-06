@@ -1526,9 +1526,9 @@ export async function processImage(
     // Step 4: Apply BALANCED enhancement pipeline for readable documents
     console.log("[Process Image] Applying OPTIMIZED enhancement settings...");
     
-    // 4a: Remove shadows first (before other enhancements)
-    imageData = removeShadows(imageData);
-    console.log("[Process Image] Shadows removed");
+    // 4a: Skip shadow removal - too computationally expensive, causes freezing
+    // imageData = removeShadows(imageData);
+    console.log("[Process Image] Skipping shadow removal - too slow");
 
     // 4b: Skip noise reduction - it blurs text
     // imageData = reduceNoise(imageData, 3);

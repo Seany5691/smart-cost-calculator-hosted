@@ -149,6 +149,20 @@ export default function CaptureMode({
         await videoRef.current.play();
       }
 
+      // Enable flash by default
+      try {
+        const track = stream.getVideoTracks()[0];
+        const capabilities = track.getCapabilities() as any;
+        if (capabilities.torch) {
+          await track.applyConstraints({
+            advanced: [{ torch: true } as any],
+          });
+          console.log("[Camera] Flash enabled by default");
+        }
+      } catch (error) {
+        console.error("[Camera] Could not enable flash:", error);
+      }
+
       setState((prev) => ({
         ...prev,
         stream,

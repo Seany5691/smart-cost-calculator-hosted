@@ -34,7 +34,14 @@ interface CameraModeState {
     bottomRight: { x: number; y: number };
     bottomLeft: { x: number; y: number };
   } | null;
+  lockedCorners: {
+    topLeft: { x: number; y: number };
+    topRight: { x: number; y: number };
+    bottomRight: { x: number; y: number };
+    bottomLeft: { x: number; y: number };
+  } | null;
   isDocumentDetected: boolean;
+  isLocked: boolean;
   showTip: boolean;
 }
 
@@ -61,7 +68,9 @@ export default function CaptureMode({
     flashEnabled: false,
     isCapturing: false,
     detectedCorners: null,
+    lockedCorners: null,
     isDocumentDetected: false,
+    isLocked: false,
     showTip: true, // Show tip initially
   });
 
@@ -229,7 +238,8 @@ export default function CaptureMode({
   };
 
   /**
-   * Detect edges in current video frame using COLOR SEGMENTATION (fast for real-time)
+   * Detect edges in current video frame using COLOR SEGMENTATION with LOCKING
+   * Once corners are found and validated, they lock until document is removed
    */
   const detectEdgesInFrame = async () => {
     if (!videoRef.current || !canvasRef.current || !overlayCanvasRef.current) return;
@@ -253,7 +263,31 @@ export default function CaptureMode({
     // Get image data
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    // Detect edges using COLOR SEGMENTATION (fast, perfect for white on dark)
+    // If we have locked corners, validate they're still good
+    if (state.isLocked && state.lockedCorners) {
+      const isStillValid = await validateLockedCorners(imageData, state.lockedCorners, scale);
+      
+      if (isStillValid) {
+        // Corners still valid, keep them locked
+        drawEdgeOverlay(overlayCtx, state.lockedCorners, overlayCanvas.width, overlayCanvas.height, true);
+        return;
+      } else {
+        // Corners no longer valid, unlock and search again
+        console.log("[Corner Lock] Document removed or invalid, unlocking...");
+        setState((prev) => ({
+          ...prev,
+          isLocked: false,
+          lockedCorners: null,
+          detectedCorners: null,
+          isDocumentDetected: false,
+        }));
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        stableFramesRef.current = 0;
+        return;
+      }
+    }
+
+    // Not locked, search for new corners
     try {
       const { detectDocumentByColor } = await import("@/lib/documentScanner/colorSegmentation");
       const edges = detectDocumentByColor(imageData);
@@ -267,24 +301,46 @@ export default function CaptureMode({
           bottomLeft: { x: edges.bottomLeft.x / scale, y: edges.bottomLeft.y / scale },
         };
 
-        // Document detected!
-        setState((prev) => ({
-          ...prev,
-          detectedCorners: scaledEdges,
-          isDocumentDetected: true,
-        }));
+        // Validate background around corners
+        const isValidBackground = await validateBackgroundAroundCorners(imageData, edges, scale);
 
-        // Draw overlay showing EXACT crop area (green quadrilateral)
-        drawEdgeOverlay(overlayCtx, scaledEdges, overlayCanvas.width, overlayCanvas.height);
+        if (isValidBackground) {
+          // Valid document with contrasting background - LOCK IT!
+          console.log("[Corner Lock] Valid document detected, LOCKING corners!");
+          setState((prev) => ({
+            ...prev,
+            detectedCorners: scaledEdges,
+            lockedCorners: scaledEdges,
+            isDocumentDetected: true,
+            isLocked: true,
+          }));
 
-        // Increment stable frames
-        stableFramesRef.current++;
+          // Draw overlay showing LOCKED crop area (green quadrilateral)
+          drawEdgeOverlay(overlayCtx, scaledEdges, overlayCanvas.width, overlayCanvas.height, true);
+
+          stableFramesRef.current++;
+        } else {
+          // Document detected but background not contrasting enough, keep searching
+          console.log("[Corner Lock] Document detected but background not valid, continuing search...");
+          setState((prev) => ({
+            ...prev,
+            detectedCorners: scaledEdges,
+            isDocumentDetected: true,
+            isLocked: false,
+          }));
+
+          // Draw overlay but not locked (yellow/amber color)
+          drawEdgeOverlay(overlayCtx, scaledEdges, overlayCanvas.width, overlayCanvas.height, false);
+          
+          stableFramesRef.current = 0;
+        }
       } else {
         // No document detected
         setState((prev) => ({
           ...prev,
           detectedCorners: null,
           isDocumentDetected: false,
+          isLocked: false,
         }));
 
         // Clear overlay
@@ -297,7 +353,115 @@ export default function CaptureMode({
   };
 
   /**
+   * Validate that locked corners are still valid
+   * Checks if document is still present at locked position
+   */
+  const validateLockedCorners = async (
+    imageData: ImageData,
+    lockedCorners: {
+      topLeft: { x: number; y: number };
+      topRight: { x: number; y: number };
+      bottomRight: { x: number; y: number };
+      bottomLeft: { x: number; y: number };
+    },
+    scale: number
+  ): Promise<boolean> => {
+    // Scale corners to match imageData resolution
+    const scaledCorners = {
+      topLeft: { x: lockedCorners.topLeft.x * scale, y: lockedCorners.topLeft.y * scale },
+      topRight: { x: lockedCorners.topRight.x * scale, y: lockedCorners.topRight.y * scale },
+      bottomRight: { x: lockedCorners.bottomRight.x * scale, y: lockedCorners.bottomRight.y * scale },
+      bottomLeft: { x: lockedCorners.bottomLeft.x * scale, y: lockedCorners.bottomLeft.y * scale },
+    };
+
+    // Check if background around corners is still contrasting
+    return validateBackgroundAroundCorners(imageData, scaledCorners, 1.0);
+  };
+
+  /**
+   * Validate that background around corners contrasts with document
+   * Returns true if background is different color from document (good for detection)
+   */
+  const validateBackgroundAroundCorners = async (
+    imageData: ImageData,
+    corners: {
+      topLeft: { x: number; y: number };
+      topRight: { x: number; y: number };
+      bottomRight: { x: number; y: number };
+      bottomLeft: { x: number; y: number };
+    },
+    scale: number
+  ): Promise<boolean> => {
+    const { width, height, data } = imageData;
+    
+    // Sample size for checking background (in scaled pixels)
+    const sampleSize = 20;
+    
+    // Helper to get average brightness in a region
+    const getAverageBrightness = (x: number, y: number, size: number): number => {
+      let total = 0;
+      let count = 0;
+      
+      for (let dy = -size; dy <= size; dy++) {
+        for (let dx = -size; dx <= size; dx++) {
+          const px = Math.floor(x + dx);
+          const py = Math.floor(y + dy);
+          
+          if (px >= 0 && px < width && py >= 0 && py < height) {
+            const idx = (py * width + px) * 4;
+            const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+            total += brightness;
+            count++;
+          }
+        }
+      }
+      
+      return count > 0 ? total / count : 0;
+    };
+    
+    // Sample document center (should be white/light)
+    const centerX = (corners.topLeft.x + corners.topRight.x + corners.bottomLeft.x + corners.bottomRight.x) / 4;
+    const centerY = (corners.topLeft.y + corners.topRight.y + corners.bottomLeft.y + corners.bottomRight.y) / 4;
+    const documentBrightness = getAverageBrightness(centerX, centerY, sampleSize);
+    
+    // Sample background outside each corner (should be dark)
+    const cornerChecks = [
+      { name: 'topLeft', x: corners.topLeft.x - sampleSize * 2, y: corners.topLeft.y - sampleSize * 2 },
+      { name: 'topRight', x: corners.topRight.x + sampleSize * 2, y: corners.topRight.y - sampleSize * 2 },
+      { name: 'bottomLeft', x: corners.bottomLeft.x - sampleSize * 2, y: corners.bottomLeft.y + sampleSize * 2 },
+      { name: 'bottomRight', x: corners.bottomRight.x + sampleSize * 2, y: corners.bottomRight.y + sampleSize * 2 },
+    ];
+    
+    let validCorners = 0;
+    
+    for (const corner of cornerChecks) {
+      // Skip if outside image bounds
+      if (corner.x < 0 || corner.x >= width || corner.y < 0 || corner.y >= height) {
+        continue;
+      }
+      
+      const backgroundBrightness = getAverageBrightness(corner.x, corner.y, sampleSize);
+      const contrast = Math.abs(documentBrightness - backgroundBrightness);
+      
+      // Need at least 80 brightness difference (on 0-255 scale)
+      if (contrast > 80) {
+        validCorners++;
+      }
+    }
+    
+    // Need at least 3 out of 4 corners to have good contrast
+    const isValid = validCorners >= 3;
+    
+    if (!isValid) {
+      console.log(`[Background Validation] Only ${validCorners}/4 corners have good contrast`);
+    }
+    
+    return isValid;
+  };
+
+  /**
    * Draw edge detection overlay on canvas
+   * Shows green for locked corners, amber for unlocked
    */
   const drawEdgeOverlay = (
     ctx: CanvasRenderingContext2D,
@@ -309,6 +473,7 @@ export default function CaptureMode({
     },
     width: number,
     height: number,
+    isLocked: boolean = false,
   ) => {
     // Clear previous overlay
     ctx.clearRect(0, 0, width, height);
@@ -330,9 +495,9 @@ export default function CaptureMode({
     // Reset composite operation
     ctx.globalCompositeOperation = "source-over";
 
-    // Draw green border around document
-    ctx.strokeStyle = "#10b981"; // Emerald green
-    ctx.lineWidth = 4;
+    // Draw border around document - GREEN if locked, AMBER if searching
+    ctx.strokeStyle = isLocked ? "#10b981" : "#f59e0b"; // Emerald green or amber
+    ctx.lineWidth = isLocked ? 6 : 4; // Thicker when locked
     ctx.beginPath();
     ctx.moveTo(edges.topLeft.x, edges.topLeft.y);
     ctx.lineTo(edges.topRight.x, edges.topRight.y);
@@ -344,15 +509,15 @@ export default function CaptureMode({
     // Draw corner circles
     const corners = [edges.topLeft, edges.topRight, edges.bottomRight, edges.bottomLeft];
     corners.forEach((corner) => {
-      ctx.fillStyle = "#10b981";
+      ctx.fillStyle = isLocked ? "#10b981" : "#f59e0b";
       ctx.beginPath();
-      ctx.arc(corner.x, corner.y, 12, 0, 2 * Math.PI);
+      ctx.arc(corner.x, corner.y, isLocked ? 14 : 12, 0, 2 * Math.PI);
       ctx.fill();
 
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(corner.x, corner.y, 12, 0, 2 * Math.PI);
+      ctx.arc(corner.x, corner.y, isLocked ? 14 : 12, 0, 2 * Math.PI);
       ctx.stroke();
     });
   };
@@ -383,7 +548,7 @@ export default function CaptureMode({
   };
 
   /**
-   * Capture image from video stream WITH detected corners - CROP IMMEDIATELY
+   * Capture image from video stream WITH LOCKED corners - CROP IMMEDIATELY
    */
   const captureImage = async () => {
     if (!videoRef.current || !canvasRef.current || state.isCapturing) return;
@@ -422,11 +587,14 @@ export default function CaptureMode({
       // Draw full frame first
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // If we have detected corners, crop to that area IMMEDIATELY
-      if (state.detectedCorners) {
-        console.log("[Capture] Cropping to detected area immediately");
+      // Use LOCKED corners if available (preferred), otherwise use detected corners
+      const cornersToUse = state.lockedCorners || state.detectedCorners;
+
+      // If we have corners, crop to that area IMMEDIATELY
+      if (cornersToUse) {
+        console.log(`[Capture] Cropping to ${state.lockedCorners ? 'LOCKED' : 'detected'} area immediately`);
         
-        const corners = state.detectedCorners;
+        const corners = cornersToUse;
         
         // Calculate bounding box
         const minX = Math.min(corners.topLeft.x, corners.topRight.x, corners.bottomLeft.x, corners.bottomRight.x);
@@ -469,10 +637,18 @@ export default function CaptureMode({
           navigator.vibrate(50);
         }
 
-        // Pass blob AND detected corners to capture handler
-        onCapture(blob, state.detectedCorners);
+        // Pass blob AND corners to capture handler
+        onCapture(blob, cornersToUse);
 
-        setState((prev) => ({ ...prev, isCapturing: false }));
+        // After capture, unlock corners so user can capture next document
+        setState((prev) => ({ 
+          ...prev, 
+          isCapturing: false,
+          isLocked: false,
+          lockedCorners: null,
+          detectedCorners: null,
+          isDocumentDetected: false,
+        }));
       } else {
         // No corners detected, capture full frame
         console.log("[Capture] No corners detected, capturing full frame");
@@ -613,11 +789,16 @@ export default function CaptureMode({
               </span>
             )}
             
-            {/* Enhanced Visual Feedback (Phase 2) */}
-            {state.isDocumentDetected ? (
-              <div className="flex items-center gap-2 mt-2 text-emerald-400 animate-pulse">
+            {/* Enhanced Visual Feedback with Lock Status */}
+            {state.isLocked ? (
+              <div className="flex items-center gap-2 mt-2 text-emerald-400">
                 <CheckCircle className="w-5 h-5" />
-                <span className="text-sm font-semibold">Document detected - Ready to capture!</span>
+                <span className="text-sm font-semibold">🔒 LOCKED - Ready to capture!</span>
+              </div>
+            ) : state.isDocumentDetected ? (
+              <div className="flex items-center gap-2 mt-2 text-amber-400 animate-pulse">
+                <CheckCircle className="w-5 h-5" />
+                <span className="text-sm font-semibold">Searching for valid background...</span>
               </div>
             ) : (
               <div className="mt-2 text-sm text-amber-400">
@@ -625,16 +806,16 @@ export default function CaptureMode({
               </div>
             )}
             
-            {/* Smart Guidance Hints (Phase 2) - Tip disappears after 3 seconds */}
+            {/* Smart Guidance Hints - Tip disappears after 3 seconds */}
             <div className="mt-2 space-y-1">
               {state.showTip && !state.isDocumentDetected && (
                 <div className="text-xs text-white/80 bg-black/40 px-3 py-2 rounded-lg backdrop-blur-sm transition-opacity duration-500">
                   💡 Tip: Place documents on a dark background for better edge detection
                 </div>
               )}
-              {state.isDocumentDetected && stableFramesRef.current < 3 && (
+              {state.isLocked && (
                 <div className="text-xs text-emerald-300 bg-emerald-900/40 px-3 py-2 rounded-lg backdrop-blur-sm">
-                  ✓ Hold steady for best quality
+                  ✓ Corners locked! Press capture or move camera away to unlock
                 </div>
               )}
             </div>
@@ -677,20 +858,22 @@ export default function CaptureMode({
             Done Capturing
           </button>
 
-          {/* Capture button */}
+          {/* Capture button - Different colors for locked/unlocked/no detection */}
           <button
             onClick={captureImage}
             disabled={state.isCapturing}
             className={`w-20 h-20 rounded-full border-4 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center touch-manipulation ${
-              state.isDocumentDetected
-                ? "bg-emerald-500 border-emerald-400 hover:bg-emerald-600"
+              state.isLocked
+                ? "bg-emerald-500 border-emerald-400 hover:bg-emerald-600 shadow-lg shadow-emerald-500/50"
+                : state.isDocumentDetected
+                ? "bg-amber-500 border-amber-400 hover:bg-amber-600"
                 : "bg-white border-emerald-500 hover:bg-emerald-50"
             }`}
             aria-label={`Capture page ${currentPageNumber}`}
             aria-disabled={state.isCapturing}
           >
             <Camera
-              className={`w-10 h-10 ${state.isDocumentDetected ? "text-white" : "text-emerald-600"}`}
+              className={`w-10 h-10 ${state.isLocked || state.isDocumentDetected ? "text-white" : "text-emerald-600"}`}
               aria-hidden="true"
             />
           </button>

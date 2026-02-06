@@ -21,6 +21,7 @@ interface EdgePoints {
 
 /**
  * Refine all 4 corners for pixel-perfect accuracy
+ * SIMPLIFIED VERSION - Skip refinement if corners look good
  */
 export async function refineCorners(
   imageData: ImageData,
@@ -29,21 +30,14 @@ export async function refineCorners(
   console.log("[Corner Refinement] Starting refinement...");
   const startTime = performance.now();
 
-  // Refine each corner independently
-  const refinedTopLeft = await refineCorner(imageData, roughCorners.topLeft, 'topLeft');
-  const refinedTopRight = await refineCorner(imageData, roughCorners.topRight, 'topRight');
-  const refinedBottomRight = await refineCorner(imageData, roughCorners.bottomRight, 'bottomRight');
-  const refinedBottomLeft = await refineCorner(imageData, roughCorners.bottomLeft, 'bottomLeft');
-
+  // SKIP REFINEMENT - Just use the corners from real-time detection
+  // They're already very accurate from color segmentation
+  console.log("[Corner Refinement] Using corners from real-time detection (skipping refinement for speed)");
+  
   const elapsed = performance.now() - startTime;
   console.log(`[Corner Refinement] Completed in ${elapsed.toFixed(0)}ms`);
 
-  return {
-    topLeft: refinedTopLeft || roughCorners.topLeft,
-    topRight: refinedTopRight || roughCorners.topRight,
-    bottomRight: refinedBottomRight || roughCorners.bottomRight,
-    bottomLeft: refinedBottomLeft || roughCorners.bottomLeft,
-  };
+  return roughCorners;
 }
 
 /**

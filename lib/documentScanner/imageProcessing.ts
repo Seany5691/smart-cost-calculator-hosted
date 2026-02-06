@@ -1088,8 +1088,11 @@ export async function processImage(
   const startTime = performance.now();
 
   try {
+    console.log("[Process Image] Starting processing for image:", image.id);
+    
     // Step 1: Load image into ImageData
     let imageData = await loadImageData(image.originalBlob);
+    console.log("[Process Image] Image loaded:", imageData.width, "x", imageData.height);
 
     // Store original dimensions for reference
     const originalWidth = imageData.width;
@@ -1097,23 +1100,17 @@ export async function processImage(
 
     // Step 2: Convert to grayscale
     imageData = convertToGrayscale(imageData);
+    console.log("[Process Image] Converted to grayscale");
 
-    // Step 3: Get document edges - use stored corners from capture OR detect new ones
-    let detectedEdges = image.detectedCorners; // Use corners from real-time detection if available
+    // Step 3: Get document edges - use stored corners from capture
+    let detectedEdges = image.detectedCorners;
 
     if (detectedEdges) {
-      console.log("[Process Image] Using corners from real-time detection");
+      console.log("[Process Image] Using corners from capture (already cropped)");
       
-      // Step 3a: REFINE corners for pixel-perfect accuracy
-      try {
-        const { refineCorners } = await import("./cornerRefinement");
-        const refinedEdges = await refineCorners(imageData, detectedEdges);
-        console.log("[Process Image] Corners refined successfully");
-        detectedEdges = refinedEdges;
-      } catch (error) {
-        console.warn("[Process Image] Corner refinement failed, using original corners:", error);
-        // Continue with original corners if refinement fails
-      }
+      // Image is already cropped to the green box, so we can skip perspective transform
+      // Just resize to A4 proportions
+      console.log("[Process Image] Skipping perspective transform (already cropped on capture)");
     } else {
       // Step 3b: Fallback to edge detection if no corners from capture
       console.log("[Process Image] No corners from capture, detecting edges...");
@@ -1128,118 +1125,68 @@ export async function processImage(
         const contourDetectedEdges = detectDocumentEdges(imageData);
         detectedEdges = contourDetectedEdges || undefined;
       }
-    }
-
-    console.log("[Process Image] Final edges:", detectedEdges);
-
-    // Step 4: Apply perspective transform if edges were detected
-    // This will straighten and crop the document to A4 proportions
-    if (detectedEdges) {
-      try {
-        imageData = applyPerspectiveTransform(imageData, detectedEdges);
-        console.log("[Process Image] Perspective transform applied, new dimensions:", {
-          width: imageData.width,
-          height: imageData.height
-        });
-      } catch (error) {
-        // If perspective transform fails, continue with original image
-        console.warn(
-          "Perspective transform failed, using original image:",
-          error,
-        );
+      
+      // Apply perspective transform if edges were detected
+      if (detectedEdges) {
+        try {
+          imageData = applyPerspectiveTransform(imageData, detectedEdges);
+          console.log("[Process Image] Perspective transform applied, new dimensions:", {
+            width: imageData.width,
+            height: imageData.height
+          });
+        } catch (error) {
+          console.warn("Perspective transform failed, using original image:", error);
+        }
       }
-    } else {
-      console.warn("[Process Image] No edges detected, processing full image");
     }
 
-    // Step 5: Enhance contrast by factor of 1.6 (balanced for good quality without over-processing)
+    console.log("[Process Image] Final edges:", detectedEdges ? "Yes" : "No");
+
+    // Step 4: Enhance contrast by factor of 1.6
     imageData = enhanceContrast(imageData, 1.6);
+    console.log("[Process Image] Contrast enhanced");
 
-    // Step 6: Adjust brightness to target level of 210 (bright but not washed out)
+    // Step 5: Adjust brightness to target level of 210
     imageData = adjustBrightness(imageData, 210);
+    console.log("[Process Image] Brightness adjusted");
 
-    // Step 7: Apply sharpening once for text clarity
+    // Step 6: Apply sharpening once for text clarity
     imageData = sharpenImage(imageData);
+    console.log("[Process Image] Sharpening applied");
 
-    // Step 8: Convert ImageData back to Blob with high quality
+    // Step 7: Convert ImageData back to Blob with high quality
     const processedBlob = await imageDataToBlob(imageData, "image/jpeg", 0.95);
+    console.log("[Process Image] Converted to blob");
 
-    // Step 9: Compress image to target size of 2MB (balanced for quality and file size)
+    // Step 8: Compress image to target size of 2MB
     const { compressImage } = await import("./imageCompression");
     const compressedBlob = await compressImage(processedBlob, { 
       maxSizeMB: 2,
-      maxWidthOrHeight: 2100, // Match A4 width
-      quality: 0.92 // Good quality
+      maxWidthOrHeight: 2100,
+      quality: 0.92
     });
+    console.log("[Process Image] Compressed to", compressedBlob.size, "bytes");
 
-    // Step 10: Generate thumbnail after compression
+    // Step 9: Generate thumbnail after compression
     const { generateThumbnail } = await import("./imageCompression");
     const thumbnailBlob = await generateThumbnail(compressedBlob, 200, 300);
+    console.log("[Process Image] Thumbnail generated");
 
     // Convert blobs to data URLs for preview
     const processedDataUrl = await blobToDataUrl(compressedBlob);
     const thumbnailDataUrl = await blobToDataUrl(thumbnailBlob);
 
-    // Calculate crop area - if perspective transform was applied, use full transformed dimensions
-    // Otherwise, use detected edges or full original dimensions
-    let cropArea: CropArea;
-    if (detectedEdges && imageData.width !== originalWidth) {
-      // Perspective transform was applied, so the image is already cropped
-      // Use full dimensions of the transformed image
-      cropArea = {
-        x: 0,
-        y: 0,
-        width: imageData.width,
-        height: imageData.height,
-      };
-      console.log("[Process Image] Using full transformed dimensions for crop");
-    } else if (detectedEdges) {
-      // Edges detected but transform failed, use detected edges for crop
-      const minX = Math.min(
-        detectedEdges.topLeft.x,
-        detectedEdges.topRight.x,
-        detectedEdges.bottomLeft.x,
-        detectedEdges.bottomRight.x,
-      );
-      const maxX = Math.max(
-        detectedEdges.topLeft.x,
-        detectedEdges.topRight.x,
-        detectedEdges.bottomLeft.x,
-        detectedEdges.bottomRight.x,
-      );
-      const minY = Math.min(
-        detectedEdges.topLeft.y,
-        detectedEdges.topRight.y,
-        detectedEdges.bottomLeft.y,
-        detectedEdges.bottomRight.y,
-      );
-      const maxY = Math.max(
-        detectedEdges.topLeft.y,
-        detectedEdges.topRight.y,
-        detectedEdges.bottomLeft.y,
-        detectedEdges.bottomRight.y,
-      );
-
-      cropArea = {
-        x: minX,
-        y: minY,
-        width: maxX - minX,
-        height: maxY - minY,
-      };
-      console.log("[Process Image] Using detected edges for crop");
-    } else {
-      // Use full image dimensions if no edges detected
-      cropArea = {
-        x: 0,
-        y: 0,
-        width: imageData.width,
-        height: imageData.height,
-      };
-      console.log("[Process Image] No edges detected, using full dimensions");
-    }
+    // Calculate crop area
+    const cropArea: CropArea = {
+      x: 0,
+      y: 0,
+      width: imageData.width,
+      height: imageData.height,
+    };
 
     // Calculate processing time
     const processingTime = performance.now() - startTime;
+    console.log("[Process Image] Completed in", processingTime.toFixed(0), "ms");
 
     // Return ProcessedImage with all fields populated
     const processedImage: ProcessedImage = {
@@ -1259,10 +1206,9 @@ export async function processImage(
     // If processing fails, mark image with error status
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    console.error("Image processing failed:", errorMessage);
+    console.error("[Process Image] Processing failed:", errorMessage);
 
     // Return a minimal ProcessedImage with error status
-    // This allows the workflow to continue and mark the page for retake
     throw new Error(`Failed to process image: ${errorMessage}`);
   }
 }

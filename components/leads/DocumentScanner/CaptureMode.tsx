@@ -383,7 +383,7 @@ export default function CaptureMode({
   };
 
   /**
-   * Capture image from video stream WITH detected corners
+   * Capture image from video stream WITH detected corners - CROP IMMEDIATELY
    */
   const captureImage = async () => {
     if (!videoRef.current || !canvasRef.current || state.isCapturing) return;
@@ -419,31 +419,86 @@ export default function CaptureMode({
         throw new Error("Failed to get canvas context");
       }
 
+      // Draw full frame first
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve(blob);
-            } else {
-              reject(new Error("Failed to create blob from canvas"));
-            }
-          },
-          "image/jpeg",
-          0.95,
+      // If we have detected corners, crop to that area IMMEDIATELY
+      if (state.detectedCorners) {
+        console.log("[Capture] Cropping to detected area immediately");
+        
+        const corners = state.detectedCorners;
+        
+        // Calculate bounding box
+        const minX = Math.min(corners.topLeft.x, corners.topRight.x, corners.bottomLeft.x, corners.bottomRight.x);
+        const maxX = Math.max(corners.topLeft.x, corners.topRight.x, corners.bottomLeft.x, corners.bottomRight.x);
+        const minY = Math.min(corners.topLeft.y, corners.topRight.y, corners.bottomLeft.y, corners.bottomRight.y);
+        const maxY = Math.max(corners.topLeft.y, corners.topRight.y, corners.bottomLeft.y, corners.bottomRight.y);
+        
+        const cropWidth = maxX - minX;
+        const cropHeight = maxY - minY;
+        
+        // Create new canvas for cropped image
+        const croppedCanvas = document.createElement('canvas');
+        croppedCanvas.width = cropWidth;
+        croppedCanvas.height = cropHeight;
+        const croppedCtx = croppedCanvas.getContext('2d')!;
+        
+        // Draw cropped area
+        croppedCtx.drawImage(
+          canvas,
+          minX, minY, cropWidth, cropHeight,
+          0, 0, cropWidth, cropHeight
         );
-      });
+        
+        // Use cropped canvas for blob
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          croppedCanvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Failed to create blob from canvas"));
+              }
+            },
+            "image/jpeg",
+            0.95,
+          );
+        });
 
-      if ("vibrate" in navigator) {
-        navigator.vibrate(50);
+        if ("vibrate" in navigator) {
+          navigator.vibrate(50);
+        }
+
+        // Pass blob AND detected corners to capture handler
+        onCapture(blob, state.detectedCorners);
+
+        setState((prev) => ({ ...prev, isCapturing: false }));
+      } else {
+        // No corners detected, capture full frame
+        console.log("[Capture] No corners detected, capturing full frame");
+        
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Failed to create blob from canvas"));
+              }
+            },
+            "image/jpeg",
+            0.95,
+          );
+        });
+
+        if ("vibrate" in navigator) {
+          navigator.vibrate(50);
+        }
+
+        onCapture(blob, null);
+
+        setState((prev) => ({ ...prev, isCapturing: false }));
       }
-
-      // Pass blob AND detected corners to capture handler
-      // The corners will be used for immediate cropping and refinement
-      onCapture(blob, state.detectedCorners);
-
-      setState((prev) => ({ ...prev, isCapturing: false }));
     } catch (error) {
       console.error("Capture error:", error);
 

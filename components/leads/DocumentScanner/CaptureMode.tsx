@@ -276,38 +276,43 @@ export default function CaptureMode({
       state.lockedCorners.bottomLeft?.locked;
 
     if (allCornersLocked) {
-      // All corners locked - validate document is still present
-      const documentStillPresent = await validateDocumentPresent(imageData, state.lockedCorners, scale);
+      // All corners locked - STAY LOCKED no matter what
+      // Only unlock if user manually moves camera completely away (checked less frequently)
+      const finalCorners = {
+        topLeft: state.lockedCorners.topLeft!,
+        topRight: state.lockedCorners.topRight!,
+        bottomRight: state.lockedCorners.bottomRight!,
+        bottomLeft: state.lockedCorners.bottomLeft!,
+      };
       
-      if (documentStillPresent) {
-        // Document still there, keep all corners locked
-        const finalCorners = {
-          topLeft: state.lockedCorners.topLeft!,
-          topRight: state.lockedCorners.topRight!,
-          bottomRight: state.lockedCorners.bottomRight!,
-          bottomLeft: state.lockedCorners.bottomLeft!,
-        };
-        drawEdgeOverlay(overlayCtx, finalCorners, overlayCanvas.width, overlayCanvas.height, true);
-        return;
-      } else {
-        // Document removed, unlock all corners
-        console.log("[Progressive Lock] Document removed, unlocking all corners");
-        setState((prev) => ({
-          ...prev,
-          lockedCorners: {
-            topLeft: null,
-            topRight: null,
-            bottomRight: null,
-            bottomLeft: null,
-          },
-          isLocked: false,
-          detectedCorners: null,
-          isDocumentDetected: false,
-        }));
-        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-        stableFramesRef.current = 0;
-        return;
+      // Draw locked overlay (green)
+      drawEdgeOverlay(overlayCtx, finalCorners, overlayCanvas.width, overlayCanvas.height, true);
+      
+      // Check if document completely removed (very lenient check, only every 10 frames)
+      if (stableFramesRef.current % 10 === 0) {
+        const documentCompletelyGone = await checkDocumentCompletelyRemoved(imageData, state.lockedCorners, scale);
+        
+        if (documentCompletelyGone) {
+          console.log("[Lock] Document completely removed from frame, unlocking");
+          setState((prev) => ({
+            ...prev,
+            lockedCorners: {
+              topLeft: null,
+              topRight: null,
+              bottomRight: null,
+              bottomLeft: null,
+            },
+            isLocked: false,
+            detectedCorners: null,
+            isDocumentDetected: false,
+          }));
+          overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+          stableFramesRef.current = 0;
+        }
       }
+      
+      stableFramesRef.current++;
+      return;
     }
 
     // Not all corners locked yet, detect new corners
@@ -439,6 +444,7 @@ export default function CaptureMode({
 
   /**
    * Validate a single corner - check inside (white) and outside (dark)
+   * Also ensures corner is within frame bounds
    */
   const validateSingleCorner = async (
     imageData: ImageData,
@@ -446,16 +452,26 @@ export default function CaptureMode({
     cornerName: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
   ): Promise<boolean> => {
     const { width, height, data } = imageData;
-    const sampleSize = 15;
-    const edgeOffset = 10;
+    const sampleSize = 10; // Smaller sample for faster validation
+    const edgeOffset = 8; // Smaller offset
+
+    // CRITICAL: Check if corner is within frame bounds (with margin)
+    const margin = 20; // Corners must be at least 20px inside frame
+    if (
+      corner.x < margin || corner.x >= width - margin ||
+      corner.y < margin || corner.y >= height - margin
+    ) {
+      console.log(`[Corner Validation] ${cornerName}: ✗ Out of frame bounds (${corner.x.toFixed(0)}, ${corner.y.toFixed(0)})`);
+      return false;
+    }
 
     // Helper to get average brightness
     const getAverageBrightness = (x: number, y: number, size: number): number => {
       let total = 0;
       let count = 0;
       
-      for (let dy = -size; dy <= size; dy++) {
-        for (let dx = -size; dx <= size; dx++) {
+      for (let dy = -size; dy <= size; dy += 2) { // Sample every 2 pixels for speed
+        for (let dx = -size; dx <= size; dx += 2) {
           const px = Math.floor(x + dx);
           const py = Math.floor(y + dy);
           
@@ -501,7 +517,7 @@ export default function CaptureMode({
         break;
     }
 
-    // Check bounds
+    // Check bounds for sample points
     if (
       insideX < 0 || insideX >= width ||
       insideY < 0 || insideY >= height ||
@@ -514,25 +530,26 @@ export default function CaptureMode({
     const insideBrightness = getAverageBrightness(insideX, insideY, sampleSize);
     const outsideBrightness = getAverageBrightness(outsideX, outsideY, sampleSize);
     
-    // Inside should be bright (white document), outside should be dark (background)
-    const insideIsWhite = insideBrightness > 150;
-    const outsideIsDark = outsideBrightness < 100;
+    // More lenient thresholds for locking
+    const insideIsWhite = insideBrightness > 140; // Lowered from 150
+    const outsideIsDark = outsideBrightness < 110; // Raised from 100
     const contrast = insideBrightness - outsideBrightness;
     
-    const isValid = insideIsWhite && outsideIsDark && contrast > 80;
+    const isValid = insideIsWhite && outsideIsDark && contrast > 60; // Lowered from 80
     
     if (isValid) {
-      console.log(`[Corner Validation] ${cornerName}: ✓ inside=${insideBrightness.toFixed(0)}, outside=${outsideBrightness.toFixed(0)}, contrast=${contrast.toFixed(0)}`);
+      console.log(`[Corner Validation] ${cornerName}: ✓ VALID - inside=${insideBrightness.toFixed(0)}, outside=${outsideBrightness.toFixed(0)}, contrast=${contrast.toFixed(0)}`);
     }
     
     return isValid;
   };
 
   /**
-   * Validate that document is still present (for locked corners)
-   * Only checks document center brightness - very tolerant of movement
+   * Check if document is COMPLETELY removed from frame
+   * Very lenient - only returns true if document is totally gone
+   * This prevents accidental unlocking from camera movement
    */
-  const validateDocumentPresent = async (
+  const checkDocumentCompletelyRemoved = async (
     imageData: ImageData,
     lockedCorners: {
       topLeft: { x: number; y: number; locked: boolean } | null;
@@ -544,7 +561,7 @@ export default function CaptureMode({
   ): Promise<boolean> => {
     const { width, height, data } = imageData;
     
-    // Calculate document center from locked corners
+    // Calculate document center from locked corners (scaled down)
     const centerX = (
       (lockedCorners.topLeft!.x + lockedCorners.topRight!.x + 
        lockedCorners.bottomLeft!.x + lockedCorners.bottomRight!.x) / 4
@@ -555,35 +572,41 @@ export default function CaptureMode({
        lockedCorners.bottomLeft!.y + lockedCorners.bottomRight!.y) / 4
     ) * scale;
     
-    // Sample center brightness
-    const sampleSize = 20;
-    let centerBrightness = 0;
-    let centerCount = 0;
+    // Check if center is out of bounds (document moved out of frame)
+    if (centerX < 0 || centerX >= width || centerY < 0 || centerY >= height) {
+      console.log("[Lock Check] Document center out of frame");
+      return true;
+    }
     
-    for (let dy = -sampleSize; dy <= sampleSize; dy++) {
-      for (let dx = -sampleSize; dx <= sampleSize; dx++) {
+    // Sample a large area at center (very lenient)
+    const sampleSize = 50; // Large sample area
+    let totalBrightness = 0;
+    let sampleCount = 0;
+    
+    for (let dy = -sampleSize; dy <= sampleSize; dy += 5) { // Sample every 5 pixels for speed
+      for (let dx = -sampleSize; dx <= sampleSize; dx += 5) {
         const px = Math.floor(centerX + dx);
         const py = Math.floor(centerY + dy);
         
         if (px >= 0 && px < width && py >= 0 && py < height) {
           const idx = (py * width + px) * 4;
           const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-          centerBrightness += brightness;
-          centerCount++;
+          totalBrightness += brightness;
+          sampleCount++;
         }
       }
     }
     
-    const avgCenterBrightness = centerCount > 0 ? centerBrightness / centerCount : 0;
+    const avgBrightness = sampleCount > 0 ? totalBrightness / sampleCount : 0;
     
-    // If center is dark (< 100), document is gone
-    if (avgCenterBrightness < 100) {
-      console.log(`[Lock Validation] Document removed - center brightness: ${avgCenterBrightness.toFixed(0)}`);
-      return false;
+    // Only unlock if center is VERY dark (< 50) - document completely gone
+    // This is much more lenient than before (was < 100)
+    if (avgBrightness < 50) {
+      console.log(`[Lock Check] Document completely removed - center brightness: ${avgBrightness.toFixed(0)}`);
+      return true;
     }
     
-    // Document still present
-    return true;
+    return false;
   };
 
   /**

@@ -70,6 +70,7 @@ export interface CapturedImage {
   status: ImageStatus; // Current processing status
   markedForRetake: boolean; // User marked for re-capture
   markedForCrop: boolean; // User marked for manual crop adjustment
+  detectedCorners?: EdgePoints; // Corners detected in real-time (optional)
 }
 
 /**
@@ -114,7 +115,7 @@ export interface DocumentScannerModalProps {
  * Props for CaptureMode component
  */
 export interface CaptureModeProps {
-  onCapture: (blob: Blob) => void; // Callback when image is captured
+  onCapture: (blob: Blob, detectedCorners?: EdgePoints | null) => void; // Callback when image is captured (with optional detected corners)
   onDone: () => void; // Callback when user finishes capturing
   currentPageNumber: number; // Current page number being captured
   maxPages: number; // Maximum pages allowed

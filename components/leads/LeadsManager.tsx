@@ -9,7 +9,7 @@ import LeadsCards from './LeadsCards';
 import LeadsFilters from './LeadsFilters';
 import LeadsPagination from './LeadsPagination';
 import BulkActions from './BulkActions';
-import ListManager from './ListManager';
+import ExportButton from './ExportButton';
 import { Grid, List, StickyNote, Users, ArrowUpDown } from 'lucide-react';
 
 export default function LeadsManager({ statusFilter, showDateInfo }: { statusFilter?: string; showDateInfo?: boolean }) {
@@ -278,7 +278,7 @@ export default function LeadsManager({ statusFilter, showDateInfo }: { statusFil
             </button>
           </div>
           
-          <ListManager />
+          {statusFilter && <ExportButton status={statusFilter} />}
           <button
             onClick={handleRefresh}
             disabled={loading}

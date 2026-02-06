@@ -8,6 +8,7 @@ import {
   ProcessedImage,
   ScannerSession,
   CropArea,
+  EdgePoints,
 } from "@/lib/documentScanner/types";
 import { blobToDataUrl } from "@/lib/documentScanner/imageProcessing";
 import { processBatch } from "@/lib/documentScanner/imageProcessing";
@@ -235,10 +236,10 @@ export default function DocumentScannerModal({
   };
 
   /**
-   * Handle image capture from camera
+   * Handle image capture from camera WITH detected corners
    * Requirements: 1.4, 2.1, 2.2
    */
-  const handleCapture = async (blob: Blob) => {
+  const handleCapture = async (blob: Blob, detectedCorners?: EdgePoints | null) => {
     try {
       // Check if max pages reached
       if (state.images.length >= MAX_PAGES) {
@@ -255,7 +256,7 @@ export default function DocumentScannerModal({
       // Convert blob to data URL for preview
       const dataUrl = await blobToDataUrl(blob);
 
-      // Create captured image
+      // Create captured image WITH detected corners
       const capturedImage: CapturedImage = {
         id,
         originalBlob: blob,
@@ -265,6 +266,7 @@ export default function DocumentScannerModal({
         status: "captured",
         markedForRetake: false,
         markedForCrop: false,
+        detectedCorners: detectedCorners || undefined, // Store detected corners for processing
       };
 
       // Add to images array
@@ -273,6 +275,8 @@ export default function DocumentScannerModal({
         images: [...prev.images, capturedImage],
         error: null,
       }));
+      
+      console.log("[Document Scanner] Captured image with corners:", detectedCorners ? "Yes" : "No");
     } catch (error) {
       console.error("Failed to capture image:", error);
       toast.error("Capture failed", {
@@ -395,10 +399,10 @@ export default function DocumentScannerModal({
   };
 
   /**
-   * Handle retake capture - replace marked page
+   * Handle retake capture - replace marked page WITH detected corners
    * Requirements: 4.3, 17.2
    */
-  const handleRetakeCapture = async (blob: Blob) => {
+  const handleRetakeCapture = async (blob: Blob, detectedCorners?: EdgePoints | null) => {
     try {
       if (state.retakePageNumbers.length === 0) return;
 
@@ -412,7 +416,7 @@ export default function DocumentScannerModal({
       // Convert blob to data URL
       const dataUrl = await blobToDataUrl(blob);
 
-      // Create replacement image (preserve ID and page number)
+      // Create replacement image (preserve ID and page number) WITH detected corners
       const replacementImage: CapturedImage = {
         ...imageToReplace,
         originalBlob: blob,
@@ -420,6 +424,7 @@ export default function DocumentScannerModal({
         timestamp: Date.now(),
         status: "captured",
         markedForRetake: false,
+        detectedCorners: detectedCorners || undefined, // Store detected corners
       };
 
       // Replace image in array
@@ -430,6 +435,8 @@ export default function DocumentScannerModal({
         ),
         retakePageNumbers: prev.retakePageNumbers.slice(1),
       }));
+      
+      console.log("[Document Scanner] Retake captured with corners:", detectedCorners ? "Yes" : "No");
     } catch (error) {
       console.error("Failed to retake image:", error);
       toast.error("Retake failed", {

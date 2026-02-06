@@ -229,7 +229,7 @@ export default function CaptureMode({
   };
 
   /**
-   * Detect edges in current video frame (optimized for speed)
+   * Detect edges in current video frame using COLOR SEGMENTATION (fast for real-time)
    */
   const detectEdgesInFrame = async () => {
     if (!videoRef.current || !canvasRef.current || !overlayCanvasRef.current) return;
@@ -238,7 +238,7 @@ export default function CaptureMode({
     const canvas = canvasRef.current;
     const overlayCanvas = overlayCanvasRef.current;
 
-    // Downsample for real-time detection (Phase 2 optimization)
+    // Downsample for real-time detection (fast)
     const scale = 0.5; // Process at half resolution for speed
     canvas.width = video.videoWidth * scale;
     canvas.height = video.videoHeight * scale;
@@ -253,10 +253,10 @@ export default function CaptureMode({
     // Get image data
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    // Detect edges (with downsampling already applied)
+    // Detect edges using COLOR SEGMENTATION (fast, perfect for white on dark)
     try {
-      const { detectDocumentEdges } = await import("@/lib/documentScanner/edgeDetection");
-      const edges = detectDocumentEdges(imageData, false); // Don't downsample again
+      const { detectDocumentByColor } = await import("@/lib/documentScanner/colorSegmentation");
+      const edges = detectDocumentByColor(imageData);
 
       if (edges) {
         // Scale corners back to full resolution
@@ -274,7 +274,7 @@ export default function CaptureMode({
           isDocumentDetected: true,
         }));
 
-        // Draw overlay
+        // Draw overlay showing EXACT crop area (green quadrilateral)
         drawEdgeOverlay(overlayCtx, scaledEdges, overlayCanvas.width, overlayCanvas.height);
 
         // Increment stable frames
@@ -383,7 +383,7 @@ export default function CaptureMode({
   };
 
   /**
-   * Capture image from video stream
+   * Capture image from video stream WITH detected corners
    */
   const captureImage = async () => {
     if (!videoRef.current || !canvasRef.current || state.isCapturing) return;
@@ -439,7 +439,9 @@ export default function CaptureMode({
         navigator.vibrate(50);
       }
 
-      onCapture(blob);
+      // Pass blob AND detected corners to capture handler
+      // The corners will be used for immediate cropping and refinement
+      onCapture(blob, state.detectedCorners);
 
       setState((prev) => ({ ...prev, isCapturing: false }));
     } catch (error) {

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 import { verifyAuth } from '@/lib/middleware';
-import ExcelJS from 'exceljs';
+import * as XLSX from 'xlsx';
 
-// GET /api/leads/export - Export leads to Excel
+// GET /api/leads/export - Export leads to Excel with notes and reminders
 export async function GET(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request);
@@ -11,95 +11,161 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Get query parameters
     const { searchParams } = new URL(request.url);
-    const leadIds = searchParams.get('leadIds')?.split(',').filter(Boolean);
+    const status = searchParams.get('status');
 
-    let query = 'SELECT * FROM leads';
-    const params: any[] = [];
-
-    if (leadIds && leadIds.length > 0) {
-      query += ' WHERE id = ANY($1)';
-      params.push(leadIds);
+    if (!status) {
+      return NextResponse.json({ error: 'Status parameter is required' }, { status: 400 });
     }
 
-    query += ' ORDER BY provider, number';
+    // Fetch leads for the specified status
+    const leadsResult = await pool.query(
+      `SELECT 
+        l.id,
+        l.name,
+        l.phone,
+        l.provider,
+        l.address,
+        l.town,
+        l.maps_address,
+        l.created_at
+      FROM leads l
+      LEFT JOIN lead_shares ls ON l.id = ls.lead_id
+      WHERE (l.user_id = $1::uuid OR ls.shared_with_user_id = $1::uuid)
+        AND l.status = $2
+      ORDER BY l.created_at DESC`,
+      [authResult.user.userId, status]
+    );
 
-    const result = await pool.query(query, params);
+    const leads = leadsResult.rows;
 
-    // Create workbook
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Leads');
+    if (leads.length === 0) {
+      return NextResponse.json({ error: 'No leads found for this status' }, { status: 404 });
+    }
 
-    // Define columns
-    worksheet.columns = [
-      { header: 'Number', key: 'number', width: 10 },
-      { header: 'Name', key: 'name', width: 30 },
-      { header: 'Phone', key: 'phone', width: 15 },
-      { header: 'Provider', key: 'provider', width: 15 },
-      { header: 'Address', key: 'address', width: 40 },
-      { header: 'Town', key: 'town', width: 20 },
-      { header: 'Contact Person', key: 'contact_person', width: 25 },
-      { header: 'Type of Business', key: 'type_of_business', width: 25 },
-      { header: 'Status', key: 'status', width: 12 },
-      { header: 'Notes', key: 'notes', width: 40 },
-      { header: 'Date to Call Back', key: 'date_to_call_back', width: 18 },
-      { header: 'Date Signed', key: 'date_signed', width: 15 },
-      { header: 'Maps Address', key: 'maps_address', width: 50 },
-      { header: 'List Name', key: 'list_name', width: 20 }
-    ];
+    // Fetch notes and reminders for all leads
+    const leadIds = leads.map(lead => lead.id);
+    
+    const notesResult = await pool.query(
+      `SELECT 
+        n.lead_id,
+        n.content,
+        n.created_at,
+        u.name as user_name
+      FROM notes n
+      JOIN users u ON n.user_id = u.id
+      WHERE n.lead_id = ANY($1::uuid[])
+      ORDER BY n.lead_id, n.created_at DESC`,
+      [leadIds]
+    );
 
-    // Style header row
-    worksheet.getRow(1).font = { bold: true };
-    worksheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    };
+    const remindersResult = await pool.query(
+      `SELECT 
+        r.lead_id,
+        r.message,
+        r.reminder_date,
+        r.reminder_time,
+        r.status,
+        u.name as user_name
+      FROM reminders r
+      JOIN users u ON r.user_id = u.id
+      WHERE r.lead_id = ANY($1::uuid[])
+      ORDER BY r.lead_id, r.reminder_date ASC`,
+      [leadIds]
+    );
 
-    // Add data rows
-    result.rows.forEach(lead => {
-      const row = worksheet.addRow({
-        number: lead.number,
-        name: lead.name,
-        phone: lead.phone,
-        provider: lead.provider,
-        address: lead.address,
-        town: lead.town,
-        contact_person: lead.contact_person,
-        type_of_business: lead.type_of_business,
-        status: lead.status,
-        notes: lead.notes,
-        date_to_call_back: lead.date_to_call_back ? new Date(lead.date_to_call_back).toLocaleDateString() : '',
-        date_signed: lead.date_signed ? new Date(lead.date_signed).toLocaleDateString() : '',
-        maps_address: lead.maps_address,
-        list_name: lead.list_name
-      });
+    // Group notes and reminders by lead_id
+    const notesByLead = new Map<string, any[]>();
+    const remindersByLead = new Map<string, any[]>();
 
-      // Add hyperlink to maps_address if it exists
-      if (lead.maps_address) {
-        const cell = row.getCell('maps_address');
-        cell.value = {
-          text: lead.maps_address,
-          hyperlink: lead.maps_address
-        };
-        cell.font = { color: { argb: 'FF0000FF' }, underline: true };
+    notesResult.rows.forEach(note => {
+      if (!notesByLead.has(note.lead_id)) {
+        notesByLead.set(note.lead_id, []);
       }
+      notesByLead.get(note.lead_id)!.push(note);
     });
 
-    // Generate buffer
-    const buffer = await workbook.xlsx.writeBuffer();
+    remindersResult.rows.forEach(reminder => {
+      if (!remindersByLead.has(reminder.lead_id)) {
+        remindersByLead.set(reminder.lead_id, []);
+      }
+      remindersByLead.get(reminder.lead_id)!.push(reminder);
+    });
 
-    // Return as downloadable file
-    return new NextResponse(buffer, {
+    // Build Excel data
+    const excelData = leads.map(lead => {
+      const notes = notesByLead.get(lead.id) || [];
+      const reminders = remindersByLead.get(lead.id) || [];
+
+      // Format notes
+      const notesText = notes.length > 0
+        ? notes.map(n => `[${new Date(n.created_at).toLocaleDateString()}] ${n.user_name}: ${n.content}`).join('\n\n')
+        : '';
+
+      // Format reminders
+      const remindersText = reminders.length > 0
+        ? reminders.map(r => {
+            const time = r.reminder_time ? ` at ${r.reminder_time}` : '';
+            return `[${r.reminder_date}${time}] ${r.message} (${r.status}) - ${r.user_name}`;
+          }).join('\n\n')
+        : '';
+
+      return {
+        'Maps URL': lead.maps_address || '',
+        'Name': lead.name || '',
+        'Phone Number': lead.phone || '',
+        'Provider': lead.provider || '',
+        'Address': lead.address || '',
+        'Notes': notesText,
+        'Reminders': remindersText,
+      };
+    });
+
+    // Create workbook
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // Set column widths
+    worksheet['!cols'] = [
+      { wch: 50 }, // Maps URL
+      { wch: 25 }, // Name
+      { wch: 15 }, // Phone Number
+      { wch: 15 }, // Provider
+      { wch: 30 }, // Address
+      { wch: 50 }, // Notes
+      { wch: 50 }, // Reminders
+    ];
+
+    // Make Maps URL column a hyperlink
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    for (let row = range.s.r + 1; row <= range.e.r; row++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: row, c: 0 });
+      const cell = worksheet[cellAddress];
+      if (cell && cell.v) {
+        cell.l = { Target: cell.v, Tooltip: 'Open in Google Maps' };
+      }
+    }
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, status.charAt(0).toUpperCase() + status.slice(1));
+
+    // Generate Excel file
+    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    // Return Excel file
+    const fileName = `leads-${status}-${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    return new NextResponse(excelBuffer, {
+      status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="leads-export-${new Date().toISOString().split('T')[0]}.xlsx"`
-      }
+        'Content-Disposition': `attachment; filename="${fileName}"`,
+      },
     });
   } catch (error) {
     console.error('Error exporting leads:', error);
     return NextResponse.json(
-      { error: 'Failed to export leads' },
+      { error: 'Failed to export leads', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

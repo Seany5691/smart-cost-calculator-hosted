@@ -1098,12 +1098,39 @@ export async function processImage(
     // Step 2: Convert to grayscale
     imageData = convertToGrayscale(imageData);
 
-    // Step 3: Detect document edges BEFORE any transformations
-    // This works on the grayscale image for better edge detection
-    const { detectDocumentEdges } = await import("./edgeDetection");
-    const detectedEdges = detectDocumentEdges(imageData);
+    // Step 3: Get document edges - use stored corners from capture OR detect new ones
+    let detectedEdges = image.detectedCorners; // Use corners from real-time detection if available
 
-    console.log("[Process Image] Edge detection result:", detectedEdges);
+    if (detectedEdges) {
+      console.log("[Process Image] Using corners from real-time detection");
+      
+      // Step 3a: REFINE corners for pixel-perfect accuracy
+      try {
+        const { refineCorners } = await import("./cornerRefinement");
+        const refinedEdges = await refineCorners(imageData, detectedEdges);
+        console.log("[Process Image] Corners refined successfully");
+        detectedEdges = refinedEdges;
+      } catch (error) {
+        console.warn("[Process Image] Corner refinement failed, using original corners:", error);
+        // Continue with original corners if refinement fails
+      }
+    } else {
+      // Step 3b: Fallback to edge detection if no corners from capture
+      console.log("[Process Image] No corners from capture, detecting edges...");
+      const { detectDocumentByColor } = await import("./colorSegmentation");
+      const colorDetectedEdges = detectDocumentByColor(imageData);
+      detectedEdges = colorDetectedEdges || undefined;
+      
+      if (!detectedEdges) {
+        // Final fallback to contour detection
+        console.log("[Process Image] Color detection failed, trying contour detection...");
+        const { detectDocumentEdges } = await import("./edgeDetection");
+        const contourDetectedEdges = detectDocumentEdges(imageData);
+        detectedEdges = contourDetectedEdges || undefined;
+      }
+    }
+
+    console.log("[Process Image] Final edges:", detectedEdges);
 
     // Step 4: Apply perspective transform if edges were detected
     // This will straighten and crop the document to A4 proportions
@@ -1121,6 +1148,8 @@ export async function processImage(
           error,
         );
       }
+    } else {
+      console.warn("[Process Image] No edges detected, processing full image");
     }
 
     // Step 5: Enhance contrast by factor of 1.6 (balanced for good quality without over-processing)

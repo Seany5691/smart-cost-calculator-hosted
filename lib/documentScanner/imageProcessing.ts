@@ -1708,9 +1708,10 @@ export async function processImage(
     // Step 4: Apply BALANCED enhancement pipeline for readable documents
     console.log("[Process Image] Applying OPTIMIZED enhancement settings...");
     
-    // 4a: FAST shadow removal - removes shadows without freezing
-    imageData = removeShadowsFast(imageData, 8);
-    console.log("[Process Image] Fast shadow removal applied");
+    // 4a: DISABLE shadow removal - it's removing actual content and making backgrounds gray
+    // The white boost approach works better for documents
+    // imageData = removeShadowsFast(imageData, 8);
+    console.log("[Process Image] Skipping shadow removal - using white boost instead");
 
     // 4b: Skip noise reduction - it blurs text
     // imageData = reduceNoise(imageData, 3);
@@ -1725,9 +1726,9 @@ export async function processImage(
     console.log("[Process Image] Brightness adjusted (target 158)");
 
     // 4e: Apply white boost to make backgrounds pure white while preserving text
-    // Lower threshold (180 instead of 200) to catch backgrounds after shadow removal
-    imageData = applyWhiteBoost(imageData, 180, 0.9);
-    console.log("[Process Image] White boost applied (threshold 180, strength 0.9)");
+    // Use original settings that were working well
+    imageData = applyWhiteBoost(imageData, 200, 0.8);
+    console.log("[Process Image] White boost applied (threshold 200, strength 0.8)");
 
     // 4f: Skip adaptive threshold - makes text unclear and cartoonish
     // imageData = applyAdaptiveThreshold(imageData, 15, 10);

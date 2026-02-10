@@ -712,12 +712,54 @@ export default function TotalCostsStep() {
             <span className="text-gray-300">Hardware Total:</span>
             <span className="text-white font-semibold">{formatCurrency(totalsData.hardwareTotal)}</span>
           </div>
+          
+          {/* Installation Base - Editable by Admin */}
           <div className="flex justify-between items-center">
             <span className="text-gray-300">Installation Base:</span>
-            <span className="text-white font-semibold">
-              {formatCurrency(totalsData.installationBase || 0)}
-            </span>
+            {isEditingInstallationBase && user?.role === 'admin' ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={customInstallationBaseInput}
+                  onChange={(e) => setCustomInstallationBaseInput(e.target.value)}
+                  className="w-32 px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+                  min="0"
+                  step="0.01"
+                />
+                <button
+                  onClick={handleSaveInstallationBase}
+                  className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleCancelInstallationBaseEdit}
+                  className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetInstallationBase}
+                  className="px-2 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600"
+                >
+                  Reset
+                </button>
+              </div>
+            ) : (
+              <span className="text-white font-semibold flex items-center gap-2">
+                {formatCurrency(totalsData.installationBase || 0)}
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={handleEditInstallationBase}
+                    className="text-xs text-blue-400 hover:text-blue-300 underline"
+                  >
+                    Edit
+                  </button>
+                )}
+              </span>
+            )}
           </div>
+          
           <div className="flex justify-between items-center">
             <span className="text-gray-300">Extension Cost:</span>
             <span className="text-white font-semibold">{formatCurrency(totalsData.extensionTotal)}</span>
@@ -803,53 +845,6 @@ export default function TotalCostsStep() {
       <div className="bg-white/5 border border-white/10 rounded-lg p-6">
         <h3 className="text-xl font-semibold text-white mb-4">Finance & Settlement</h3>
         <div className="space-y-3">
-          {/* Installation Base - Editable by Admin */}
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300">Installation Base:</span>
-            {isEditingInstallationBase && user?.role === 'admin' ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={customInstallationBaseInput}
-                  onChange={(e) => setCustomInstallationBaseInput(e.target.value)}
-                  className="w-32 px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-                  min="0"
-                  step="0.01"
-                />
-                <button
-                  onClick={handleSaveInstallationBase}
-                  className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={handleCancelInstallationBaseEdit}
-                  className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleResetInstallationBase}
-                  className="px-2 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600"
-                >
-                  Reset
-                </button>
-              </div>
-            ) : (
-              <span className="text-white font-semibold flex items-center gap-2">
-                {formatCurrency(totalsData.installationBase || 0)}
-                {user?.role === 'admin' && (
-                  <button
-                    onClick={handleEditInstallationBase}
-                    className="text-xs text-blue-400 hover:text-blue-300 underline"
-                  >
-                    Edit
-                  </button>
-                )}
-              </span>
-            )}
-          </div>
-          
           {/* Finance Fee - Editable by Admin */}
           <div className="flex justify-between items-center">
             <span className="text-gray-300">Finance Fee:</span>

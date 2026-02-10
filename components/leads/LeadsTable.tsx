@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useLeadsStore } from '@/lib/store/leads';
+import { useCalculatorStore } from '@/lib/store/calculator';
 import type { Lead } from '@/lib/leads/types';
 import { Eye, Edit, Trash2, Phone, MapPin, Calendar, ChevronDown, ChevronUp, StickyNote, Bell, Clock, Plus, X, FileText, Share2, Paperclip } from 'lucide-react';
 import LeadDetailsModal from './LeadDetailsModal';
@@ -93,6 +94,7 @@ interface LeadsTableProps {
 
 export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = false, showDateInfo = false }: LeadsTableProps) {
   const { selectedLeads, toggleLeadSelection } = useLeadsStore();
+  const { resetCalculator } = useCalculatorStore();
   const { toast } = useToast();
   const router = useRouter();
   const [detailsLead, setDetailsLead] = useState<Lead | null>(null);
@@ -113,6 +115,10 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
   const [attachmentsModalLead, setAttachmentsModalLead] = useState<Lead | null>(null);
 
   const handleCreateProposal = (lead: Lead) => {
+    // Reset calculator first to start fresh
+    resetCalculator();
+    localStorage.removeItem('calculator-storage');
+    
     // Store lead ID in localStorage for the calculator to attach the proposal
     localStorage.setItem('proposal-lead-id', lead.id);
     localStorage.setItem('proposal-lead-name', lead.name);

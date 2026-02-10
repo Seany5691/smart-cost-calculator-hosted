@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, FileText, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useCalculatorStore } from '@/lib/store/calculator';
 import type { Lead } from '@/lib/leads/types';
 
 interface ProposalModalProps {
@@ -20,6 +21,7 @@ export default function ProposalModal({
   onConfirm
 }: ProposalModalProps) {
   const router = useRouter();
+  const { resetCalculator } = useCalculatorStore();
   const [mounted, setMounted] = useState(false);
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,6 +78,10 @@ export default function ProposalModal({
         date_proposal_created: proposalCreatedDate, 
         notes: noteText 
       });
+      
+      // Reset calculator first to start fresh
+      resetCalculator();
+      localStorage.removeItem('calculator-storage');
       
       // Store lead info in localStorage for calculator
       localStorage.setItem('proposal-lead-id', lead.id);

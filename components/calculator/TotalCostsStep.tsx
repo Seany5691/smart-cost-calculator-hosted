@@ -148,11 +148,24 @@ export default function TotalCostsStep() {
         let fuelTotal = 0;
         let installationTotal = 0;
         
+        // Check if there's a custom installation base (set by admin)
+        const hasCustomInstallationBase = totalsData?.customInstallationBase !== undefined;
+        
         try {
           console.log('[TOTAL COSTS] Calculating installation base for', extensionCount, 'extensions');
           console.log('[TOTAL COSTS] activeScales.installation:', activeScales.installation);
-          installationBase = calculateInstallation(extensionCount, activeScales, effectiveRole);
-          console.log('[TOTAL COSTS] Installation base calculated:', installationBase);
+          console.log('[TOTAL COSTS] Has custom installation base:', hasCustomInstallationBase);
+          
+          if (hasCustomInstallationBase) {
+            // Use custom installation base set by admin
+            installationBase = totalsData.customInstallationBase!;
+            console.log('[TOTAL COSTS] Using custom installation base:', installationBase);
+          } else {
+            // Calculate installation base from scales
+            installationBase = calculateInstallation(extensionCount, activeScales, effectiveRole);
+            console.log('[TOTAL COSTS] Installation base calculated:', installationBase);
+          }
+          
           if (isNaN(installationBase) || !isFinite(installationBase)) {
             console.error('[TOTAL COSTS] Invalid installation base:', installationBase);
             installationBase = 0;
@@ -285,6 +298,10 @@ export default function TotalCostsStep() {
         let financeFee = 0;
         let totalPayout = 0;
         let financeAmount = 0;
+        
+        // Check if there's a custom finance fee (set by admin)
+        const hasCustomFinanceFee = totalsData?.customFinanceFee !== undefined;
+        
         try {
           // Base total payout = hardware + installation + gross profit + settlement
           const baseTotalPayout = hardwareTotal + installationTotal + grossProfit + actualSettlement;
@@ -295,27 +312,34 @@ export default function TotalCostsStep() {
           console.log('[TOTAL COSTS] Gross Profit:', grossProfit);
           console.log('[TOTAL COSTS] Settlement:', actualSettlement);
           console.log('[TOTAL COSTS] Base total payout (before finance fee):', baseTotalPayout);
+          console.log('[TOTAL COSTS] Has custom finance fee:', hasCustomFinanceFee);
           console.log('[TOTAL COSTS] activeScales.finance_fee:', activeScales.finance_fee);
           
-          // Iteratively calculate finance fee until it stabilizes
-          let previousFinanceFee = -1;
-          let iterations = 0;
-          const maxIterations = 10;
-          
-          while (financeFee !== previousFinanceFee && iterations < maxIterations) {
-            previousFinanceFee = financeFee;
-            const totalPayoutForFeeCalculation = baseTotalPayout + financeFee;
+          if (hasCustomFinanceFee) {
+            // Use custom finance fee set by admin
+            financeFee = totalsData.customFinanceFee!;
+            console.log('[TOTAL COSTS] Using custom finance fee:', financeFee);
+          } else {
+            // Iteratively calculate finance fee until it stabilizes
+            let previousFinanceFee = -1;
+            let iterations = 0;
+            const maxIterations = 10;
             
-            console.log('[TOTAL COSTS] Iteration', iterations, '- Total for fee calc:', totalPayoutForFeeCalculation);
+            while (financeFee !== previousFinanceFee && iterations < maxIterations) {
+              previousFinanceFee = financeFee;
+              const totalPayoutForFeeCalculation = baseTotalPayout + financeFee;
+              
+              console.log('[TOTAL COSTS] Iteration', iterations, '- Total for fee calc:', totalPayoutForFeeCalculation);
+              
+              // Get finance fee based on current total payout
+              financeFee = getFinanceFeeBand(totalPayoutForFeeCalculation, activeScales.finance_fee, effectiveRole);
+              
+              console.log('[TOTAL COSTS] Iteration', iterations, '- Finance fee:', financeFee);
+              iterations++;
+            }
             
-            // Get finance fee based on current total payout
-            financeFee = getFinanceFeeBand(totalPayoutForFeeCalculation, activeScales.finance_fee, effectiveRole);
-            
-            console.log('[TOTAL COSTS] Iteration', iterations, '- Finance fee:', financeFee);
-            iterations++;
+            console.log('[TOTAL COSTS] Finance fee stabilized after', iterations, 'iterations:', financeFee);
           }
-          
-          console.log('[TOTAL COSTS] Finance fee stabilized after', iterations, 'iterations:', financeFee);
           
           // Calculate final totals
           // Total Payout = Hardware + Installation + Gross Profit + Settlement + Finance Fee
@@ -415,9 +439,11 @@ export default function TotalCostsStep() {
           representativeSettlement,
           actualSettlement,
           financeFee,
+          customFinanceFee: hasCustomFinanceFee ? totalsData.customFinanceFee : undefined,
           totalPayout,
           grossProfit,
           customGrossProfit: customGrossProfitRef.current,
+          customInstallationBase: hasCustomInstallationBase ? totalsData.customInstallationBase : undefined,
           financeAmount,
           factor,
           hardwareRental,

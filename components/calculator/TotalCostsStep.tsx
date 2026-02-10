@@ -49,6 +49,10 @@ export default function TotalCostsStep() {
   const [customGrossProfitInput, setCustomGrossProfitInput] = useState(
     totalsData?.customGrossProfit?.toString() || ''
   );
+  const [isEditingFinanceFee, setIsEditingFinanceFee] = useState(false);
+  const [customFinanceFeeInput, setCustomFinanceFeeInput] = useState('');
+  const [isEditingInstallationBase, setIsEditingInstallationBase] = useState(false);
+  const [customInstallationBaseInput, setCustomInstallationBaseInput] = useState('');
   const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
   const proposalGeneratorRef = useRef<ProposalGeneratorRef>(null);
   const customGrossProfitRef = useRef(totalsData?.customGrossProfit);
@@ -596,6 +600,80 @@ export default function TotalCostsStep() {
     setCustomGrossProfitInput('');
   };
 
+  // Handle custom finance fee edit
+  const handleEditFinanceFee = () => {
+    setIsEditingFinanceFee(true);
+    setCustomFinanceFeeInput(totalsData.financeFee.toString());
+  };
+
+  const handleSaveFinanceFee = () => {
+    const value = parseFloat(customFinanceFeeInput);
+    if (!isNaN(value) && value >= 0) {
+      // Store custom finance fee in totalsData
+      setTotalsData({
+        ...totalsData,
+        financeFee: value,
+        customFinanceFee: value,
+      });
+      setIsEditingFinanceFee(false);
+    } else {
+      toast.error('Invalid Input', {
+        message: 'Please enter a valid positive number',
+        section: 'calculator'
+      });
+    }
+  };
+
+  const handleCancelFinanceFeeEdit = () => {
+    setIsEditingFinanceFee(false);
+    setCustomFinanceFeeInput('');
+  };
+
+  const handleResetFinanceFee = () => {
+    // Recalculate finance fee by removing custom value
+    const { customFinanceFee, ...rest } = totalsData;
+    setTotalsData(rest);
+    setIsEditingFinanceFee(false);
+    setCustomFinanceFeeInput('');
+  };
+
+  // Handle custom installation base edit
+  const handleEditInstallationBase = () => {
+    setIsEditingInstallationBase(true);
+    setCustomInstallationBaseInput((totalsData.installationBase || 0).toString());
+  };
+
+  const handleSaveInstallationBase = () => {
+    const value = parseFloat(customInstallationBaseInput);
+    if (!isNaN(value) && value >= 0) {
+      // Store custom installation base in totalsData
+      setTotalsData({
+        ...totalsData,
+        installationBase: value,
+        customInstallationBase: value,
+      });
+      setIsEditingInstallationBase(false);
+    } else {
+      toast.error('Invalid Input', {
+        message: 'Please enter a valid positive number',
+        section: 'calculator'
+      });
+    }
+  };
+
+  const handleCancelInstallationBaseEdit = () => {
+    setIsEditingInstallationBase(false);
+    setCustomInstallationBaseInput('');
+  };
+
+  const handleResetInstallationBase = () => {
+    // Recalculate installation base by removing custom value
+    const { customInstallationBase, ...rest } = totalsData;
+    setTotalsData(rest);
+    setIsEditingInstallationBase(false);
+    setCustomInstallationBaseInput('');
+  };
+
   // Determine which role is being used for pricing
   const effectiveRole = originalUserRole || user?.role || 'user';
   const roleName = effectiveRole === 'admin' ? 'Admin' : effectiveRole === 'manager' ? 'Manager' : 'User';
@@ -725,13 +803,103 @@ export default function TotalCostsStep() {
       <div className="bg-white/5 border border-white/10 rounded-lg p-6">
         <h3 className="text-xl font-semibold text-white mb-4">Finance & Settlement</h3>
         <div className="space-y-3">
+          {/* Installation Base - Editable by Admin */}
+          <div className="flex justify-between items-center">
+            <span className="text-gray-300">Installation Base:</span>
+            {isEditingInstallationBase && user?.role === 'admin' ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={customInstallationBaseInput}
+                  onChange={(e) => setCustomInstallationBaseInput(e.target.value)}
+                  className="w-32 px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+                  min="0"
+                  step="0.01"
+                />
+                <button
+                  onClick={handleSaveInstallationBase}
+                  className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleCancelInstallationBaseEdit}
+                  className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetInstallationBase}
+                  className="px-2 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600"
+                >
+                  Reset
+                </button>
+              </div>
+            ) : (
+              <span className="text-white font-semibold flex items-center gap-2">
+                {formatCurrency(totalsData.installationBase || 0)}
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={handleEditInstallationBase}
+                    className="text-xs text-blue-400 hover:text-blue-300 underline"
+                  >
+                    Edit
+                  </button>
+                )}
+              </span>
+            )}
+          </div>
+          
+          {/* Finance Fee - Editable by Admin */}
+          <div className="flex justify-between items-center">
+            <span className="text-gray-300">Finance Fee:</span>
+            {isEditingFinanceFee && user?.role === 'admin' ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={customFinanceFeeInput}
+                  onChange={(e) => setCustomFinanceFeeInput(e.target.value)}
+                  className="w-32 px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-sm focus:outline-none focus:border-blue-500"
+                  min="0"
+                  step="0.01"
+                />
+                <button
+                  onClick={handleSaveFinanceFee}
+                  className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleCancelFinanceFeeEdit}
+                  className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetFinanceFee}
+                  className="px-2 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600"
+                >
+                  Reset
+                </button>
+              </div>
+            ) : (
+              <span className="text-white font-semibold flex items-center gap-2">
+                {formatCurrency(totalsData.financeFee)}
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={handleEditFinanceFee}
+                    className="text-xs text-blue-400 hover:text-blue-300 underline"
+                  >
+                    Edit
+                  </button>
+                )}
+              </span>
+            )}
+          </div>
+          
           <div className="flex justify-between items-center">
             <span className="text-gray-300">Settlement Amount:</span>
             <span className="text-white font-semibold">{formatCurrency(totalsData.actualSettlement)}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-300">Finance Fee:</span>
-            <span className="text-white font-semibold">{formatCurrency(totalsData.financeFee)}</span>
           </div>
           <div className="border-t border-white/10 pt-3 flex justify-between items-center">
             <span className="text-gray-300 font-semibold">Total Payout:</span>

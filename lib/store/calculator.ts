@@ -91,9 +91,11 @@ export interface TotalsData {
   representativeSettlement: number;
   actualSettlement: number;
   financeFee: number;
+  customFinanceFee?: number; // Custom finance fee set by admin
   totalPayout: number;
   grossProfit: number;
   customGrossProfit?: number;
+  customInstallationBase?: number; // Custom installation base set by admin
   financeAmount: number;
   factor: number;
   hardwareRental: number;

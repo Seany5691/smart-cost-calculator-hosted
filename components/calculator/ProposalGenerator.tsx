@@ -256,8 +256,18 @@ const ProposalGenerator = forwardRef<ProposalGeneratorRef, ProposalGeneratorProp
               field.setText(value);
             }
           } catch (error) {
-            console.warn(`Field "${fieldName}" not found in PDF form`);
+            // Silently skip fields that don't exist in this PDF template
+            // This is expected as different proposal types have different fields
+            console.log(`Field "${fieldName}" not found in ${pdfFileName} - skipping`);
           }
+        }
+
+        // Flatten the form to prevent corruption issues
+        // This converts form fields to static text
+        try {
+          form.flatten();
+        } catch (error) {
+          console.warn('Could not flatten form, continuing without flattening:', error);
         }
 
         // Save the filled PDF

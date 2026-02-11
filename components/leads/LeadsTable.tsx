@@ -641,9 +641,15 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                     <tr
                       id={`lead-row-${lead.id}`}
                       className={`hover:bg-white/5 transition-all duration-300 cursor-pointer ${
-                        highlightedLeadId === lead.id ? 'ring-2 ring-emerald-500 bg-emerald-500/10' : ''
+                        highlightedLeadId === lead.id 
+                          ? 'ring-4 ring-emerald-400 ring-inset bg-emerald-500/20 shadow-lg shadow-emerald-500/50 animate-pulse' 
+                          : ''
                       }`}
-                      style={disableBackgroundColor ? {} : { backgroundColor: lead.background_color }}
+                      style={
+                        highlightedLeadId === lead.id 
+                          ? { backgroundColor: 'rgba(16, 185, 129, 0.15) !important' } 
+                          : (disableBackgroundColor ? {} : { backgroundColor: lead.background_color })
+                      }
                       onClick={(e) => {
                         // Only toggle if not clicking on interactive elements
                         const target = e.target as HTMLElement;

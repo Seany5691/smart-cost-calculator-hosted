@@ -610,9 +610,15 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
               key={lead.id}
               id={`lead-card-${lead.id}`}
               className={`bg-white/10 border border-white/20 rounded-lg overflow-hidden hover:border-emerald-500/50 transition-all duration-300 ${
-                highlightedLeadId === lead.id ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-lg shadow-emerald-500/20' : ''
+                highlightedLeadId === lead.id 
+                  ? 'ring-4 ring-emerald-400 ring-inset bg-emerald-500/20 border-emerald-400 shadow-lg shadow-emerald-500/50 animate-pulse' 
+                  : ''
               }`}
-              style={disableBackgroundColor ? {} : { backgroundColor: lead.background_color }}
+              style={
+                highlightedLeadId === lead.id 
+                  ? { backgroundColor: 'rgba(16, 185, 129, 0.15) !important' } 
+                  : (disableBackgroundColor ? {} : { backgroundColor: lead.background_color })
+              }
             >
               {/* Card Header */}
               <div className="p-4 border-b border-white/10">

@@ -172,6 +172,31 @@ export default function LeadsPage() {
     return () => clearInterval(interval);
   }, [activeTab, highlightLeadId]);
 
+  // Clear highlightLead URL parameter after highlighting is complete
+  useEffect(() => {
+    if (highlightLeadId) {
+      // Wait for highlight to complete (1s delay + 5s highlight = 6s total)
+      const clearTimer = setTimeout(() => {
+        const url = new URL(window.location.href);
+        const params = new URLSearchParams(url.search);
+        
+        // Only clear if the parameter still exists
+        if (params.has('highlightLead')) {
+          params.delete('highlightLead');
+          url.search = params.toString();
+          
+          // Update URL without triggering a page reload or navigation
+          window.history.replaceState({}, '', url.toString());
+          
+          // Clear the state
+          setHighlightLeadId(null);
+        }
+      }, 6000);
+      
+      return () => clearTimeout(clearTimer);
+    }
+  }, [highlightLeadId]);
+
   useEffect(() => {
     // Only redirect after component is mounted and auth is loaded
     if (mounted) {

@@ -5,9 +5,8 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useCalculatorStore } from '@/lib/store/calculator';
 import type { Lead } from '@/lib/leads/types';
-import { X, Phone, MapPin, Calendar, Paperclip, Eye, User, Building2, Briefcase, FileText, Edit, Trash2, Share2, ExternalLink } from 'lucide-react';
+import { X, Phone, MapPin, Calendar, Paperclip, Eye, User, Building2, Briefcase, FileText, Edit, Trash2, Share2, ExternalLink, Bell, Clock } from 'lucide-react';
 import NotesSection from './NotesSection';
-import RemindersSection from './RemindersSection';
 import AttachmentsSection from './AttachmentsSection';
 import EditLeadModal from './EditLeadModal';
 import ShareLeadModal from './ShareLeadModal';
@@ -30,11 +29,182 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
   const [showEditModal, setShowEditModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [reminders, setReminders] = useState<any[]>([]);
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [loadingReminders, setLoadingReminders] = useState(true);
+  const [loadingAttachments, setLoadingAttachments] = useState(true);
 
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  // Fetch reminders
+  useEffect(() => {
+    if (mounted) {
+      fetchReminders();
+      fetchAttachments();
+    }
+  }, [mounted, lead.id]);
+
+  const fetchReminders = async () => {
+    try {
+      setLoadingReminders(true);
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) return;
+
+      const response = await fetch(`/api/leads/${lead.id}/reminders`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setReminders(data.reminders || []);
+      }
+    } catch (error) {
+      console.error('Error fetching reminders:', error);
+    } finally {
+      setLoadingReminders(false);
+    }
+  };
+
+  const fetchAttachments = async () => {
+    try {
+      setLoadingAttachments(true);
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) return;
+
+      const response = await fetch(`/api/leads/${lead.id}/attachments`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAttachments(data.attachments || []);
+      }
+    } catch (error) {
+      console.error('Error fetching attachments:', error);
+    } finally {
+      setLoadingAttachments(false);
+    }
+  };
+
+  const handleToggleReminderComplete = async (reminderId: string, currentCompleted: boolean) => {
+    try {
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) return;
+
+      const response = await fetch(`/api/leads/${lead.id}/reminders/${reminderId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          completed: !currentCompleted,
+          status: !currentCompleted ? 'completed' : 'pending'
+        })
+      });
+
+      if (response.ok) {
+        fetchReminders();
+      }
+    } catch (error) {
+      console.error('Error updating reminder:', error);
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'text-red-400 bg-red-500/10 border-red-500/30';
+      case 'medium': return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30';
+      case 'low': return 'text-green-400 bg-green-500/10 border-green-500/30';
+      default: return 'text-gray-400 bg-gray-500/10 border-gray-500/30';
+    }
+  };
+
+  const formatDateTime = (date: string | null, time?: string | null): string => {
+    if (!date) return '';
+    const d = new Date(date);
+    const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (time) {
+      return `${dateStr} at ${time}`;
+    }
+    return dateStr;
+  };
+
+  const getRelativeTime = (date: string): string => {
+    const now = new Date();
+    const reminderDate = new Date(date);
+    const diffMs = reminderDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return `${Math.abs(diffDays)} days ago`;
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    return `In ${diffDays} days`;
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const handleDownloadAttachment = async (attachmentId: string, filename: string) => {
+    try {
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) return;
+
+      const response = await fetch(`/api/leads/${lead.id}/attachments/${attachmentId}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (error) {
+      console.error('Error downloading attachment:', error);
+      toast.error('Failed to download file', {
+        message: 'Please try again',
+        section: 'leads'
+      });
+    }
+  };
 
   // Handle creating proposal
   const handleCreateProposal = () => {
@@ -53,23 +223,24 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
 
   // Handle view lead in tab
   const handleViewLead = () => {
-    // Map status to tab index
-    const statusToTab: Record<string, number> = {
-      'new': 1, // Main Sheet
-      'leads': 2,
-      'working': 3,
-      'later': 4,
-      'bad': 5,
-      'signed': 6
+    // Map status to tab ID
+    const statusToTab: Record<string, string> = {
+      'new': 'main-sheet', // Main Sheet
+      'leads': 'leads',
+      'working': 'working',
+      'proposal': 'proposal',
+      'later': 'later',
+      'bad': 'bad',
+      'signed': 'signed'
     };
 
-    const tabIndex = statusToTab[lead.status] || 2;
+    const tabId = statusToTab[lead.status] || 'leads';
     
     // Close modal first
     onClose();
     
     // Navigate to the tab with lead ID for highlighting
-    router.push(`/leads?tab=${tabIndex}&highlightLead=${lead.id}`);
+    router.push(`/leads?tab=${tabId}&highlightLead=${lead.id}`);
   };
 
   // Handle delete success
@@ -177,55 +348,62 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
                   <Briefcase className="w-5 h-5 text-emerald-400" />
                   Actions
                 </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {/* Shared Status */}
-                  <div className="col-span-2 sm:col-span-3">
-                    <SharedWithIndicator leadId={lead.id} />
-                  </div>
+                
+                {/* Shared Status - Full Width */}
+                <div className="mb-3">
+                  <SharedWithIndicator leadId={lead.id} />
+                </div>
 
+                {/* Action Buttons - Glassmorphism Design */}
+                <div className="flex flex-wrap gap-2">
                   {/* View Lead */}
                   <button
                     onClick={handleViewLead}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-emerald-500/50 min-h-[44px]"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    View Lead
+                    <span className="hidden sm:inline">View Lead</span>
+                    <span className="sm:hidden">View</span>
                   </button>
 
                   {/* Edit */}
                   <button
                     onClick={() => setShowEditModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-blue-500/50 min-h-[44px]"
                   >
                     <Edit className="w-4 h-4" />
-                    Edit
+                    <span className="hidden sm:inline">Edit</span>
+                    <span className="sm:hidden">Edit</span>
                   </button>
 
                   {/* Create Proposal */}
                   <button
                     onClick={handleCreateProposal}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-purple-500/50 min-h-[44px]"
                   >
                     <FileText className="w-4 h-4" />
-                    Proposal
+                    <span className="hidden sm:inline">Proposal</span>
+                    <span className="sm:hidden">Proposal</span>
                   </button>
 
                   {/* Attachments */}
                   <button
                     onClick={() => setShowAttachments(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-yellow-500/50 min-h-[44px]"
                   >
                     <Paperclip className="w-4 h-4" />
-                    Attachments
+                    <span className="hidden sm:inline">Attachments</span>
+                    <span className="sm:hidden">Files</span>
                   </button>
 
                   {/* Share Lead */}
                   <button
                     onClick={() => setShowShareModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-cyan-500/50 min-h-[44px]"
                   >
                     <Share2 className="w-4 h-4" />
-                    Share Lead
+                    <span className="hidden sm:inline">Share</span>
+                    <span className="sm:hidden">Share</span>
                   </button>
 
                   {/* Open in Maps */}
@@ -234,20 +412,22 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
                       href={lead.maps_address}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-indigo-500/50 min-h-[44px]"
                     >
                       <MapPin className="w-4 h-4" />
-                      Open in Maps
+                      <span className="hidden sm:inline">Maps</span>
+                      <span className="sm:hidden">Maps</span>
                     </a>
                   )}
 
                   {/* Delete */}
                   <button
                     onClick={() => setShowDeleteModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-red-500/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-red-500/50 min-h-[44px]"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Delete
+                    <span className="hidden sm:inline">Delete</span>
+                    <span className="sm:hidden">Delete</span>
                   </button>
                 </div>
               </div>
@@ -425,18 +605,94 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
                   <Calendar className="w-5 h-5 text-emerald-400" />
                   Reminders
                 </h3>
-                <RemindersSection leadId={lead.id} />
+                {loadingReminders ? (
+                  <div className="text-center py-4 text-white/60">Loading reminders...</div>
+                ) : reminders.length > 0 ? (
+                  <div className="space-y-3">
+                    {reminders.map((reminder) => (
+                      <div key={reminder.id} className="p-4 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={reminder.completed || reminder.status === 'completed'}
+                            onChange={() => handleToggleReminderComplete(reminder.id, reminder.completed)}
+                            className="mt-1 rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-emerald-500 cursor-pointer"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`px-2 py-0.5 rounded text-xs border ${getPriorityColor(reminder.priority)}`}>
+                                {reminder.priority}
+                              </span>
+                              <span className="text-xs text-white/60">{reminder.reminder_type}</span>
+                            </div>
+                            <p className={`text-sm text-white font-medium mb-1 ${(reminder.completed || reminder.status === 'completed') ? 'line-through opacity-60' : ''}`}>
+                              {reminder.message || reminder.title || 'No message'}
+                            </p>
+                            {reminder.note && (
+                              <p className="text-xs text-white/70 mb-2">{reminder.note}</p>
+                            )}
+                            <div className="flex items-center gap-3 text-xs text-white/60">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {formatDateTime(reminder.reminder_date, reminder.reminder_time)}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {getRelativeTime(reminder.reminder_date)}
+                              </span>
+                              {(reminder.completed || reminder.status === 'completed') && (
+                                <span className="text-green-400">✓ Completed</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-white/60">
+                    <Bell className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No reminders for this lead</p>
+                  </div>
+                )}
               </div>
 
-              {/* Attachments Info */}
+              {/* Attachments Section */}
               <div>
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   <Paperclip className="w-5 h-5 text-emerald-400" />
                   Attachments
                 </h3>
-                <p className="text-emerald-200 text-sm mb-3">
-                  Click the "Attachments" button above to view and manage files attached to this lead.
-                </p>
+                {loadingAttachments ? (
+                  <div className="text-center py-4 text-white/60">Loading attachments...</div>
+                ) : attachments.length > 0 ? (
+                  <div className="space-y-2">
+                    {attachments.map((attachment) => (
+                      <div key={attachment.id} className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <FileText className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white font-medium truncate">{attachment.filename}</p>
+                            <p className="text-xs text-white/60">{formatFileSize(attachment.file_size)}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDownloadAttachment(attachment.id, attachment.filename)}
+                          className="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm font-medium"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span className="hidden sm:inline">View</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-white/60">
+                    <Paperclip className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>No attachments for this lead</p>
+                    <p className="text-xs mt-1">Use the Attachments button above to add files</p>
+                  </div>
+                )}
               </div>
 
               {/* List Name */}

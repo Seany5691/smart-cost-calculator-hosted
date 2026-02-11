@@ -122,7 +122,7 @@ export default function LeadsPage() {
     };
   }, []);
 
-  // Listen for browser back/forward navigation
+  // Listen for browser back/forward navigation AND programmatic navigation
   useEffect(() => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
@@ -145,6 +145,32 @@ export default function LeadsPage() {
       window.removeEventListener('popstate', handlePopState);
     };
   }, []);
+
+  // Watch for URL changes (for programmatic navigation like router.push)
+  useEffect(() => {
+    const checkUrlParams = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab') as TabId;
+      const highlightLead = params.get('highlightLead');
+      
+      if (tab && TABS.some(t => t.id === tab) && tab !== activeTab) {
+        setActiveTab(tab);
+        setRefreshKey(prev => prev + 1);
+      }
+      
+      if (highlightLead !== highlightLeadId) {
+        setHighlightLeadId(highlightLead);
+      }
+    };
+
+    // Check immediately
+    checkUrlParams();
+    
+    // Also check periodically (for router.push which doesn't trigger popstate)
+    const interval = setInterval(checkUrlParams, 100);
+    
+    return () => clearInterval(interval);
+  }, [activeTab, highlightLeadId]);
 
   useEffect(() => {
     // Only redirect after component is mounted and auth is loaded

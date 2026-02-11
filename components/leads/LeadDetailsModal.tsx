@@ -359,51 +359,46 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
                   {/* View Lead */}
                   <button
                     onClick={handleViewLead}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-emerald-500/50 min-h-[44px]"
+                    className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-emerald-500/50 min-h-[44px]"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    <span className="hidden sm:inline">View Lead</span>
-                    <span className="sm:hidden">View</span>
+                    <span>View Lead</span>
                   </button>
 
                   {/* Edit */}
                   <button
                     onClick={() => setShowEditModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-blue-500/50 min-h-[44px]"
+                    className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-blue-500/50 min-h-[44px]"
                   >
                     <Edit className="w-4 h-4" />
-                    <span className="hidden sm:inline">Edit</span>
-                    <span className="sm:hidden">Edit</span>
+                    <span>Edit</span>
                   </button>
 
                   {/* Create Proposal */}
                   <button
                     onClick={handleCreateProposal}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-purple-500/50 min-h-[44px]"
+                    className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-purple-500/50 min-h-[44px]"
                   >
                     <FileText className="w-4 h-4" />
-                    <span className="hidden sm:inline">Proposal</span>
-                    <span className="sm:hidden">Proposal</span>
+                    <span>Proposal</span>
                   </button>
 
                   {/* Attachments */}
                   <button
                     onClick={() => setShowAttachments(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-yellow-500/50 min-h-[44px]"
+                    className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-yellow-500/50 min-h-[44px]"
                   >
                     <Paperclip className="w-4 h-4" />
-                    <span className="hidden sm:inline">Attachments</span>
-                    <span className="sm:hidden">Files</span>
+                    <span>Attachments</span>
                   </button>
 
                   {/* Share Lead */}
                   <button
                     onClick={() => setShowShareModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-cyan-500/50 min-h-[44px]"
+                    className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-cyan-500/50 min-h-[44px]"
                   >
                     <Share2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Share</span>
-                    <span className="sm:hidden">Share</span>
+                    <span>Share</span>
                   </button>
 
                   {/* Open in Maps */}
@@ -412,22 +407,20 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
                       href={lead.maps_address}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-indigo-500/50 min-h-[44px]"
+                      className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-indigo-500/50 min-h-[44px]"
                     >
                       <MapPin className="w-4 h-4" />
-                      <span className="hidden sm:inline">Maps</span>
-                      <span className="sm:hidden">Maps</span>
+                      <span>Maps</span>
                     </a>
                   )}
 
                   {/* Delete */}
                   <button
                     onClick={() => setShowDeleteModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-red-500/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-red-500/50 min-h-[44px]"
+                    className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-red-500/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 font-medium border border-white/20 hover:border-red-500/50 min-h-[44px]"
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Delete</span>
-                    <span className="sm:hidden">Delete</span>
+                    <span>Delete</span>
                   </button>
                 </div>
               </div>

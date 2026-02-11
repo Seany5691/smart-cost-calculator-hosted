@@ -92,20 +92,31 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
     if (highlightLeadId) {
       setHighlightedLeadId(highlightLeadId);
       
-      // Scroll to the lead card
-      setTimeout(() => {
+      // Scroll to the lead card with a delay to ensure DOM is ready
+      const scrollTimer = setTimeout(() => {
         const leadCard = document.getElementById(`lead-card-${highlightLeadId}`);
         if (leadCard) {
           leadCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          // If not found immediately, try again after a longer delay
+          setTimeout(() => {
+            const retryLeadCard = document.getElementById(`lead-card-${highlightLeadId}`);
+            if (retryLeadCard) {
+              retryLeadCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 500);
         }
-      }, 100);
+      }, 300);
       
-      // Clear highlight after 3 seconds
-      const timer = setTimeout(() => {
+      // Clear highlight after 5 seconds (increased from 3)
+      const highlightTimer = setTimeout(() => {
         setHighlightedLeadId(null);
-      }, 3000);
+      }, 5000);
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(scrollTimer);
+        clearTimeout(highlightTimer);
+      };
     }
   }, [highlightLeadId]);
 

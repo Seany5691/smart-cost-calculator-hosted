@@ -85,22 +85,25 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
   const [signedLead, setSignedLead] = useState<Lead | null>(null);
   const [proposalLead, setProposalLead] = useState<Lead | null>(null);
   const [attachmentsModalLead, setAttachmentsModalLead] = useState<Lead | null>(null);
-  const [highlightedLeadId, setHighlightedLeadId] = useState<string | null>(highlightLeadId);
+  const [highlightedLeadId, setHighlightedLeadId] = useState<string | null>(null);
 
-  // Scroll to and highlight lead when highlightLeadId changes
+  // Scroll to and highlight lead when highlightLeadId prop changes
   useEffect(() => {
     if (highlightLeadId) {
+      console.log('[LeadsCards] Highlighting lead:', highlightLeadId);
       setHighlightedLeadId(highlightLeadId);
       
       // Scroll to the lead card with a delay to ensure DOM is ready
       const scrollTimer = setTimeout(() => {
         const leadCard = document.getElementById(`lead-card-${highlightLeadId}`);
+        console.log('[LeadsCards] Found lead card:', leadCard);
         if (leadCard) {
           leadCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
           // If not found immediately, try again after a longer delay
           setTimeout(() => {
             const retryLeadCard = document.getElementById(`lead-card-${highlightLeadId}`);
+            console.log('[LeadsCards] Retry found lead card:', retryLeadCard);
             if (retryLeadCard) {
               retryLeadCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
@@ -108,8 +111,9 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
         }
       }, 300);
       
-      // Clear highlight after 5 seconds (increased from 3)
+      // Clear highlight after 5 seconds
       const highlightTimer = setTimeout(() => {
+        console.log('[LeadsCards] Clearing highlight');
         setHighlightedLeadId(null);
       }, 5000);
       

@@ -114,22 +114,25 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
   const [isDeletingNote, setIsDeletingNote] = useState(false);
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
   const [attachmentsModalLead, setAttachmentsModalLead] = useState<Lead | null>(null);
-  const [highlightedLeadId, setHighlightedLeadId] = useState<string | null>(highlightLeadId);
+  const [highlightedLeadId, setHighlightedLeadId] = useState<string | null>(null);
 
-  // Scroll to and highlight lead when highlightLeadId changes
+  // Scroll to and highlight lead when highlightLeadId prop changes
   useEffect(() => {
     if (highlightLeadId) {
+      console.log('[LeadsTable] Highlighting lead:', highlightLeadId);
       setHighlightedLeadId(highlightLeadId);
       
       // Scroll to the lead row with a delay to ensure DOM is ready
       const scrollTimer = setTimeout(() => {
         const leadRow = document.getElementById(`lead-row-${highlightLeadId}`);
+        console.log('[LeadsTable] Found lead row:', leadRow);
         if (leadRow) {
           leadRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
           // If not found immediately, try again after a longer delay
           setTimeout(() => {
             const retryLeadRow = document.getElementById(`lead-row-${highlightLeadId}`);
+            console.log('[LeadsTable] Retry found lead row:', retryLeadRow);
             if (retryLeadRow) {
               retryLeadRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
@@ -137,8 +140,9 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
         }
       }, 300);
       
-      // Clear highlight after 5 seconds (increased from 3)
+      // Clear highlight after 5 seconds
       const highlightTimer = setTimeout(() => {
+        console.log('[LeadsTable] Clearing highlight');
         setHighlightedLeadId(null);
       }, 5000);
       

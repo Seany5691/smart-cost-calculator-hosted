@@ -2,11 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useRouter } from 'next/navigation';
+import { useCalculatorStore } from '@/lib/store/calculator';
 import type { Lead } from '@/lib/leads/types';
-import { X, Phone, MapPin, Calendar, Paperclip, Eye, User, Building2, Briefcase, FileText } from 'lucide-react';
+import { X, Phone, MapPin, Calendar, Paperclip, Eye, User, Building2, Briefcase, FileText, Edit, Trash2, Share2, ExternalLink } from 'lucide-react';
 import NotesSection from './NotesSection';
 import RemindersSection from './RemindersSection';
 import AttachmentsSection from './AttachmentsSection';
+import EditLeadModal from './EditLeadModal';
+import ShareLeadModal from './ShareLeadModal';
+import SharedWithIndicator from './SharedWithIndicator';
+import DeleteLeadModal from './DeleteLeadModal';
+import { useToast } from '@/components/ui/Toast/useToast';
 
 interface LeadDetailsModalProps {
   lead: Lead;
@@ -15,13 +22,126 @@ interface LeadDetailsModalProps {
 }
 
 export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetailsModalProps) {
+  const router = useRouter();
+  const { resetCalculator } = useCalculatorStore();
+  const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [showAttachments, setShowAttachments] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  // Handle creating proposal
+  const handleCreateProposal = () => {
+    // Reset calculator first to start fresh
+    resetCalculator();
+    localStorage.removeItem('calculator-storage');
+    
+    // Store lead ID in localStorage for the calculator to attach the proposal
+    localStorage.setItem('proposal-lead-id', lead.id);
+    localStorage.setItem('proposal-lead-name', lead.name);
+    
+    // Close modal and navigate to calculator
+    onClose();
+    router.push(`/calculator?customerName=${encodeURIComponent(lead.name)}&dealName=${encodeURIComponent(lead.name)}`);
+  };
+
+  // Handle view lead in tab
+  const handleViewLead = () => {
+    // Map status to tab index
+    const statusToTab: Record<string, number> = {
+      'new': 1, // Main Sheet
+      'leads': 2,
+      'working': 3,
+      'later': 4,
+      'bad': 5,
+      'signed': 6
+    };
+
+    const tabIndex = statusToTab[lead.status] || 2;
+    
+    // Close modal first
+    onClose();
+    
+    // Navigate to the tab with lead ID for highlighting
+    router.push(`/leads?tab=${tabIndex}&highlightLead=${lead.id}`);
+  };
+
+  // Handle delete success
+  const handleDeleteConfirm = async () => {
+    try {
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      if (token) {
+        const data = JSON.parse(token);
+        authToken = data.state?.token || data.token;
+      }
+
+      if (!authToken) {
+        toast.error('Not authenticated', {
+          message: 'Please log in to continue',
+          section: 'leads'
+        });
+        return;
+      }
+
+      const response = await fetch(`/api/leads/${lead.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete lead');
+      }
+
+      const data = await response.json();
+      
+      // Show appropriate success message based on action
+      if (data.action === 'unshared') {
+        toast.success('Lead removed from your list', {
+          message: 'The shared lead has been removed',
+          section: 'leads'
+        });
+      } else {
+        toast.success('Lead deleted successfully', {
+          message: 'The lead has been permanently deleted',
+          section: 'leads'
+        });
+      }
+
+      setShowDeleteModal(false);
+      onClose();
+      onUpdate();
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      toast.error('Failed to delete lead', {
+        message: 'Please try again',
+        section: 'leads'
+      });
+    }
+  };
+
+  // Check if current user is owner
+  const isOwner = (() => {
+    try {
+      const stored = localStorage.getItem('auth-storage');
+      if (stored) {
+        const data = JSON.parse(stored);
+        const currentUserId = data.state?.user?.userId || data.user?.userId;
+        return lead.user_id === currentUserId;
+      }
+    } catch (error) {
+      console.error('Error checking ownership:', error);
+    }
+    return true; // Default to true to allow delete
+  })();
 
   if (!mounted) return null;
 
@@ -51,6 +171,87 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
 
             {/* Content */}
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] sm:max-h-[calc(100vh-160px)] custom-scrollbar space-y-6">
+              {/* Action Buttons Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-emerald-400" />
+                  Actions
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {/* Shared Status */}
+                  <div className="col-span-2 sm:col-span-3">
+                    <SharedWithIndicator leadId={lead.id} />
+                  </div>
+
+                  {/* View Lead */}
+                  <button
+                    onClick={handleViewLead}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    View Lead
+                  </button>
+
+                  {/* Edit */}
+                  <button
+                    onClick={() => setShowEditModal(true)}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Edit
+                  </button>
+
+                  {/* Create Proposal */}
+                  <button
+                    onClick={handleCreateProposal}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Proposal
+                  </button>
+
+                  {/* Attachments */}
+                  <button
+                    onClick={() => setShowAttachments(true)}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                    Attachments
+                  </button>
+
+                  {/* Share Lead */}
+                  <button
+                    onClick={() => setShowShareModal(true)}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share Lead
+                  </button>
+
+                  {/* Open in Maps */}
+                  {lead.maps_address && (
+                    <a
+                      href={lead.maps_address}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                    >
+                      <MapPin className="w-4 h-4" />
+                      Open in Maps
+                    </a>
+                  )}
+
+                  {/* Delete */}
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-semibold min-h-[44px]"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+
               {/* Basic Info */}
               <div>
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
@@ -227,19 +428,15 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
                 <RemindersSection leadId={lead.id} />
               </div>
 
-              {/* Attachments Section */}
+              {/* Attachments Info */}
               <div>
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   <Paperclip className="w-5 h-5 text-emerald-400" />
                   Attachments
                 </h3>
-                <button
-                  onClick={() => setShowAttachments(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-semibold"
-                >
-                  <Paperclip className="w-4 h-4" />
-                  Manage Attachments
-                </button>
+                <p className="text-emerald-200 text-sm mb-3">
+                  Click the "Attachments" button above to view and manage files attached to this lead.
+                </p>
               </div>
 
               {/* List Name */}
@@ -271,6 +468,43 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
           leadId={lead.id}
           leadName={lead.name}
           onClose={() => setShowAttachments(false)}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <EditLeadModal
+          lead={lead}
+          onClose={() => setShowEditModal(false)}
+          onUpdate={() => {
+            setShowEditModal(false);
+            onUpdate();
+          }}
+        />
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <ShareLeadModal
+          isOpen={showShareModal}
+          leadId={lead.id}
+          leadName={lead.name}
+          onClose={() => setShowShareModal(false)}
+          onShareSuccess={() => {
+            setShowShareModal(false);
+            onUpdate();
+          }}
+        />
+      )}
+
+      {/* Delete Modal */}
+      {showDeleteModal && (
+        <DeleteLeadModal
+          isOpen={showDeleteModal}
+          leadName={lead.name}
+          isOwner={isOwner}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDeleteConfirm}
         />
       )}
     </>

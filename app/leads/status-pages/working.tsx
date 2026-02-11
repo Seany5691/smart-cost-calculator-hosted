@@ -3,7 +3,7 @@
 import LeadsManager from '@/components/leads/LeadsManager';
 import AddLeadButton from '@/components/leads/AddLeadButton';
 
-export default function WorkingStatusPage() {
+export default function WorkingStatusPage({ highlightLeadId }: { highlightLeadId?: string | null }) {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -15,7 +15,7 @@ export default function WorkingStatusPage() {
         </div>
         <AddLeadButton defaultStatus="working" />
       </div>
-      <LeadsManager key="working-status" statusFilter="working" />
+      <LeadsManager key="working-status" statusFilter="working" highlightLeadId={highlightLeadId} />
     </div>
   );
 }

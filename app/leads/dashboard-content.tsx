@@ -23,6 +23,8 @@ import { useRemindersStore } from '@/lib/store/reminders';
 import { useImportStore } from '@/lib/store/import';
 import CallbackCalendar from '@/components/leads/dashboard/CallbackCalendar';
 import UpcomingReminders from '@/components/leads/dashboard/UpcomingReminders';
+import LeadDetailsModal from '@/components/leads/LeadDetailsModal';
+import type { Lead } from '@/lib/leads/types';
 
 interface DashboardStats {
   totalLeads: number;
@@ -49,6 +51,7 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
   const [selectedCalendarUserId, setSelectedCalendarUserId] = useState<string | null>(null);
   const [selectedCalendarOwnerName, setSelectedCalendarOwnerName] = useState<string | null>(null);
   const [sharedCalendarReminders, setSharedCalendarReminders] = useState<any[]>([]);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
   // Fetch calendar events
   const fetchCalendarEvents = async (userId?: string | null) => {
@@ -224,6 +227,7 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
   ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 5);
 
   return (
+    <>
     <div className="space-y-8">
       {/* Requirement: 2.1 - Welcome message and heading */}
       <div className="text-center">
@@ -267,10 +271,10 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
             reminders={selectedCalendarUserId ? sharedCalendarReminders : reminders}
             leads={allLeads}
             onLeadClick={(leadId) => {
-              // Find the lead and navigate to its status tab
+              // Find the lead and open modal
               const lead = allLeads.find(l => l.id === leadId);
               if (lead) {
-                handleStatClick(lead.status);
+                setSelectedLead(lead);
               }
             }}
             onCalendarChange={(userId, ownerName) => {
@@ -296,10 +300,10 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
             selectedCalendarUserId={selectedCalendarUserId}
             selectedCalendarOwnerName={selectedCalendarOwnerName}
             onLeadClick={(leadId) => {
-              // Find the lead and navigate to its status tab
+              // Find the lead and open modal
               const lead = allLeads.find(l => l.id === leadId);
               if (lead) {
-                handleStatClick(lead.status);
+                setSelectedLead(lead);
               }
             }}
             onReminderUpdate={() => {
@@ -364,5 +368,19 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
         )}
       </div>
     </div>
+
+    {/* Lead Details Modal */}
+    {selectedLead && (
+      <LeadDetailsModal
+        lead={selectedLead}
+        onClose={() => setSelectedLead(null)}
+        onUpdate={() => {
+          // Refresh data when lead is updated
+          fetchAllReminders();
+          fetchCalendarEvents(selectedCalendarUserId);
+        }}
+      />
+    )}
+    </>
   );
 }

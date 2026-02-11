@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLeadsStore } from '@/lib/store/leads';
 import { useCalculatorStore } from '@/lib/store/calculator';
 import type { Lead } from '@/lib/leads/types';
@@ -26,6 +26,7 @@ interface LeadsCardsProps {
   onUpdate: () => void;
   disableBackgroundColor?: boolean; // Don't show background_color styling
   showDateInfo?: boolean; // Show Date Info (for Later Stage and Signed tabs)
+  highlightLeadId?: string | null; // Lead ID to highlight and scroll to
 }
 
 interface LeadNote {
@@ -63,7 +64,7 @@ function getAuthToken(): string | null {
   return null;
 }
 
-export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = false, showDateInfo = false }: LeadsCardsProps) {
+export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = false, showDateInfo = false, highlightLeadId = null }: LeadsCardsProps) {
   const { selectedLeads, toggleLeadSelection } = useLeadsStore();
   const { resetCalculator } = useCalculatorStore();
   const { toast } = useToast();
@@ -84,6 +85,48 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
   const [signedLead, setSignedLead] = useState<Lead | null>(null);
   const [proposalLead, setProposalLead] = useState<Lead | null>(null);
   const [attachmentsModalLead, setAttachmentsModalLead] = useState<Lead | null>(null);
+  const [highlightedLeadId, setHighlightedLeadId] = useState<string | null>(highlightLeadId);
+
+  // Scroll to and highlight lead when highlightLeadId changes
+  useEffect(() => {
+    if (highlightLeadId) {
+      setHighlightedLeadId(highlightLeadId);
+      
+      // Scroll to the lead card
+      setTimeout(() => {
+        const leadCard = document.getElementById(`lead-card-${highlightLeadId}`);
+        if (leadCard) {
+          leadCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      
+      // Clear highlight after 3 seconds
+      const timer = setTimeout(() => {
+        setHighlightedLeadId(null);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [highlightLeadId]);
+
+  // Clear highlight on any user interaction
+  useEffect(() => {
+    const clearHighlight = () => {
+      if (highlightedLeadId) {
+        setHighlightedLeadId(null);
+      }
+    };
+
+    window.addEventListener('scroll', clearHighlight);
+    window.addEventListener('click', clearHighlight);
+    window.addEventListener('touchstart', clearHighlight);
+    
+    return () => {
+      window.removeEventListener('scroll', clearHighlight);
+      window.removeEventListener('click', clearHighlight);
+      window.removeEventListener('touchstart', clearHighlight);
+    };
+  }, [highlightedLeadId]);
 
   const handleCreateProposal = (lead: Lead) => {
     // Reset calculator first to start fresh
@@ -550,7 +593,10 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
           return (
             <div
               key={lead.id}
-              className="bg-white/10 border border-white/20 rounded-lg overflow-hidden hover:border-emerald-500/50 transition-colors"
+              id={`lead-card-${lead.id}`}
+              className={`bg-white/10 border border-white/20 rounded-lg overflow-hidden hover:border-emerald-500/50 transition-all duration-300 ${
+                highlightedLeadId === lead.id ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-lg shadow-emerald-500/20' : ''
+              }`}
               style={disableBackgroundColor ? {} : { backgroundColor: lead.background_color }}
             >
               {/* Card Header */}

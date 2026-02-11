@@ -75,6 +75,15 @@ export default function LeadsPage() {
     return 'dashboard';
   });
   
+  // Extract highlightLead parameter from URL
+  const [highlightLeadId, setHighlightLeadId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('highlightLead');
+    }
+    return null;
+  });
+  
   // Add a refresh key that changes when tab changes to force component remount
   const [refreshKey, setRefreshKey] = useState(0);
   
@@ -118,6 +127,8 @@ export default function LeadsPage() {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab') as TabId;
+      const highlightLead = params.get('highlightLead');
+      
       if (tab && TABS.some(t => t.id === tab)) {
         setActiveTab(tab);
         setRefreshKey(prev => prev + 1);
@@ -125,6 +136,8 @@ export default function LeadsPage() {
         setActiveTab('dashboard');
         setRefreshKey(prev => prev + 1);
       }
+      
+      setHighlightLeadId(highlightLead);
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -266,12 +279,12 @@ export default function LeadsPage() {
             <Suspense key={`${activeTab}-${refreshKey}`} fallback={<TabLoadingFallback tabName={currentTab.name} />}>
               {activeTab === 'dashboard' && <DashboardContent stats={stats} />}
               {activeTab === 'main-sheet' && <MainSheetContent key={refreshKey} />}
-              {activeTab === 'leads' && <LeadsContent key={refreshKey} />}
-              {activeTab === 'working' && <WorkingContent key={refreshKey} />}
-              {activeTab === 'proposal' && <ProposalContent key={refreshKey} />}
-              {activeTab === 'later' && <LaterContent key={refreshKey} />}
-              {activeTab === 'bad' && <BadContent key={refreshKey} />}
-              {activeTab === 'signed' && <SignedContent key={refreshKey} />}
+              {activeTab === 'leads' && <LeadsContent key={refreshKey} highlightLeadId={highlightLeadId} />}
+              {activeTab === 'working' && <WorkingContent key={refreshKey} highlightLeadId={highlightLeadId} />}
+              {activeTab === 'proposal' && <ProposalContent key={refreshKey} highlightLeadId={highlightLeadId} />}
+              {activeTab === 'later' && <LaterContent key={refreshKey} highlightLeadId={highlightLeadId} />}
+              {activeTab === 'bad' && <BadContent key={refreshKey} highlightLeadId={highlightLeadId} />}
+              {activeTab === 'signed' && <SignedContent key={refreshKey} highlightLeadId={highlightLeadId} />}
               {activeTab === 'routes' && <RoutesContent key={refreshKey} />}
               {activeTab === 'reminders' && <RemindersContent key={refreshKey} />}
             </Suspense>

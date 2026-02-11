@@ -5,6 +5,7 @@ import { useAuthStore } from '@/lib/store/auth-simple';
 import { useRemindersStore } from '@/lib/store/reminders';
 import { Bell, Calendar as CalendarIcon, Plus, Filter, Loader2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import AdvancedCalendar from '@/components/leads/AdvancedCalendar';
+import LeadDetailsModal from '@/components/leads/LeadDetailsModal';
 import type { LeadReminder, Lead } from '@/lib/leads/types';
 
 interface Reminder {
@@ -70,6 +71,7 @@ export default function RemindersPage() {
   const [selectedCalendarOwnerName, setSelectedCalendarOwnerName] = useState<string | null>(null);
   const [sharedCalendars, setSharedCalendars] = useState<any[]>([]);
   const [sharedCalendarReminders, setSharedCalendarReminders] = useState<LeadReminder[]>([]);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
   const fetchLeads = useCallback(async () => {
     try {
@@ -462,6 +464,7 @@ export default function RemindersPage() {
   }
 
   return (
+    <>
     <div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-white mb-2">Reminders & Events</h2>
@@ -518,8 +521,11 @@ export default function RemindersPage() {
           selectedCalendarUserId={selectedCalendarUserId}
           hideCalendarSelector={true}
           onLeadClick={(leadId) => {
-            // Navigate to lead details or open modal
-            window.location.href = `/leads?leadId=${leadId}`;
+            // Find the lead and open modal
+            const lead = leads.find(l => l.id === leadId);
+            if (lead) {
+              setSelectedLead(lead);
+            }
           }}
           onReminderUpdate={() => {
             // Refresh reminders when one is updated
@@ -793,5 +799,19 @@ export default function RemindersPage() {
         </div>
       )}
     </div>
+
+    {/* Lead Details Modal */}
+    {selectedLead && (
+      <LeadDetailsModal
+        lead={selectedLead}
+        onClose={() => setSelectedLead(null)}
+        onUpdate={() => {
+          // Refresh data when lead is updated
+          fetchReminders();
+          fetchCalendarEventsData();
+        }}
+      />
+    )}
+    </>
   );
 }

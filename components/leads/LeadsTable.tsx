@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLeadsStore } from '@/lib/store/leads';
 import { useCalculatorStore } from '@/lib/store/calculator';
 import type { Lead } from '@/lib/leads/types';
@@ -90,9 +90,10 @@ interface LeadsTableProps {
   onUpdate: () => void;
   disableBackgroundColor?: boolean; // Don't show background_color styling
   showDateInfo?: boolean; // Show Date Info column (for Later Stage and Signed tabs)
+  highlightLeadId?: string | null; // Lead ID to highlight and scroll to
 }
 
-export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = false, showDateInfo = false }: LeadsTableProps) {
+export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = false, showDateInfo = false, highlightLeadId = null }: LeadsTableProps) {
   const { selectedLeads, toggleLeadSelection } = useLeadsStore();
   const { resetCalculator } = useCalculatorStore();
   const { toast } = useToast();
@@ -113,6 +114,46 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
   const [isDeletingNote, setIsDeletingNote] = useState(false);
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
   const [attachmentsModalLead, setAttachmentsModalLead] = useState<Lead | null>(null);
+  const [highlightedLeadId, setHighlightedLeadId] = useState<string | null>(highlightLeadId);
+
+  // Scroll to and highlight lead when highlightLeadId changes
+  useEffect(() => {
+    if (highlightLeadId) {
+      setHighlightedLeadId(highlightLeadId);
+      
+      // Scroll to the lead row
+      setTimeout(() => {
+        const leadRow = document.getElementById(`lead-row-${highlightLeadId}`);
+        if (leadRow) {
+          leadRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      
+      // Clear highlight after 3 seconds
+      const timer = setTimeout(() => {
+        setHighlightedLeadId(null);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [highlightLeadId]);
+
+  // Clear highlight on any user interaction
+  useEffect(() => {
+    const clearHighlight = () => {
+      if (highlightedLeadId) {
+        setHighlightedLeadId(null);
+      }
+    };
+
+    window.addEventListener('scroll', clearHighlight);
+    window.addEventListener('click', clearHighlight);
+    
+    return () => {
+      window.removeEventListener('scroll', clearHighlight);
+      window.removeEventListener('click', clearHighlight);
+    };
+  }, [highlightedLeadId]);
 
   const handleCreateProposal = (lead: Lead) => {
     // Reset calculator first to start fresh
@@ -583,7 +624,10 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                 return (
                   <React.Fragment key={lead.id}>
                     <tr
-                      className="hover:bg-white/5 transition-colors cursor-pointer"
+                      id={`lead-row-${lead.id}`}
+                      className={`hover:bg-white/5 transition-all duration-300 cursor-pointer ${
+                        highlightedLeadId === lead.id ? 'ring-2 ring-emerald-500 bg-emerald-500/10' : ''
+                      }`}
                       style={disableBackgroundColor ? {} : { backgroundColor: lead.background_color }}
                       onClick={(e) => {
                         // Only toggle if not clicking on interactive elements

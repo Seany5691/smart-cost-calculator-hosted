@@ -12,7 +12,7 @@ import BulkActions from './BulkActions';
 import ExportButton from './ExportButton';
 import { Grid, List, StickyNote, Users, ArrowUpDown } from 'lucide-react';
 
-export default function LeadsManager({ statusFilter, showDateInfo }: { statusFilter?: string; showDateInfo?: boolean }) {
+export default function LeadsManager({ statusFilter, showDateInfo, highlightLeadId }: { statusFilter?: string; showDateInfo?: boolean; highlightLeadId?: string | null }) {
   const {
     leads,
     selectedLeads,
@@ -383,6 +383,7 @@ export default function LeadsManager({ statusFilter, showDateInfo }: { statusFil
           onUpdate={handleRefresh} 
           disableBackgroundColor={true}
           showDateInfo={showDateInfo || statusFilter === 'proposal' || statusFilter === 'later' || statusFilter === 'signed'}
+          highlightLeadId={highlightLeadId}
         />
       ) : (
         <LeadsTable 
@@ -390,6 +391,7 @@ export default function LeadsManager({ statusFilter, showDateInfo }: { statusFil
           onUpdate={handleRefresh} 
           disableBackgroundColor={true}
           showDateInfo={showDateInfo || statusFilter === 'proposal' || statusFilter === 'later' || statusFilter === 'signed'}
+          highlightLeadId={highlightLeadId}
         />
       )}
 

@@ -124,19 +124,24 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
     }
   }, [highlightLeadId]);
 
-  // Clear highlight on any user interaction
+  // Clear highlight on any user interaction (with delay to avoid clearing immediately)
   useEffect(() => {
+    if (!highlightedLeadId) return;
+
     const clearHighlight = () => {
-      if (highlightedLeadId) {
-        setHighlightedLeadId(null);
-      }
+      console.log('[LeadsCards] User interaction detected, clearing highlight');
+      setHighlightedLeadId(null);
     };
 
-    window.addEventListener('scroll', clearHighlight);
-    window.addEventListener('click', clearHighlight);
-    window.addEventListener('touchstart', clearHighlight);
+    // Add a delay before attaching listeners to avoid clearing from the initial click/scroll
+    const attachTimer = setTimeout(() => {
+      window.addEventListener('scroll', clearHighlight, { passive: true });
+      window.addEventListener('click', clearHighlight);
+      window.addEventListener('touchstart', clearHighlight, { passive: true });
+    }, 1000); // Wait 1 second before listening for user interactions
     
     return () => {
+      clearTimeout(attachTimer);
       window.removeEventListener('scroll', clearHighlight);
       window.removeEventListener('click', clearHighlight);
       window.removeEventListener('touchstart', clearHighlight);

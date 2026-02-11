@@ -153,18 +153,23 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
     }
   }, [highlightLeadId]);
 
-  // Clear highlight on any user interaction
+  // Clear highlight on any user interaction (with delay to avoid clearing immediately)
   useEffect(() => {
+    if (!highlightedLeadId) return;
+
     const clearHighlight = () => {
-      if (highlightedLeadId) {
-        setHighlightedLeadId(null);
-      }
+      console.log('[LeadsTable] User interaction detected, clearing highlight');
+      setHighlightedLeadId(null);
     };
 
-    window.addEventListener('scroll', clearHighlight);
-    window.addEventListener('click', clearHighlight);
+    // Add a delay before attaching listeners to avoid clearing from the initial click/scroll
+    const attachTimer = setTimeout(() => {
+      window.addEventListener('scroll', clearHighlight, { passive: true });
+      window.addEventListener('click', clearHighlight);
+    }, 1000); // Wait 1 second before listening for user interactions
     
     return () => {
+      clearTimeout(attachTimer);
       window.removeEventListener('scroll', clearHighlight);
       window.removeEventListener('click', clearHighlight);
     };

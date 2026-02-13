@@ -114,17 +114,9 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
     const next7DaysEnd = new Date(today);
     next7DaysEnd.setDate(next7DaysEnd.getDate() + 7);
     
-    // Filter reminders using local date parsing AND calendar selection
+    // Filter reminders using local date parsing
+    // When viewing shared calendar, reminders are already filtered by the API/parent component
     let filteredReminders = reminders.filter(reminder => {
-      // Filter by calendar selection FIRST
-      if (selectedCalendarUserId) {
-        // Viewing shared calendar - only show that user's reminders
-        if (reminder.user_id !== selectedCalendarUserId) return false;
-      } else {
-        // Viewing own calendar - only show own reminders
-        // Assuming reminders passed in are already filtered to current user
-      }
-      
       if (selectedRange === 'all') return true;
       
       // Parse reminder date in LOCAL timezone

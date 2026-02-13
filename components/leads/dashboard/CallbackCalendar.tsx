@@ -272,22 +272,13 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick, onCale
       const isToday = date.getTime() === today.getTime();
       
       // FIX #6: Find reminders on this date - ensure proper date comparison
-      // FILTER BY SELECTED CALENDAR: Only show reminders for the selected calendar owner
+      // When viewing shared calendar, reminders are already filtered by the API/parent component
+      // So we just need to filter by date, not by user_id
       const dateReminders = reminders.filter(reminder => {
         if (!reminder.reminder_date) return false;
         // Parse the reminder date properly to avoid timezone issues
         const reminderDateStr = reminder.reminder_date.split('T')[0];
-        if (reminderDateStr !== dateStr) return false;
-        
-        // Filter by calendar selection
-        if (selectedCalendarUserId) {
-          // Viewing shared calendar - only show that user's reminders
-          return reminder.user_id === selectedCalendarUserId;
-        } else {
-          // Viewing own calendar - only show own reminders
-          // Assuming reminders passed in are already filtered to current user
-          return true;
-        }
+        return reminderDateStr === dateStr;
       });
 
       // Find calendar events on this date
@@ -320,7 +311,7 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick, onCale
     }
     
     return dates;
-  }, [currentMonth, reminders, calendarEvents, selectedCalendarUserId]);
+  }, [currentMonth, reminders, calendarEvents]);
 
   // Navigate to previous month
   const handlePrevMonth = () => {
@@ -355,21 +346,14 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick, onCale
     const day = selectedDate.getDate();
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     
+    // When viewing shared calendar, reminders are already filtered by the API/parent component
+    // So we just need to filter by date, not by user_id
     return reminders.filter(reminder => {
       if (!reminder.reminder_date) return false;
       const reminderDateStr = reminder.reminder_date.split('T')[0];
-      if (reminderDateStr !== dateStr) return false;
-      
-      // Filter by calendar selection
-      if (selectedCalendarUserId) {
-        // Viewing shared calendar - only show that user's reminders
-        return reminder.user_id === selectedCalendarUserId;
-      } else {
-        // Viewing own calendar - only show own reminders
-        return true;
-      }
+      return reminderDateStr === dateStr;
     });
-  }, [selectedDate, reminders, selectedCalendarUserId]);
+  }, [selectedDate, reminders]);
 
   // Get events for selected date
   const selectedDateEvents = useMemo(() => {

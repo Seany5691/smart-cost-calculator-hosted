@@ -129,7 +129,7 @@ export default function RemindersPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchAllReminders]);
+  }, []); // Remove fetchAllReminders from dependencies to prevent infinite loop
 
   const fetchCalendarEventsData = useCallback(async () => {
     try {
@@ -165,7 +165,7 @@ export default function RemindersPage() {
       fetchLeads();
       fetchSharedCalendars();
     }
-  }, [token, fetchReminders, fetchCalendarEventsData, fetchLeads, fetchSharedCalendars]);
+  }, [token]); // Only depend on token to prevent infinite loops
 
   // Fetch reminders for selected calendar when it changes
   useEffect(() => {

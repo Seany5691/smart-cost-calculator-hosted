@@ -100,19 +100,11 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick, onRemi
   const getItemsForDate = (date: Date) => {
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     
-    // Filter reminders by date AND calendar selection
+    // When viewing shared calendar, reminders are already filtered by the API/parent component
+    // So we just need to filter by date, not by user_id
     const dateReminders = reminders.filter(r => {
       if (!r.reminder_date) return false;
-      if (r.reminder_date.split('T')[0] !== dateStr) return false;
-      
-      // Filter by calendar selection
-      if (selectedCalendarUserId) {
-        // Viewing shared calendar - only show that user's reminders
-        return r.user_id === selectedCalendarUserId;
-      } else {
-        // Viewing own calendar - only show own reminders
-        return true;
-      }
+      return r.reminder_date.split('T')[0] === dateStr;
     });
 
     const dateEvents = calendarEvents.filter(e => {

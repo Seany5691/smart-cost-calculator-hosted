@@ -61,6 +61,9 @@ export interface LeadNote {
   content: string;
   created_at: string;
   updated_at: string;
+  // User information (joined from users table)
+  user_name?: string;
+  username?: string;
 }
 
 // =====================================================
@@ -99,6 +102,9 @@ export interface LeadReminder {
   parent_reminder_id?: string | null; // Links to parent for recurring instances
   created_at: string;
   updated_at?: string;
+  // User information (joined from users table)
+  user_name?: string;
+  username?: string;
 }
 
 // =====================================================

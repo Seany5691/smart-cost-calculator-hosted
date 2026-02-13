@@ -100,9 +100,19 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick, onRemi
   const getItemsForDate = (date: Date) => {
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     
+    // Filter reminders by date AND calendar selection
     const dateReminders = reminders.filter(r => {
       if (!r.reminder_date) return false;
-      return r.reminder_date.split('T')[0] === dateStr;
+      if (r.reminder_date.split('T')[0] !== dateStr) return false;
+      
+      // Filter by calendar selection
+      if (selectedCalendarUserId) {
+        // Viewing shared calendar - only show that user's reminders
+        return r.user_id === selectedCalendarUserId;
+      } else {
+        // Viewing own calendar - only show own reminders
+        return true;
+      }
     });
 
     const dateEvents = calendarEvents.filter(e => {
@@ -666,6 +676,11 @@ export default function AdvancedCalendar({ reminders, leads, onLeadClick, onRemi
                                 <span className={`px-2 py-0.5 rounded ${priorityColor.replace('text-', 'bg-')}/20 ${priorityColor}`}>
                                   {getReminderPriorityLabel(reminder.priority)}
                                 </span>
+                                {reminder.username && (
+                                  <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded">
+                                    👤 {reminder.username || reminder.user_name}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>

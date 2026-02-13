@@ -617,6 +617,11 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
                                 {reminder.priority}
                               </span>
                               <span className="text-xs text-white/60">{reminder.reminder_type}</span>
+                              {reminder.username && (
+                                <span className="px-2 py-0.5 text-xs font-semibold rounded-full border bg-blue-500/20 text-blue-400 border-blue-500/30">
+                                  👤 {reminder.username || reminder.user_name}
+                                </span>
+                              )}
                             </div>
                             <p className={`text-sm text-white font-medium mb-1 ${(reminder.completed || reminder.status === 'completed') ? 'line-through opacity-60' : ''}`}>
                               {reminder.message || reminder.title || 'No message'}

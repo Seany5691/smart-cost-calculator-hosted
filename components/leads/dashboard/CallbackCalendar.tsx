@@ -272,18 +272,28 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick, onCale
       const isToday = date.getTime() === today.getTime();
       
       // FIX #6: Find reminders on this date - ensure proper date comparison
+      // FILTER BY SELECTED CALENDAR: Only show reminders for the selected calendar owner
       const dateReminders = reminders.filter(reminder => {
         if (!reminder.reminder_date) return false;
         // Parse the reminder date properly to avoid timezone issues
         const reminderDateStr = reminder.reminder_date.split('T')[0];
-        return reminderDateStr === dateStr;
+        if (reminderDateStr !== dateStr) return false;
+        
+        // Filter by calendar selection
+        if (selectedCalendarUserId) {
+          // Viewing shared calendar - only show that user's reminders
+          return reminder.user_id === selectedCalendarUserId;
+        } else {
+          // Viewing own calendar - only show own reminders
+          // Assuming reminders passed in are already filtered to current user
+          return true;
+        }
       });
 
       // Find calendar events on this date
       const dateEvents = calendarEvents.filter(event => {
         if (!event.event_date) return false;
         const eventDateStr = event.event_date.split('T')[0];
-        console.log('[CALENDAR DISPLAY] Comparing event date:', eventDateStr, 'with calendar date:', dateStr, 'match:', eventDateStr === dateStr);
         return eventDateStr === dateStr;
       });
       
@@ -310,7 +320,7 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick, onCale
     }
     
     return dates;
-  }, [currentMonth, reminders, calendarEvents]);
+  }, [currentMonth, reminders, calendarEvents, selectedCalendarUserId]);
 
   // Navigate to previous month
   const handlePrevMonth = () => {
@@ -348,9 +358,18 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick, onCale
     return reminders.filter(reminder => {
       if (!reminder.reminder_date) return false;
       const reminderDateStr = reminder.reminder_date.split('T')[0];
-      return reminderDateStr === dateStr;
+      if (reminderDateStr !== dateStr) return false;
+      
+      // Filter by calendar selection
+      if (selectedCalendarUserId) {
+        // Viewing shared calendar - only show that user's reminders
+        return reminder.user_id === selectedCalendarUserId;
+      } else {
+        // Viewing own calendar - only show own reminders
+        return true;
+      }
     });
-  }, [selectedDate, reminders]);
+  }, [selectedDate, reminders, selectedCalendarUserId]);
 
   // Get events for selected date
   const selectedDateEvents = useMemo(() => {
@@ -703,6 +722,11 @@ export default function CallbackCalendar({ reminders, leads, onLeadClick, onCale
                       {isCompleted && (
                         <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
                           ✅ Completed
+                        </span>
+                      )}
+                      {reminder.username && (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+                          👤 {reminder.username || reminder.user_name}
                         </span>
                       )}
                     </div>

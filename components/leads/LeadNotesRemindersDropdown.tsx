@@ -198,15 +198,21 @@ export default function LeadNotesRemindersDropdown({ leadId, leadName, legacyNot
                         className="py-2 border-b border-white/10 last:border-0"
                       >
                         <p className="text-sm text-white/90 whitespace-pre-wrap">{note.content}</p>
-                        <p className="text-xs text-white/50 mt-1">
-                          {new Date(note.created_at).toLocaleString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-white/50">
+                          <span>
+                            Added by {note.username || note.user_name || 'Unknown'}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {new Date(note.created_at).toLocaleString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -238,6 +244,9 @@ export default function LeadNotesRemindersDropdown({ leadId, leadName, legacyNot
                             {reminder.note && (
                               <p className="text-xs text-white/70 mt-1">{reminder.note}</p>
                             )}
+                            <div className="flex items-center gap-2 mt-1 text-xs text-white/50">
+                              <span>Owner: {reminder.username || reminder.user_name || 'Unknown'}</span>
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 mt-2 text-xs text-white/60">

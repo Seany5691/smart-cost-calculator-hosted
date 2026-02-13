@@ -114,8 +114,17 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
     const next7DaysEnd = new Date(today);
     next7DaysEnd.setDate(next7DaysEnd.getDate() + 7);
     
-    // Filter reminders using local date parsing
+    // Filter reminders using local date parsing AND calendar selection
     let filteredReminders = reminders.filter(reminder => {
+      // Filter by calendar selection FIRST
+      if (selectedCalendarUserId) {
+        // Viewing shared calendar - only show that user's reminders
+        if (reminder.user_id !== selectedCalendarUserId) return false;
+      } else {
+        // Viewing own calendar - only show own reminders
+        // Assuming reminders passed in are already filtered to current user
+      }
+      
       if (selectedRange === 'all') return true;
       
       // Parse reminder date in LOCAL timezone
@@ -269,7 +278,7 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
     
     // Limit to 10 items
     return combined.slice(0, 10);
-  }, [reminders, calendarEvents, selectedRange]);
+  }, [reminders, calendarEvents, selectedRange, selectedCalendarUserId]);
 
   // Check if reminder is overdue or today
   const getReminderStatus = (reminder: LeadReminder) => {
@@ -712,6 +721,11 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
                       {status === 'overdue' && !isCompleted && (
                         <span className="px-2 py-0.5 text-xs font-semibold rounded-full border bg-red-500/20 text-red-400 border-red-500/30">
                           🔴 Overdue
+                        </span>
+                      )}
+                      {reminder.username && (
+                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full border bg-blue-500/20 text-blue-400 border-blue-500/30">
+                          👤 {reminder.username || reminder.user_name}
                         </span>
                       )}
                     </div>

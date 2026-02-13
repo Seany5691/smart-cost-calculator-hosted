@@ -34,7 +34,7 @@ const LaterContent = lazy(() => import('./status-pages/later').catch(() => ({ de
 const BadContent = lazy(() => import('./status-pages/bad').catch(() => ({ default: () => <PlaceholderContent name="Bad Leads" /> })));
 const SignedContent = lazy(() => import('./status-pages/signed').catch(() => ({ default: () => <PlaceholderContent name="Signed" /> })));
 const RoutesContent = lazy(() => import('./routes-page').catch(() => ({ default: () => <PlaceholderContent name="Routes" /> })));
-const RemindersContent = lazy(() => import('@/components/leads/RemindersContent').catch(() => ({ default: () => <PlaceholderContent name="Reminders" /> })));
+const RemindersContent = lazy(() => import('./reminders-page').catch(() => ({ default: () => <PlaceholderContent name="Reminders" /> })));
 
 
 // Placeholder component for tabs that don't have content yet

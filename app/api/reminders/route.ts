@@ -60,7 +60,12 @@ export async function GET(request: NextRequest) {
         CASE WHEN r.user_id = $1 THEN false ELSE true END as is_shared
       FROM reminders r
       JOIN users u ON r.user_id = u.id
-      LEFT JOIN leads l ON r.lead_id = l.id
+      LEFT JOIN leads l ON r.lead_id = l.id 
+        AND (l.user_id = $1 OR EXISTS (
+          SELECT 1 FROM lead_shares ls2 
+          WHERE ls2.lead_id = l.id 
+          AND ls2.shared_with_user_id = $1
+        ))
       LEFT JOIN reminder_shares rs ON r.id = rs.reminder_id
       WHERE 1=1
     `;

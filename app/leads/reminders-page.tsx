@@ -743,8 +743,48 @@ export default function RemindersPage() {
 
             // Render reminder
             const reminder = item.data as Reminder;
+            
+            // Handler to open lead modal
+            const handleReminderClick = () => {
+              if (!reminder.lead_id) return;
+              
+              console.log('[Reminders] Reminder clicked, lead_id:', reminder.lead_id);
+              console.log('[Reminders] leads count:', leads.length);
+              
+              const lead = leads.find(l => l.id === reminder.lead_id);
+              console.log('[Reminders] Found lead:', lead ? lead.name : 'NOT FOUND');
+              
+              if (lead) {
+                setSelectedLead(lead);
+              } else {
+                console.error('[Reminders] Lead not found! Fetching directly...');
+                // Try to fetch the lead directly
+                const fetchLead = async () => {
+                  try {
+                    const response = await fetch(`/api/leads/${reminder.lead_id}`, {
+                      headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                      const fetchedLead = await response.json();
+                      console.log('[Reminders] Fetched lead directly:', fetchedLead);
+                      setSelectedLead(fetchedLead);
+                    } else {
+                      console.error('[Reminders] Failed to fetch lead:', response.status);
+                    }
+                  } catch (error) {
+                    console.error('[Reminders] Error fetching lead:', error);
+                  }
+                };
+                fetchLead();
+              }
+            };
+            
             return (
-              <div key={`reminder-${reminder.id}`} className="glass-card p-4 border-l-4 border-emerald-500">
+              <div 
+                key={`reminder-${reminder.id}`} 
+                className="glass-card p-4 border-l-4 border-emerald-500 cursor-pointer hover:bg-white/5 transition-colors"
+                onClick={handleReminderClick}
+              >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -768,7 +808,7 @@ export default function RemindersPage() {
                     )}
                   </div>
                   {!reminder.completed && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleCompleteReminder(reminder.id, reminder.lead_id)}
                         className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-1"

@@ -10,7 +10,7 @@
  * Version: 2.0 - Fixed cache issue
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { 
   Calendar as CalendarIcon,
   Bell,
@@ -145,6 +145,18 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
     setRoutesCount(routes.length);
   }, [routes]);
 
+  // Filter reminders to show only owned reminders when viewing "My Calendar"
+  // When viewing a shared calendar, use sharedCalendarReminders which are already filtered
+  const displayReminders = useMemo(() => {
+    if (selectedCalendarUserId) {
+      // Viewing shared calendar - use the fetched shared calendar reminders
+      return sharedCalendarReminders;
+    } else {
+      // Viewing own calendar - filter out shared reminders, show only owned ones
+      return reminders.filter(reminder => !reminder.is_shared);
+    }
+  }, [selectedCalendarUserId, sharedCalendarReminders, reminders]);
+
   // Requirement: 2.4 - Navigate to corresponding tab when statistic card is clicked
   const handleStatClick = (tab: string) => {
     if (typeof window !== 'undefined') {
@@ -268,7 +280,7 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
             Reminders Calendar
           </h2>
           <CallbackCalendar 
-            reminders={selectedCalendarUserId ? sharedCalendarReminders : reminders}
+            reminders={displayReminders}
             leads={allLeads}
             onLeadClick={(leadId) => {
               // Find the lead and open modal
@@ -325,7 +337,7 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
             }
           </h2>
           <UpcomingReminders 
-            reminders={selectedCalendarUserId ? sharedCalendarReminders : reminders}
+            reminders={displayReminders}
             leads={allLeads}
             calendarEvents={calendarEvents}
             selectedCalendarUserId={selectedCalendarUserId}

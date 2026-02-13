@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     // If filtering by specific user (viewing shared calendar), only show that user's reminders
     // Otherwise, show both owned and shared reminders
     if (filterUserId) {
-      sql += ` AND r.user_id = $${paramIndex}`;
+      sql += ` AND r.user_id = $$${paramIndex}`;
       params.push(filterUserId);
       paramIndex++;
     } else {
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     // Apply status filter
     if (status) {
-      sql += ` AND r.status = $${paramIndex}`;
+      sql += ` AND r.status = $$${paramIndex}`;
       params.push(status);
       paramIndex++;
     } else if (!includeCompleted) {
@@ -94,26 +94,26 @@ export async function GET(request: NextRequest) {
 
     // Apply type filter
     if (type) {
-      sql += ` AND r.reminder_type = $${paramIndex}`;
+      sql += ` AND r.reminder_type = $$${paramIndex}`;
       params.push(type);
       paramIndex++;
     }
 
     // Apply priority filter
     if (priority) {
-      sql += ` AND r.priority = $${paramIndex}`;
+      sql += ` AND r.priority = $$${paramIndex}`;
       params.push(priority);
       paramIndex++;
     }
 
     // Apply date range filter
     if (dateFrom) {
-      sql += ` AND r.reminder_date >= $${paramIndex}`;
+      sql += ` AND r.reminder_date >= $$${paramIndex}`;
       params.push(dateFrom);
       paramIndex++;
     }
     if (dateTo) {
-      sql += ` AND r.reminder_date <= $${paramIndex}`;
+      sql += ` AND r.reminder_date <= $$${paramIndex}`;
       params.push(dateTo);
       paramIndex++;
     }
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
 
     // Apply same user filter to count
     if (filterUserId) {
-      countSql += ` AND r.user_id = $${countParamIndex}`;
+      countSql += ` AND r.user_id = $$${countParamIndex}`;
       countParams.push(filterUserId);
       countParamIndex++;
     } else {
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (status) {
-      countSql += ` AND r.status = $${countParamIndex}`;
+      countSql += ` AND r.status = $$${countParamIndex}`;
       countParams.push(status);
       countParamIndex++;
     } else if (!includeCompleted) {
@@ -146,24 +146,24 @@ export async function GET(request: NextRequest) {
     }
 
     if (type) {
-      countSql += ` AND r.reminder_type = $${countParamIndex}`;
+      countSql += ` AND r.reminder_type = $$${countParamIndex}`;
       countParams.push(type);
       countParamIndex++;
     }
 
     if (priority) {
-      countSql += ` AND r.priority = $${countParamIndex}`;
+      countSql += ` AND r.priority = $$${countParamIndex}`;
       countParams.push(priority);
       countParamIndex++;
     }
 
     if (dateFrom) {
-      countSql += ` AND r.reminder_date >= $${countParamIndex}`;
+      countSql += ` AND r.reminder_date >= $$${countParamIndex}`;
       countParams.push(dateFrom);
       countParamIndex++;
     }
     if (dateTo) {
-      countSql += ` AND r.reminder_date <= $${countParamIndex}`;
+      countSql += ` AND r.reminder_date <= $$${countParamIndex}`;
       countParams.push(dateTo);
       countParamIndex++;
     }
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
     const total = parseInt(countResult.rows[0].count);
 
     sql += ` ORDER BY r.reminder_date ASC, r.reminder_time ASC, r.priority DESC`;
-    sql += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    sql += ` LIMIT $$${paramIndex} OFFSET $$${paramIndex + 1}`;
     params.push(limit, offset);
 
     const result = await query(sql, params);
@@ -225,8 +225,13 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching reminders:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      { error: 'Failed to fetch reminders' },
+      { 
+        error: 'Failed to fetch reminders',
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }
@@ -347,3 +352,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+
+

@@ -105,6 +105,8 @@ export interface LeadReminder {
   // User information (joined from users table)
   user_name?: string;
   username?: string;
+  // Sharing information
+  is_shared?: boolean; // True if reminder belongs to someone else and is shared with you
 }
 
 // =====================================================

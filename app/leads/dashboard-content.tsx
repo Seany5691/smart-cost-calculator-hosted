@@ -272,9 +272,40 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
             leads={allLeads}
             onLeadClick={(leadId) => {
               // Find the lead and open modal
+              console.log('[Dashboard/Calendar] onLeadClick called with leadId:', leadId);
+              console.log('[Dashboard/Calendar] allLeads count:', allLeads.length);
               const lead = allLeads.find(l => l.id === leadId);
+              console.log('[Dashboard/Calendar] Found lead:', lead ? lead.name : 'NOT FOUND');
               if (lead) {
                 setSelectedLead(lead);
+              } else {
+                console.error('[Dashboard/Calendar] Lead not found in allLeads! leadId:', leadId);
+                // Try to fetch the lead directly
+                const fetchLead = async () => {
+                  try {
+                    const token = localStorage.getItem('auth-storage');
+                    let authToken = null;
+                    if (token) {
+                      const data = JSON.parse(token);
+                      authToken = data.state?.token || data.token;
+                    }
+                    if (!authToken) return;
+
+                    const response = await fetch(`/api/leads/${leadId}`, {
+                      headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    if (response.ok) {
+                      const fetchedLead = await response.json();
+                      console.log('[Dashboard/Calendar] Fetched lead directly:', fetchedLead);
+                      setSelectedLead(fetchedLead);
+                    } else {
+                      console.error('[Dashboard/Calendar] Failed to fetch lead:', response.status);
+                    }
+                  } catch (error) {
+                    console.error('[Dashboard/Calendar] Error fetching lead:', error);
+                  }
+                };
+                fetchLead();
               }
             }}
             onCalendarChange={(userId, ownerName) => {
@@ -301,9 +332,41 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
             selectedCalendarOwnerName={selectedCalendarOwnerName}
             onLeadClick={(leadId) => {
               // Find the lead and open modal
+              console.log('[Dashboard] onLeadClick called with leadId:', leadId);
+              console.log('[Dashboard] allLeads count:', allLeads.length);
+              console.log('[Dashboard] allLeads IDs:', allLeads.map(l => l.id));
               const lead = allLeads.find(l => l.id === leadId);
+              console.log('[Dashboard] Found lead:', lead ? lead.name : 'NOT FOUND');
               if (lead) {
                 setSelectedLead(lead);
+              } else {
+                console.error('[Dashboard] Lead not found in allLeads! leadId:', leadId);
+                // Try to fetch the lead directly
+                const fetchLead = async () => {
+                  try {
+                    const token = localStorage.getItem('auth-storage');
+                    let authToken = null;
+                    if (token) {
+                      const data = JSON.parse(token);
+                      authToken = data.state?.token || data.token;
+                    }
+                    if (!authToken) return;
+
+                    const response = await fetch(`/api/leads/${leadId}`, {
+                      headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    if (response.ok) {
+                      const fetchedLead = await response.json();
+                      console.log('[Dashboard] Fetched lead directly:', fetchedLead);
+                      setSelectedLead(fetchedLead);
+                    } else {
+                      console.error('[Dashboard] Failed to fetch lead:', response.status);
+                    }
+                  } catch (error) {
+                    console.error('[Dashboard] Error fetching lead:', error);
+                  }
+                };
+                fetchLead();
               }
             }}
             onReminderUpdate={() => {

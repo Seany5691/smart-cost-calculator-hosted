@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/lib/store/auth-simple';
 import { useToast } from '@/components/ui/Toast/useToast';
 
@@ -59,13 +59,21 @@ export default function RemindersSection({ leadId, showLeadInfo = false }: Remin
     description: '',
     recurrence_pattern: '',
   });
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
     fetchReminders();
   }, [leadId, showCompleted]);
 
   const fetchReminders = async () => {
+    // Prevent multiple simultaneous fetches
+    if (fetchingRef.current) {
+      console.log('[RemindersSection] Fetch already in progress, skipping');
+      return;
+    }
+
     try {
+      fetchingRef.current = true;
       setLoading(true);
       const url = leadId
         ? `/api/leads/${leadId}/reminders`
@@ -88,6 +96,7 @@ export default function RemindersSection({ leadId, showLeadInfo = false }: Remin
       console.error('Error fetching reminders:', error);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   };
 

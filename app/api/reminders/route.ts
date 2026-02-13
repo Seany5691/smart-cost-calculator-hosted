@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
 
     // Apply same user filter to count
     if (filterUserId) {
-      countSql += ` AND r.user_id = ${countParamIndex}`;
+      countSql += ` AND r.user_id = $${countParamIndex}`;
       countParams.push(filterUserId);
       countParamIndex++;
     } else {

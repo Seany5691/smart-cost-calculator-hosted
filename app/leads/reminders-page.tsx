@@ -129,7 +129,7 @@ export default function RemindersPage() {
     } finally {
       setLoading(false);
     }
-  }, []); // Remove fetchAllReminders from dependencies to prevent infinite loop
+  }, [fetchAllReminders]); // Need fetchAllReminders here, but we'll handle it differently
 
   const fetchCalendarEventsData = useCallback(async () => {
     try {
@@ -160,19 +160,30 @@ export default function RemindersPage() {
 
   useEffect(() => {
     if (token) {
-      fetchReminders();
+      // Call functions directly instead of through callbacks to avoid dependency issues
+      const loadData = async () => {
+        try {
+          await fetchAllReminders();
+        } catch (error) {
+          console.error('Error fetching reminders:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      loadData();
       fetchCalendarEventsData();
       fetchLeads();
       fetchSharedCalendars();
     }
-  }, [token]); // Only depend on token to prevent infinite loops
+  }, [token, fetchAllReminders]); // Include fetchAllReminders but it's stable from the store
 
   // Fetch reminders for selected calendar when it changes
   useEffect(() => {
     if (token) {
       fetchRemindersForCalendar(selectedCalendarUserId);
     }
-  }, [selectedCalendarUserId, token, fetchRemindersForCalendar]);
+  }, [selectedCalendarUserId, token]); // Removed fetchRemindersForCalendar to prevent infinite loop
 
   // Update local reminders when store reminders change
   // Use useMemo to prevent unnecessary recalculations

@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
               JSON.stringify({
                 session_name: sessionName,
                 businesses_scraped: businesses.length,
-                towns_completed: progress.completedTowns.length,
+                towns_completed: progress.completedTowns,
               })
             ]
           );

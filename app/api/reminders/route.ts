@@ -60,14 +60,14 @@ export async function GET(request: NextRequest) {
         l.contact_person as lead_contact_person,
         l.town as lead_town,
         l.phone as lead_phone,
-        CASE WHEN r.user_id = $1 THEN false ELSE true END as is_shared
+        CASE WHEN r.user_id = $1::uuid THEN false ELSE true END as is_shared
       FROM reminders r
       JOIN users u ON r.user_id = u.id
       LEFT JOIN leads l ON r.lead_id = l.id 
-        AND (l.user_id = $1 OR EXISTS (
+        AND (l.user_id = $1::uuid OR EXISTS (
           SELECT 1 FROM lead_shares ls2 
           WHERE ls2.lead_id = l.id 
-          AND ls2.shared_with_user_id = $1
+          AND ls2.shared_with_user_id = $1::uuid
         ))
       LEFT JOIN reminder_shares rs ON r.id = rs.reminder_id
       WHERE 1=1
@@ -79,11 +79,11 @@ export async function GET(request: NextRequest) {
     // If filtering by specific user (viewing shared calendar), only show that user's reminders
     // Otherwise, show both owned and shared reminders
     if (filterUserId) {
-      sql += ` AND r.user_id = $${paramIndex}`;
+      sql += ` AND r.user_id = $${paramIndex}::uuid`;
       params.push(filterUserId);
       paramIndex++;
     } else {
-      sql += ` AND (r.user_id = $1 OR rs.shared_with_user_id = $1)`;
+      sql += ` AND (r.user_id = $1::uuid OR rs.shared_with_user_id = $1::uuid)`;
     }
 
     // Apply status filter
@@ -135,11 +135,11 @@ export async function GET(request: NextRequest) {
 
     // Apply same user filter to count
     if (filterUserId) {
-      countSql += ` AND r.user_id = $${countParamIndex}`;
+      countSql += ` AND r.user_id = $${countParamIndex}::uuid`;
       countParams.push(filterUserId);
       countParamIndex++;
     } else {
-      countSql += ` AND (r.user_id = $1 OR rs.shared_with_user_id = $1)`;
+      countSql += ` AND (r.user_id = $1::uuid OR rs.shared_with_user_id = $1::uuid)`;
     }
 
     if (status) {

@@ -709,31 +709,31 @@ export default function RemindersPage() {
       </div>
 
       {/* Tab Selector */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex justify-center gap-3 mb-6">
         <button
           onClick={() => setActiveTab('list')}
           className={`
-            px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2
+            px-8 py-4 rounded-xl font-semibold text-lg transition-all flex items-center gap-3 shadow-lg
             ${activeTab === 'list'
-              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
-              : 'bg-white/10 text-emerald-200 hover:bg-white/20'
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white scale-105'
+              : 'bg-white/10 text-emerald-200 hover:bg-white/20 hover:scale-102'
             }
           `}
         >
-          <Bell className="w-5 h-5" />
+          <Bell className="w-6 h-6" />
           List View
         </button>
         <button
           onClick={() => setActiveTab('calendar')}
           className={`
-            px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2
+            px-8 py-4 rounded-xl font-semibold text-lg transition-all flex items-center gap-3 shadow-lg
             ${activeTab === 'calendar'
-              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
-              : 'bg-white/10 text-emerald-200 hover:bg-white/20'
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white scale-105'
+              : 'bg-white/10 text-emerald-200 hover:bg-white/20 hover:scale-102'
             }
           `}
         >
-          <CalendarIcon className="w-5 h-5" />
+          <CalendarIcon className="w-6 h-6" />
           Calendar View
         </button>
       </div>
@@ -809,84 +809,6 @@ export default function RemindersPage() {
       {/* List View */}
       {activeTab === 'list' && (
         <>
-          {/* Time Range Selector */}
-          <div className="glass-card p-4 mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="w-5 h-5 text-emerald-400" />
-              <span className="text-white font-medium">Time Range</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { value: 'all', label: 'All Time' },
-                { value: 'today', label: 'Today' },
-                { value: 'tomorrow', label: 'Tomorrow' },
-                { value: '2days', label: '2 Days' },
-                { value: '3days', label: '3 Days' },
-                { value: 'week', label: 'This Week' },
-                { value: 'nextweek', label: 'Next 7 Days' },
-                { value: 'month', label: 'This Month' },
-                { value: 'nextmonth', label: 'Next 30 Days' }
-              ].map(range => (
-                <button
-                  key={range.value}
-                  onClick={() => setTimeRange(range.value as any)}
-                  className={`
-                    px-4 py-2 rounded-lg font-medium transition-all text-sm
-                    ${timeRange === range.value
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
-                      : 'bg-white/10 text-emerald-200 hover:bg-white/20'
-                    }
-                  `}
-                >
-                  {range.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Bulk Actions */}
-          {selectedReminders.length > 0 && (
-            <div className="glass-card p-4 mb-6 border-2 border-emerald-500/50">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-emerald-400" />
-                  <span className="text-white font-medium">
-                    {selectedReminders.length} reminder(s) selected
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => handleBulkComplete(true)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-2"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Mark Complete
-                  </button>
-                  <button
-                    onClick={() => handleBulkComplete(false)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
-                  >
-                    <Clock className="w-4 h-4" />
-                    Mark Incomplete
-                  </button>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center gap-2"
-                  >
-                    <Bell className="w-4 h-4" />
-                    Delete
-                  </button>
-                  <button
-                    onClick={() => setSelectedReminders([])}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
-                  >
-                    Clear Selection
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Stats */}
           {reminders && calendarEvents && (
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
@@ -1087,6 +1009,84 @@ export default function RemindersPage() {
               </div>
             </div>
           </div>
+
+          {/* Time Range Selector */}
+          <div className="glass-card p-4 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="w-5 h-5 text-emerald-400" />
+              <span className="text-white font-medium">Time Range</span>
+            </div>
+            <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2">
+              {[
+                { value: 'all', label: 'All Time' },
+                { value: 'today', label: 'Today' },
+                { value: 'tomorrow', label: 'Tomorrow' },
+                { value: '2days', label: '2 Days' },
+                { value: '3days', label: '3 Days' },
+                { value: 'week', label: 'This Week' },
+                { value: 'nextweek', label: 'Next 7 Days' },
+                { value: 'month', label: 'This Month' },
+                { value: 'nextmonth', label: 'Next 30 Days' }
+              ].map(range => (
+                <button
+                  key={range.value}
+                  onClick={() => setTimeRange(range.value as any)}
+                  className={`
+                    px-3 py-2 rounded-lg font-medium transition-all text-sm
+                    ${timeRange === range.value
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
+                      : 'bg-white/10 text-emerald-200 hover:bg-white/20'
+                    }
+                  `}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bulk Actions */}
+          {selectedReminders.length > 0 && (
+            <div className="glass-card p-4 mb-6 border-2 border-emerald-500/50">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  <span className="text-white font-medium">
+                    {selectedReminders.length} reminder(s) selected
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handleBulkComplete(true)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-2"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Mark Complete
+                  </button>
+                  <button
+                    onClick={() => handleBulkComplete(false)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+                  >
+                    <Clock className="w-4 h-4" />
+                    Mark Incomplete
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center gap-2"
+                  >
+                    <Bell className="w-4 h-4" />
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => setSelectedReminders([])}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Reminders and Events List */}
           {combinedItems.length === 0 ? (

@@ -6,6 +6,7 @@ import { useRemindersStore } from '@/lib/store/reminders';
 import { Bell, Calendar as CalendarIcon, Plus, Filter, Loader2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import AdvancedCalendar from '@/components/leads/AdvancedCalendar';
 import LeadDetailsModal from '@/components/leads/LeadDetailsModal';
+import EditReminderModal from '@/components/leads/EditReminderModal';
 import type { LeadReminder, Lead } from '@/lib/leads/types';
 
 interface Reminder {
@@ -80,6 +81,7 @@ export default function RemindersPage() {
   const [activeTab, setActiveTab] = useState<'list' | 'calendar'>('list');
   const [selectedReminders, setSelectedReminders] = useState<string[]>([]);
   const [timeRange, setTimeRange] = useState<'all' | 'today' | 'tomorrow' | '2days' | '3days' | 'week' | 'nextweek' | 'month' | 'nextmonth'>('all');
+  const [editingReminder, setEditingReminder] = useState<LeadReminder | null>(null);
 
   // Helper function to parse date strings in LOCAL timezone (not UTC)
   const parseLocalDate = (dateStr: string): Date => {
@@ -1350,6 +1352,19 @@ export default function RemindersPage() {
 
                   {/* Action Buttons */}
                   <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => {
+                        // Find the full LeadReminder object from store
+                        const fullReminder = (selectedCalendarUserId ? sharedCalendarReminders : storeReminders).find(r => r.id === reminder.id);
+                        if (fullReminder) {
+                          setEditingReminder(fullReminder);
+                        }
+                      }}
+                      className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-1 whitespace-nowrap"
+                    >
+                      <Plus className="w-4 h-4 rotate-45" />
+                      Edit
+                    </button>
                     {reminder.completed ? (
                       <button
                         onClick={() => handleCompleteReminder(reminder.id, reminder.lead_id)}
@@ -1395,6 +1410,23 @@ export default function RemindersPage() {
           fetchReminders();
           fetchCalendarEventsData();
         }}
+      />
+    )}
+
+    {/* Edit Reminder Modal */}
+    {editingReminder && (
+      <EditReminderModal
+        isOpen={!!editingReminder}
+        onClose={() => {
+          setEditingReminder(null);
+          // Refresh reminders after edit
+          if (selectedCalendarUserId) {
+            fetchRemindersForCalendar(selectedCalendarUserId);
+          } else {
+            fetchReminders();
+          }
+        }}
+        reminder={editingReminder}
       />
     )}
     </>

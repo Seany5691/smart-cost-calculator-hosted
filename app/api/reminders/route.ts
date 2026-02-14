@@ -224,13 +224,17 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Error fetching reminders:', error);
-    console.error('Error details:', error instanceof Error ? error.message : String(error));
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('[REMINDERS API] Error fetching reminders:', error);
+    console.error('[REMINDERS API] Error details:', error instanceof Error ? error.message : String(error));
+    console.error('[REMINDERS API] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('[REMINDERS API] SQL Query:', sql);
+    console.error('[REMINDERS API] SQL Params:', params);
     return NextResponse.json(
       { 
         error: 'Failed to fetch reminders',
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
+        sql: sql,
+        params: params
       },
       { status: 500 }
     );

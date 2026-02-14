@@ -138,133 +138,8 @@ export default function RemindersPage() {
     }
   }, [token]);
 
-  const fetchReminders = useCallback(async () => {
-    try {
-      await fetchAllReminders();
-    } catch (error) {
-      console.error('Error fetching reminders:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchAllReminders]); // Need fetchAllReminders here, but we'll handle it differently
-
-  const fetchCalendarEventsData = useCallback(async () => {
-    try {
-      // Fetch events for the next 90 days
-      const today = new Date();
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 90);
-
-      const startDateStr = today.toISOString().split('T')[0];
-      const endDateStr = endDate.toISOString().split('T')[0];
-
-      let url = `/api/calendar/events?start_date=${startDateStr}&end_date=${endDateStr}`;
-      if (selectedCalendarUserId) {
-        url += `&user_id=${selectedCalendarUserId}`;
-      }
-
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const events = data.events || [];
-        
-        // Categorize events
-        const categorized = categorizeEvents(events);
-        setCalendarEvents(categorized);
-      }
-    } catch (error) {
-      console.error('Error fetching calendar events:', error);
-    }
-  }, [token, selectedCalendarUserId]);
-
-  useEffect(() => {
-    if (token) {
-      // Call functions directly instead of through callbacks to avoid dependency issues
-      const loadData = async () => {
-        try {
-          await fetchAllReminders();
-        } catch (error) {
-          console.error('Error fetching reminders:', error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      loadData();
-      fetchCalendarEventsData();
-      fetchLeads();
-      fetchSharedCalendars();
-    }
-  }, [token, fetchAllReminders]); // Include fetchAllReminders but it's stable from the store
-
-  // Fetch reminders for selected calendar when it changes
-  useEffect(() => {
-    if (!token) return;
-    
-    const fetchData = async () => {
-      try {
-        // Fetch reminders
-        let url = '/api/reminders?includeCompleted=true';
-        if (selectedCalendarUserId) {
-          url += `&user_id=${selectedCalendarUserId}`;
-        }
-
-        const remindersResponse = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (remindersResponse.ok) {
-          const remindersData = await remindersResponse.json();
-          setSharedCalendarReminders(remindersData.reminders || []);
-        }
-
-        // Fetch events
-        const today = new Date();
-        const endDate = new Date();
-        endDate.setDate(endDate.getDate() + 90);
-
-        const startDateStr = today.toISOString().split('T')[0];
-        const endDateStr = endDate.toISOString().split('T')[0];
-
-        let eventsUrl = `/api/calendar/events?start_date=${startDateStr}&end_date=${endDateStr}`;
-        if (selectedCalendarUserId) {
-          eventsUrl += `&user_id=${selectedCalendarUserId}`;
-        }
-
-        const eventsResponse = await fetch(eventsUrl, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (eventsResponse.ok) {
-          const eventsData = await eventsResponse.json();
-          const events = eventsData.events || [];
-          const categorized = categorizeEvents(events);
-          setCalendarEvents(categorized);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    };
-
-    fetchData();
-  }, [selectedCalendarUserId, token]);
-
-  // Update local reminders when store reminders or shared calendar reminders change
-  // Use useMemo to prevent unnecessary recalculations
-  useEffect(() => {
-    // Use shared calendar reminders if a calendar is selected, otherwise use store reminders
-    const remindersToUse = selectedCalendarUserId ? sharedCalendarReminders : storeReminders;
-    
-    if (remindersToUse.length >= 0) { // Changed from > 0 to >= 0 to handle empty state
-      const categorized = categorizeReminders(remindersToUse);
-      setReminders(categorized);
-    }
-  }, [storeReminders, sharedCalendarReminders, selectedCalendarUserId]);
-
-  const categorizeEvents = (events: CalendarEvent[]): CategorizedEvents => {
+  // Memoize categorizeEvents to prevent infinite loops
+  const categorizeEvents = useCallback((events: CalendarEvent[]): CategorizedEvents => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -298,9 +173,10 @@ export default function RemindersPage() {
     });
 
     return categorized;
-  };
+  }, []);
 
-  const categorizeReminders = (allReminders: LeadReminder[]): CategorizedReminders => {
+  // Memoize categorizeReminders to prevent infinite loops
+  const categorizeReminders = useCallback((allReminders: LeadReminder[]): CategorizedReminders => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -356,7 +232,132 @@ export default function RemindersPage() {
     });
 
     return categorized;
-  };
+  }, []);
+
+  const fetchReminders = useCallback(async () => {
+    try {
+      await fetchAllReminders();
+    } catch (error) {
+      console.error('Error fetching reminders:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchAllReminders]);
+
+  const fetchCalendarEventsData = useCallback(async () => {
+    try {
+      // Fetch events for the next 90 days
+      const today = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 90);
+
+      const startDateStr = today.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+
+      let url = `/api/calendar/events?start_date=${startDateStr}&end_date=${endDateStr}`;
+      if (selectedCalendarUserId) {
+        url += `&user_id=${selectedCalendarUserId}`;
+      }
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const events = data.events || [];
+        
+        // Categorize events
+        const categorized = categorizeEvents(events);
+        setCalendarEvents(categorized);
+      }
+    } catch (error) {
+      console.error('Error fetching calendar events:', error);
+    }
+  }, [token, selectedCalendarUserId, categorizeEvents]);
+
+  useEffect(() => {
+    if (!token) return;
+    
+    // Call functions directly to avoid dependency issues
+    const loadData = async () => {
+      try {
+        await fetchAllReminders();
+      } catch (error) {
+        console.error('Error fetching reminders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+    fetchLeads();
+    fetchSharedCalendars();
+  }, [token, fetchAllReminders, fetchLeads, fetchSharedCalendars]);
+
+  // Fetch reminders for selected calendar when it changes
+  useEffect(() => {
+    if (!token) return;
+    
+    const fetchData = async () => {
+      try {
+        // Fetch reminders
+        let url = '/api/reminders?includeCompleted=true';
+        if (selectedCalendarUserId) {
+          url += `&user_id=${selectedCalendarUserId}`;
+        }
+
+        const remindersResponse = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (remindersResponse.ok) {
+          const remindersData = await remindersResponse.json();
+          setSharedCalendarReminders(remindersData.reminders || []);
+        }
+
+        // Fetch events
+        const today = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + 90);
+
+        const startDateStr = today.toISOString().split('T')[0];
+        const endDateStr = endDate.toISOString().split('T')[0];
+
+        let eventsUrl = `/api/calendar/events?start_date=${startDateStr}&end_date=${endDateStr}`;
+        if (selectedCalendarUserId) {
+          eventsUrl += `&user_id=${selectedCalendarUserId}`;
+        }
+
+        const eventsResponse = await fetch(eventsUrl, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (eventsResponse.ok) {
+          const eventsData = await eventsResponse.json();
+          const events = eventsData.events || [];
+          const categorized = categorizeEvents(events);
+          setCalendarEvents(categorized);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
+  }, [selectedCalendarUserId, token, categorizeEvents]);
+
+  // Update local reminders when store reminders or shared calendar reminders change
+  // Use useMemo to prevent unnecessary recalculations
+  useEffect(() => {
+    // Use shared calendar reminders if a calendar is selected, otherwise use store reminders
+    const remindersToUse = selectedCalendarUserId ? sharedCalendarReminders : storeReminders;
+    
+    if (remindersToUse.length >= 0) { // Changed from > 0 to >= 0 to handle empty state
+      const categorized = categorizeReminders(remindersToUse);
+      setReminders(categorized);
+    }
+  }, [storeReminders, sharedCalendarReminders, selectedCalendarUserId, categorizeReminders]);
 
   const handleCompleteReminder = async (reminderId: string, leadId: string) => {
     try {

@@ -118,6 +118,8 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
     try {
       const token = getAuthToken();
       const params = new URLSearchParams();
+      // Always include completed reminders so they can be filtered on the frontend
+      params.append('includeCompleted', 'true');
       if (status) {
         params.append('status', status);
       }

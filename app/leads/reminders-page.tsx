@@ -116,9 +116,9 @@ export default function RemindersPage() {
 
   const fetchRemindersForCalendar = useCallback(async (userId?: string | null) => {
     try {
-      let url = '/api/reminders';
+      let url = '/api/reminders?includeCompleted=true';
       if (userId) {
-        url += `?user_id=${userId}`;
+        url += `&user_id=${userId}`;
       }
 
       const response = await fetch(url, {
@@ -723,41 +723,48 @@ export default function RemindersPage() {
 
           {/* Filters */}
           <div className="glass-card p-4 mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Filter className="w-5 h-5 text-gray-400" />
+            <div className="flex items-center gap-2 mb-4">
+              <Filter className="w-5 h-5 text-emerald-400" />
               <span className="text-white font-medium">Filters</span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Show</label>
+            
+            {/* Mobile: Stack vertically */}
+            <div className="flex flex-col gap-3 md:hidden">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Show:</label>
                 <select
                   value={showType}
                   onChange={(e) => setShowType(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="all">All Items</option>
                   <option value="reminders">Reminders Only</option>
                   <option value="events">Events Only</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Status</label>
+              
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Status:</label>
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="all">All</option>
                   <option value="active">Active</option>
                   <option value="completed">Completed</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Type</label>
+              
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Type:</label>
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   disabled={showType === 'events'}
                 >
                   <option value="all">All Types</option>
@@ -768,12 +775,79 @@ export default function RemindersPage() {
                   <option value="other">Other</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Priority</label>
+              
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Priority:</label>
                 <select
                   value={filterPriority}
                   onChange={(e) => setFilterPriority(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="flex-1 min-w-0 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                >
+                  <option value="all">All Priorities</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+            </div>
+            
+            {/* Desktop: Horizontal layout */}
+            <div className="hidden md:flex md:flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Show:</label>
+                <select
+                  value={showType}
+                  onChange={(e) => setShowType(e.target.value as any)}
+                  className="px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                >
+                  <option value="all">All Items</option>
+                  <option value="reminders">Reminders Only</option>
+                  <option value="events">Events Only</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Status:</label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as any)}
+                  className="px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                >
+                  <option value="all">All</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Type:</label>
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  disabled={showType === 'events'}
+                >
+                  <option value="all">All Types</option>
+                  <option value="callback">Callback</option>
+                  <option value="follow_up">Follow Up</option>
+                  <option value="meeting">Meeting</option>
+                  <option value="email">Email</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <label className="text-sm font-medium text-emerald-200 whitespace-nowrap">Priority:</label>
+                <select
+                  value={filterPriority}
+                  onChange={(e) => setFilterPriority(e.target.value)}
+                  className="px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="all">All Priorities</option>
                   <option value="urgent">Urgent</option>

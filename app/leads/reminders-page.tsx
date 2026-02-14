@@ -72,6 +72,7 @@ export default function RemindersPage() {
   const [sharedCalendars, setSharedCalendars] = useState<any[]>([]);
   const [sharedCalendarReminders, setSharedCalendarReminders] = useState<LeadReminder[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [activeTab, setActiveTab] = useState<'list' | 'calendar'>('list');
 
   const fetchLeads = useCallback(async () => {
     try {
@@ -493,6 +494,36 @@ export default function RemindersPage() {
         </p>
       </div>
 
+      {/* Tab Selector */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setActiveTab('list')}
+          className={`
+            px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2
+            ${activeTab === 'list'
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
+              : 'bg-white/10 text-emerald-200 hover:bg-white/20'
+            }
+          `}
+        >
+          <Bell className="w-5 h-5" />
+          List View
+        </button>
+        <button
+          onClick={() => setActiveTab('calendar')}
+          className={`
+            px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2
+            ${activeTab === 'calendar'
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
+              : 'bg-white/10 text-emerald-200 hover:bg-white/20'
+            }
+          `}
+        >
+          <CalendarIcon className="w-5 h-5" />
+          Calendar View
+        </button>
+      </div>
+
       {/* Shared Calendar Selector - At page level, above both calendar and list */}
       {sharedCalendars.length > 0 && (
         <div className="glass-card p-4 mb-6">
@@ -531,175 +562,180 @@ export default function RemindersPage() {
         </div>
       )}
 
-      {/* Advanced Calendar Component */}
-      <div className="glass-card p-6 mb-6">
-        <h3 className="text-xl font-semibold text-white mb-4">Calendar View</h3>
-        
-        <AdvancedCalendar 
-          reminders={selectedCalendarUserId ? sharedCalendarReminders : storeReminders}
-          leads={leads}
-          selectedCalendarUserId={selectedCalendarUserId}
-          hideCalendarSelector={true}
-          onLeadClick={(leadId) => {
-            // Find the lead and open modal
-            const lead = leads.find(l => l.id === leadId);
-            if (lead) {
-              setSelectedLead(lead);
-            }
-          }}
-          onReminderUpdate={() => {
-            // Refresh reminders when one is updated
-            if (selectedCalendarUserId) {
-              fetchRemindersForCalendar(selectedCalendarUserId);
-            } else {
-              fetchReminders();
-            }
-            fetchCalendarEventsData();
-          }}
-        />
-      </div>
-
-      {/* Stats */}
-      {reminders && calendarEvents && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <div className="glass-card p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertCircle className="w-5 h-5 text-red-400" />
-              <div className="text-sm text-gray-400">Overdue</div>
-            </div>
-            <div className="text-2xl font-bold text-white">
-              {reminders.overdue.length + calendarEvents.overdue.length}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {reminders.overdue.length} reminders, {calendarEvents.overdue.length} events
-            </div>
-          </div>
-          <div className="glass-card p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-5 h-5 text-blue-400" />
-              <div className="text-sm text-gray-400">Today</div>
-            </div>
-            <div className="text-2xl font-bold text-white">
-              {reminders.today.length + calendarEvents.today.length}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {reminders.today.length} reminders, {calendarEvents.today.length} events
-            </div>
-          </div>
-          <div className="glass-card p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <CalendarIcon className="w-5 h-5 text-purple-400" />
-              <div className="text-sm text-gray-400">Upcoming</div>
-            </div>
-            <div className="text-2xl font-bold text-white">
-              {reminders.tomorrow.length + reminders.upcoming.length + reminders.future.length +
-               calendarEvents.tomorrow.length + calendarEvents.upcoming.length + calendarEvents.future.length}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Combined future items
-            </div>
-          </div>
-          <div className="glass-card p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle className="w-5 h-5 text-green-400" />
-              <div className="text-sm text-gray-400">Completed</div>
-            </div>
-            <div className="text-2xl font-bold text-white">{reminders.completed.length}</div>
-            <div className="text-xs text-gray-500 mt-1">
-              Reminders only
-            </div>
-          </div>
-          <div className="glass-card p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <CalendarIcon className="w-5 h-5 text-emerald-400" />
-              <div className="text-sm text-gray-400">Events</div>
-            </div>
-            <div className="text-2xl font-bold text-white">{totalEvents}</div>
-            <div className="text-xs text-gray-500 mt-1">
-              Calendar events
-            </div>
-          </div>
+      {/* Calendar View */}
+      {activeTab === 'calendar' && (
+        <div className="glass-card p-6 mb-6">
+          <h3 className="text-xl font-semibold text-white mb-4">Calendar View</h3>
+          
+          <AdvancedCalendar 
+            reminders={selectedCalendarUserId ? sharedCalendarReminders : storeReminders}
+            leads={leads}
+            selectedCalendarUserId={selectedCalendarUserId}
+            hideCalendarSelector={true}
+            onLeadClick={(leadId) => {
+              // Find the lead and open modal
+              const lead = leads.find(l => l.id === leadId);
+              if (lead) {
+                setSelectedLead(lead);
+              }
+            }}
+            onReminderUpdate={() => {
+              // Refresh reminders when one is updated
+              if (selectedCalendarUserId) {
+                fetchRemindersForCalendar(selectedCalendarUserId);
+              } else {
+                fetchReminders();
+              }
+              fetchCalendarEventsData();
+            }}
+          />
         </div>
       )}
 
-      {/* Filters */}
-      <div className="glass-card p-4 mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <Filter className="w-5 h-5 text-gray-400" />
-          <span className="text-white font-medium">Filters</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Show</label>
-            <select
-              value={showType}
-              onChange={(e) => setShowType(e.target.value as any)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-            >
-              <option value="all">All Items</option>
-              <option value="reminders">Reminders Only</option>
-              <option value="events">Events Only</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Status</label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-            >
-              <option value="all">All</option>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Type</label>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              disabled={showType === 'events'}
-            >
-              <option value="all">All Types</option>
-              <option value="callback">Callback</option>
-              <option value="follow_up">Follow Up</option>
-              <option value="meeting">Meeting</option>
-              <option value="email">Email</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Priority</label>
-            <select
-              value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-            >
-              <option value="all">All Priorities</option>
-              <option value="urgent">Urgent</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* List View */}
+      {activeTab === 'list' && (
+        <>
+          {/* Stats */}
+          {reminders && calendarEvents && (
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="w-5 h-5 text-red-400" />
+                  <div className="text-sm text-gray-400">Overdue</div>
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  {reminders.overdue.length + calendarEvents.overdue.length}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {reminders.overdue.length} reminders, {calendarEvents.overdue.length} events
+                </div>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-5 h-5 text-blue-400" />
+                  <div className="text-sm text-gray-400">Today</div>
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  {reminders.today.length + calendarEvents.today.length}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {reminders.today.length} reminders, {calendarEvents.today.length} events
+                </div>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CalendarIcon className="w-5 h-5 text-purple-400" />
+                  <div className="text-sm text-gray-400">Upcoming</div>
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  {reminders.tomorrow.length + reminders.upcoming.length + reminders.future.length +
+                   calendarEvents.tomorrow.length + calendarEvents.upcoming.length + calendarEvents.future.length}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Combined future items
+                </div>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <div className="text-sm text-gray-400">Completed</div>
+                </div>
+                <div className="text-2xl font-bold text-white">{reminders.completed.length}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Reminders only
+                </div>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CalendarIcon className="w-5 h-5 text-emerald-400" />
+                  <div className="text-sm text-gray-400">Events</div>
+                </div>
+                <div className="text-2xl font-bold text-white">{totalEvents}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Calendar events
+                </div>
+              </div>
+            </div>
+          )}
 
-      {/* Reminders and Events List */}
-      {combinedItems.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <Bell className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">No items found</h3>
-          <p className="text-gray-400">
-            {filterStatus !== 'all' || filterType !== 'all' || filterPriority !== 'all' || showType !== 'all'
-              ? 'Try adjusting your filters'
-              : 'Create reminders from the lead details page or add calendar events'}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {combinedItems.map((item) => {
+          {/* Filters */}
+          <div className="glass-card p-4 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Filter className="w-5 h-5 text-gray-400" />
+              <span className="text-white font-medium">Filters</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Show</label>
+                <select
+                  value={showType}
+                  onChange={(e) => setShowType(e.target.value as any)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                >
+                  <option value="all">All Items</option>
+                  <option value="reminders">Reminders Only</option>
+                  <option value="events">Events Only</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Status</label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as any)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                >
+                  <option value="all">All</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Type</label>
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  disabled={showType === 'events'}
+                >
+                  <option value="all">All Types</option>
+                  <option value="callback">Callback</option>
+                  <option value="follow_up">Follow Up</option>
+                  <option value="meeting">Meeting</option>
+                  <option value="email">Email</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Priority</label>
+                <select
+                  value={filterPriority}
+                  onChange={(e) => setFilterPriority(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                >
+                  <option value="all">All Priorities</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Reminders and Events List */}
+          {combinedItems.length === 0 ? (
+            <div className="glass-card p-12 text-center">
+              <Bell className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">No items found</h3>
+              <p className="text-gray-400">
+                {filterStatus !== 'all' || filterType !== 'all' || filterPriority !== 'all' || showType !== 'all'
+                  ? 'Try adjusting your filters'
+                  : 'Create reminders from the lead details page or add calendar events'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {combinedItems.map((item) => {
             // Render calendar event
             if (item.type === 'event') {
               const event = item.data as CalendarEvent;
@@ -857,6 +893,8 @@ export default function RemindersPage() {
             );
           })}
         </div>
+      )}
+        </>
       )}
     </div>
 

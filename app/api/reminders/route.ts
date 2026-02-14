@@ -123,15 +123,19 @@ export async function GET(request: NextRequest) {
       FROM reminders r
       WHERE 1=1
     `;
-    const countParams: any[] = [userId];
-    let countParamIndex = 2;
+    let countParams: any[];
+    let countParamIndex: number;
 
     if (filterUserId) {
-      countSql += ` AND r.user_id = $` + countParamIndex;
-      countParams.push(filterUserId);
-      countParamIndex++;
-    } else {
+      // When filtering by user, don't include userId in params
       countSql += ` AND r.user_id = $1`;
+      countParams = [filterUserId];
+      countParamIndex = 2;
+    } else {
+      // When showing own reminders, use userId
+      countSql += ` AND r.user_id = $1`;
+      countParams = [userId];
+      countParamIndex = 2;
     }
 
     if (status) {

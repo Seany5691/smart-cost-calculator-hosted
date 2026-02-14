@@ -3,15 +3,8 @@ import { query } from '@/lib/db';
 import { verifyAuth } from '@/lib/middleware';
 
 // GET /api/reminders - Get all reminders for the authenticated user
-// This works EXACTLY like the events API - simple and straightforward
+// Uses EXACT same pattern as events API
 export async function GET(request: NextRequest) {
-  // NOTE: The readFile tool shows $$ as $ due to template literal interpretation
-  // The actual file has $$ which is correct for PostgreSQL parameterized queries
-  // DO NOT "fix" the $ signs - they are already correct as $$
-  
-  let sql = '';
-  let params: any[] = [];
-  
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.authenticated || !authResult.user) {
@@ -35,8 +28,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = (page - 1) * limit;
 
-    // Build query - EXACTLY like events API
-    sql = `
+    // Build query - EXACT same pattern as events API
+    let sql = `
       SELECT 
         r.id,
         r.lead_id,
@@ -66,60 +59,60 @@ export async function GET(request: NextRequest) {
         l.contact_person as lead_contact_person,
         l.town as lead_town,
         l.phone as lead_phone,
-        CASE WHEN r.user_id = $$1 THEN false ELSE true END as is_shared
+        CASE WHEN r.user_id = $1 THEN false ELSE true END as is_shared
       FROM reminders r
       JOIN users u ON r.user_id = u.id
       LEFT JOIN leads l ON r.lead_id = l.id
       WHERE 1=1
     `;
 
-    params = [userId];
+    const params: any[] = [userId];
     let paramIndex = 2;
 
-    // Filter by user - EXACTLY like events API (no permission check!)
+    // Filter by user - EXACT same pattern as events API
     if (filterUserId) {
       // Viewing a specific user's calendar (shared)
-      sql += ` AND r.user_id = ${paramIndex}`;
+      sql += ` AND r.user_id = $` + paramIndex;
       params.push(filterUserId);
       paramIndex++;
     } else {
       // Viewing own calendar - only show MY reminders
-      sql += ` AND r.user_id = $$1`;
+      sql += ` AND r.user_id = $1`;
     }
 
     // Apply status filter
     if (status) {
-      sql += ` AND r.status = ${paramIndex}`;
+      sql += ` AND r.status = $` + paramIndex;
       params.push(status);
       paramIndex++;
     } else if (!includeCompleted) {
-      sql += ` AND r.completed = ${paramIndex}`;
+      sql += ` AND r.completed = $` + paramIndex;
       params.push(false);
       paramIndex++;
     }
 
     // Apply type filter
     if (type) {
-      sql += ` AND r.reminder_type = ${paramIndex}`;
+      sql += ` AND r.reminder_type = $` + paramIndex;
       params.push(type);
       paramIndex++;
     }
 
     // Apply priority filter
     if (priority) {
-      sql += ` AND r.priority = ${paramIndex}`;
+      sql += ` AND r.priority = $` + paramIndex;
       params.push(priority);
       paramIndex++;
     }
 
     // Apply date range filter
     if (dateFrom) {
-      sql += ` AND r.reminder_date >= ${paramIndex}`;
+      sql += ` AND r.reminder_date >= $` + paramIndex;
       params.push(dateFrom);
       paramIndex++;
     }
     if (dateTo) {
-      sql += ` AND r.reminder_date <= ${paramIndex}`;
+      sql += ` AND r.reminder_date <= $` + paramIndex;
       params.push(dateTo);
       paramIndex++;
     }
@@ -130,46 +123,46 @@ export async function GET(request: NextRequest) {
       FROM reminders r
       WHERE 1=1
     `;
-    let countParams: any[] = [userId];
+    const countParams: any[] = [userId];
     let countParamIndex = 2;
 
     if (filterUserId) {
-      countSql += ` AND r.user_id = ${countParamIndex}`;
+      countSql += ` AND r.user_id = $` + countParamIndex;
       countParams.push(filterUserId);
       countParamIndex++;
     } else {
-      countSql += ` AND r.user_id = $$1`;
+      countSql += ` AND r.user_id = $1`;
     }
 
     if (status) {
-      countSql += ` AND r.status = ${countParamIndex}`;
+      countSql += ` AND r.status = $` + countParamIndex;
       countParams.push(status);
       countParamIndex++;
     } else if (!includeCompleted) {
-      countSql += ` AND r.completed = ${countParamIndex}`;
+      countSql += ` AND r.completed = $` + countParamIndex;
       countParams.push(false);
       countParamIndex++;
     }
 
     if (type) {
-      countSql += ` AND r.reminder_type = ${countParamIndex}`;
+      countSql += ` AND r.reminder_type = $` + countParamIndex;
       countParams.push(type);
       countParamIndex++;
     }
 
     if (priority) {
-      countSql += ` AND r.priority = ${countParamIndex}`;
+      countSql += ` AND r.priority = $` + countParamIndex;
       countParams.push(priority);
       countParamIndex++;
     }
 
     if (dateFrom) {
-      countSql += ` AND r.reminder_date >= ${countParamIndex}`;
+      countSql += ` AND r.reminder_date >= $` + countParamIndex;
       countParams.push(dateFrom);
       countParamIndex++;
     }
     if (dateTo) {
-      countSql += ` AND r.reminder_date <= ${countParamIndex}`;
+      countSql += ` AND r.reminder_date <= $` + countParamIndex;
       countParams.push(dateTo);
       countParamIndex++;
     }
@@ -178,7 +171,7 @@ export async function GET(request: NextRequest) {
     const total = parseInt(countResult.rows[0].count);
 
     sql += ` ORDER BY r.reminder_date ASC, r.reminder_time ASC, r.priority DESC`;
-    sql += ` LIMIT ${paramIndex} OFFSET ${paramIndex + 1}`;
+    sql += ` LIMIT $` + paramIndex + ` OFFSET $` + (paramIndex + 1);
     params.push(limit, offset);
 
     const result = await query(sql, params);
@@ -233,14 +226,10 @@ export async function GET(request: NextRequest) {
     console.error('[REMINDERS API] Error fetching reminders:', error);
     console.error('[REMINDERS API] Error details:', error instanceof Error ? error.message : String(error));
     console.error('[REMINDERS API] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    console.error('[REMINDERS API] SQL Query:', sql);
-    console.error('[REMINDERS API] SQL Params:', params);
     return NextResponse.json(
       { 
         error: 'Failed to fetch reminders',
-        details: error instanceof Error ? error.message : String(error),
-        sql: sql,
-        params: params
+        details: error instanceof Error ? error.message : String(error)
       },
       { status: 500 }
     );
@@ -301,7 +290,7 @@ export async function POST(request: NextRequest) {
       due_date = `${dateOnly}T${reminder_time}:00.000Z`;
     }
 
-    // Insert reminder
+    // Insert reminder - using string concatenation for parameters
     const sql = `
       INSERT INTO reminders (
         user_id,
@@ -321,7 +310,7 @@ export async function POST(request: NextRequest) {
         recurrence_pattern,
         status,
         completed
-      ) VALUES ($1, $$2, $$3, $$4, $$5, $$6, $$7, $$8, $$9, $$10, $$11, $$12, $$13, $$14, $$15, $$16, $$17)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *
     `;
 
@@ -362,4 +351,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

@@ -479,9 +479,9 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
   };
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col h-full space-y-4">
       {/* Time range selector */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 flex-shrink-0">
         <button
           onClick={() => setSelectedRange('all')}
           className={`
@@ -546,13 +546,13 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
 
       {/* Reminders and Events list */}
       {filteredItems.length === 0 ? (
-        <div className="text-center py-8">
+        <div className="text-center py-8 flex-shrink-0">
           <Clock className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
           <p className="text-emerald-200">No reminders or events for this time range</p>
         </div>
       ) : (
-        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-emerald-500/50 scrollbar-track-white/10 hover:scrollbar-thumb-emerald-500/70">
-          {filteredItems.map(item => {
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-emerald-500/50 scrollbar-track-white/10 hover:scrollbar-thumb-emerald-500/70 min-h-0">
+          <div className="space-y-3">{filteredItems.map(item => {
             // Handle calendar events
             if (item.type === 'event') {
               const event = item.data as GroupedCalendarEvent;
@@ -799,6 +799,7 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
               View All Reminders →
             </button>
           )}
+          </div>
         </div>
       )}
     </div>

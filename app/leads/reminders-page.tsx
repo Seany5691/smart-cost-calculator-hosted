@@ -141,7 +141,12 @@ export default function RemindersPage() {
       const startDateStr = today.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
-      const response = await fetch(`/api/calendar/events?start_date=${startDateStr}&end_date=${endDateStr}`, {
+      let url = `/api/calendar/events?start_date=${startDateStr}&end_date=${endDateStr}`;
+      if (selectedCalendarUserId) {
+        url += `&user_id=${selectedCalendarUserId}`;
+      }
+
+      const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -156,7 +161,7 @@ export default function RemindersPage() {
     } catch (error) {
       console.error('Error fetching calendar events:', error);
     }
-  }, [token]);
+  }, [token, selectedCalendarUserId]);
 
   useEffect(() => {
     if (token) {
@@ -182,17 +187,21 @@ export default function RemindersPage() {
   useEffect(() => {
     if (token) {
       fetchRemindersForCalendar(selectedCalendarUserId);
+      fetchCalendarEventsData();
     }
   }, [selectedCalendarUserId, token]); // Removed fetchRemindersForCalendar to prevent infinite loop
 
-  // Update local reminders when store reminders change
+  // Update local reminders when store reminders or shared calendar reminders change
   // Use useMemo to prevent unnecessary recalculations
   useEffect(() => {
-    if (storeReminders.length >= 0) { // Changed from > 0 to >= 0 to handle empty state
-      const categorized = categorizeReminders(storeReminders);
+    // Use shared calendar reminders if a calendar is selected, otherwise use store reminders
+    const remindersToUse = selectedCalendarUserId ? sharedCalendarReminders : storeReminders;
+    
+    if (remindersToUse.length >= 0) { // Changed from > 0 to >= 0 to handle empty state
+      const categorized = categorizeReminders(remindersToUse);
       setReminders(categorized);
     }
-  }, [storeReminders]);
+  }, [storeReminders, sharedCalendarReminders, selectedCalendarUserId]);
 
   const categorizeEvents = (events: CalendarEvent[]): CategorizedEvents => {
     const today = new Date();

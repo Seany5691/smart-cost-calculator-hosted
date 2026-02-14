@@ -3,6 +3,7 @@ import { query } from '@/lib/db';
 import { verifyAuth } from '@/lib/middleware';
 
 // GET /api/reminders - Get all reminders for the authenticated user
+// This works EXACTLY like the events API - simple and straightforward
 export async function GET(request: NextRequest) {
   // NOTE: The readFile tool shows $$ as $ due to template literal interpretation
   // The actual file has $$ which is correct for PostgreSQL parameterized queries
@@ -17,125 +18,73 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const userId = authResult.user.userId;
     const { searchParams } = new URL(request.url);
     
     // Filters
-    const status = searchParams.get('status'); // 'pending', 'completed', 'snoozed'
-    const type = searchParams.get('type'); // reminder_type filter
-    const priority = searchParams.get('priority'); // priority filter
+    const status = searchParams.get('status');
+    const type = searchParams.get('type');
+    const priority = searchParams.get('priority');
     const dateFrom = searchParams.get('date_from');
     const dateTo = searchParams.get('date_to');
     const includeCompleted = searchParams.get('includeCompleted') === 'true';
-    const filterUserId = searchParams.get('user_id'); // Filter by specific user (for viewing shared calendars)
+    const filterUserId = searchParams.get('user_id'); // For viewing shared calendars
     
     // Pagination
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = (page - 1) * limit;
 
-    let paramIndex = 1;
+    // Build query - EXACTLY like events API
+    sql = `
+      SELECT 
+        r.id,
+        r.lead_id,
+        r.user_id,
+        r.reminder_type,
+        r.priority,
+        r.due_date,
+        r.title,
+        r.description,
+        r.recurrence_pattern,
+        r.completed,
+        r.completed_at,
+        r.created_at,
+        r.updated_at,
+        r.route_id,
+        r.is_all_day,
+        r.note,
+        r.message,
+        r.is_recurring,
+        r.parent_reminder_id,
+        r.status,
+        r.reminder_date,
+        r.reminder_time,
+        u.name as user_name,
+        u.username,
+        l.name as lead_name,
+        l.contact_person as lead_contact_person,
+        l.town as lead_town,
+        l.phone as lead_phone,
+        CASE WHEN r.user_id = $$1 THEN false ELSE true END as is_shared
+      FROM reminders r
+      JOIN users u ON r.user_id = u.id
+      LEFT JOIN leads l ON r.lead_id = l.id
+      WHERE 1=1
+    `;
 
-    // Build query based on whether we're viewing a shared calendar or own calendar
+    params = [userId];
+    let paramIndex = 2;
+
+    // Filter by user - EXACTLY like events API (no permission check!)
     if (filterUserId) {
-      // SHARED CALENDAR VIEW
-      // First, verify calendar sharing permission
-      const permissionCheck = await query(
-        `SELECT 1 FROM calendar_shares 
-         WHERE owner_user_id = $$1::uuid 
-         AND shared_with_user_id = $$2::uuid`,
-        [filterUserId, authResult.user.userId]
-      );
-
-      if (permissionCheck.rows.length === 0) {
-        return NextResponse.json({ error: 'No permission to view this calendar' }, { status: 403 });
-      }
-
-      // Build query for shared calendar - only show that user's reminders
-      sql = `
-        SELECT 
-          r.id,
-          r.lead_id,
-          r.user_id,
-          r.reminder_type,
-          r.priority,
-          r.due_date,
-          r.title,
-          r.description,
-          r.recurrence_pattern,
-          r.completed,
-          r.completed_at,
-          r.created_at,
-          r.updated_at,
-          r.route_id,
-          r.is_all_day,
-          r.note,
-          r.message,
-          r.is_recurring,
-          r.parent_reminder_id,
-          r.status,
-          r.reminder_date,
-          r.reminder_time,
-          u.name as user_name,
-          u.username,
-          l.name as lead_name,
-          l.contact_person as lead_contact_person,
-          l.town as lead_town,
-          l.phone as lead_phone,
-          true as is_shared
-        FROM reminders r
-        JOIN users u ON r.user_id = u.id
-        LEFT JOIN leads l ON r.lead_id = l.id
-        WHERE r.user_id = $$${paramIndex}::uuid
-      `;
-      params = [filterUserId];
+      // Viewing a specific user's calendar (shared)
+      sql += ` AND r.user_id = $$${paramIndex}`;
+      params.push(filterUserId);
       paramIndex++;
     } else {
-      // OWN CALENDAR VIEW
-      // Build query for own calendar - show owned and individually shared reminders
-      sql = `
-        SELECT 
-          r.id,
-          r.lead_id,
-          r.user_id,
-          r.reminder_type,
-          r.priority,
-          r.due_date,
-          r.title,
-          r.description,
-          r.recurrence_pattern,
-          r.completed,
-          r.completed_at,
-          r.created_at,
-          r.updated_at,
-          r.route_id,
-          r.is_all_day,
-          r.note,
-          r.message,
-          r.is_recurring,
-          r.parent_reminder_id,
-          r.status,
-          r.reminder_date,
-          r.reminder_time,
-          u.name as user_name,
-          u.username,
-          l.name as lead_name,
-          l.contact_person as lead_contact_person,
-          l.town as lead_town,
-          l.phone as lead_phone,
-          CASE WHEN r.user_id = $$${paramIndex}::uuid THEN false ELSE true END as is_shared
-        FROM reminders r
-        JOIN users u ON r.user_id = u.id
-        LEFT JOIN leads l ON r.lead_id = l.id 
-          AND (l.user_id = $$${paramIndex}::uuid OR EXISTS (
-            SELECT 1 FROM lead_shares ls2 
-            WHERE ls2.lead_id = l.id 
-            AND ls2.shared_with_user_id = $$${paramIndex}::uuid
-          ))
-        LEFT JOIN reminder_shares rs ON r.id = rs.reminder_id
-        WHERE (r.user_id = $$${paramIndex}::uuid OR rs.shared_with_user_id = $$${paramIndex}::uuid)
-      `;
-      params = [authResult.user.userId];
-      paramIndex++;
+      // Viewing own calendar - only show MY reminders
+      sql += ` AND r.user_id = $$1`;
     }
 
     // Apply status filter
@@ -175,28 +124,21 @@ export async function GET(request: NextRequest) {
       paramIndex++;
     }
 
-    // Get total count with same filters
-    let countSql = '';
-    let countParams: any[] = [];
-    let countParamIndex = 1;
+    // Get total count
+    let countSql = `
+      SELECT COUNT(*) 
+      FROM reminders r
+      WHERE 1=1
+    `;
+    let countParams: any[] = [userId];
+    let countParamIndex = 2;
 
     if (filterUserId) {
-      countSql = `
-        SELECT COUNT(DISTINCT r.id) 
-        FROM reminders r
-        WHERE r.user_id = $$${countParamIndex}::uuid
-      `;
-      countParams = [filterUserId];
+      countSql += ` AND r.user_id = $$${countParamIndex}`;
+      countParams.push(filterUserId);
       countParamIndex++;
     } else {
-      countSql = `
-        SELECT COUNT(DISTINCT r.id) 
-        FROM reminders r
-        LEFT JOIN reminder_shares rs ON r.id = rs.reminder_id
-        WHERE (r.user_id = $$${countParamIndex}::uuid OR rs.shared_with_user_id = $$${countParamIndex}::uuid)
-      `;
-      countParams = [authResult.user.userId];
-      countParamIndex++;
+      countSql += ` AND r.user_id = $$1`;
     }
 
     if (status) {

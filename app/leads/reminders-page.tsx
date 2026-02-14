@@ -78,6 +78,8 @@ export default function RemindersPage() {
   const [sharedCalendarReminders, setSharedCalendarReminders] = useState<LeadReminder[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeTab, setActiveTab] = useState<'list' | 'calendar'>('list');
+  const [selectedReminders, setSelectedReminders] = useState<string[]>([]);
+  const [timeRange, setTimeRange] = useState<'all' | 'today' | 'tomorrow' | '2days' | '3days' | 'week' | 'nextweek' | 'month' | 'nextmonth'>('all');
 
   // Helper function to parse date strings in LOCAL timezone (not UTC)
   const parseLocalDate = (dateStr: string): Date => {
@@ -346,6 +348,98 @@ export default function RemindersPage() {
     }
   };
 
+  const handleToggleSelect = (reminderId: string) => {
+    setSelectedReminders(prev => 
+      prev.includes(reminderId) 
+        ? prev.filter(id => id !== reminderId)
+        : [...prev, reminderId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    const allReminderIds = getCombinedItems()
+      .filter(item => item.type === 'reminder')
+      .map(item => (item.data as Reminder).id);
+    
+    if (selectedReminders.length === allReminderIds.length) {
+      setSelectedReminders([]);
+    } else {
+      setSelectedReminders(allReminderIds);
+    }
+  };
+
+  const handleBulkComplete = async (completed: boolean) => {
+    if (selectedReminders.length === 0) return;
+    
+    try {
+      const allReminders = getCombinedItems()
+        .filter(item => item.type === 'reminder')
+        .map(item => item.data as Reminder);
+      
+      await Promise.all(
+        selectedReminders.map(async (reminderId) => {
+          const reminder = allReminders.find(r => r.id === reminderId);
+          if (!reminder) return;
+          
+          const response = await fetch(`/api/leads/${reminder.lead_id}/reminders/${reminderId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+              completed,
+              status: completed ? 'completed' : 'pending'
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update reminder');
+          }
+        })
+      );
+
+      setSelectedReminders([]);
+      fetchReminders();
+    } catch (error) {
+      console.error('Error updating reminders:', error);
+      alert('Failed to update some reminders. Please try again.');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedReminders.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedReminders.length} reminder(s)?`)) return;
+    
+    try {
+      const allReminders = getCombinedItems()
+        .filter(item => item.type === 'reminder')
+        .map(item => item.data as Reminder);
+      
+      await Promise.all(
+        selectedReminders.map(async (reminderId) => {
+          const reminder = allReminders.find(r => r.id === reminderId);
+          if (!reminder) return;
+          
+          const response = await fetch(`/api/leads/${reminder.lead_id}/reminders/${reminderId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to delete reminder');
+          }
+        })
+      );
+
+      setSelectedReminders([]);
+      fetchReminders();
+    } catch (error) {
+      console.error('Error deleting reminders:', error);
+      alert('Failed to delete some reminders. Please try again.');
+    }
+  };
+
   const getFilteredReminders = () => {
     if (!reminders) return [];
 
@@ -415,12 +509,69 @@ export default function RemindersPage() {
     const reminders = showType === 'events' ? [] : getFilteredReminders();
     const events = showType === 'reminders' ? [] : getFilteredEvents();
 
-    // Group multi-day events
-    const groupedEvents = new Map<string, GroupedCalendarEvent>();
+    // Apply time range filter
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    events.forEach(event => {
+    const getEndDate = () => {
+      const end = new Date(today);
+      switch (timeRange) {
+        case 'today':
+          return today;
+        case 'tomorrow':
+          end.setDate(end.getDate() + 1);
+          return end;
+        case '2days':
+          end.setDate(end.getDate() + 2);
+          return end;
+        case '3days':
+          end.setDate(end.getDate() + 3);
+          return end;
+        case 'week':
+          // This week = remaining days until Sunday
+          const daysUntilSunday = 7 - today.getDay();
+          end.setDate(end.getDate() + daysUntilSunday);
+          return end;
+        case 'nextweek':
+          // Next week = next 7 days from today
+          end.setDate(end.getDate() + 7);
+          return end;
+        case 'month':
+          // This month = remaining days in current month
+          end.setMonth(end.getMonth() + 1, 0); // Last day of current month
+          return end;
+        case 'nextmonth':
+          // Next month = 30 days from today
+          end.setDate(end.getDate() + 30);
+          return end;
+        default:
+          return null;
+      }
+    };
+
+    const endDate = getEndDate();
+    
+    let filteredReminders = reminders;
+    if (timeRange !== 'all' && endDate) {
+      filteredReminders = reminders.filter(r => {
+        const reminderDate = new Date(r.due_date);
+        reminderDate.setHours(0, 0, 0, 0);
+        return reminderDate >= today && reminderDate <= endDate;
+      });
+    }
+
+    let filteredEvents = events;
+    if (timeRange !== 'all' && endDate) {
+      filteredEvents = events.filter(e => {
+        const eventDate = parseLocalDate(e.event_date);
+        return eventDate >= today && eventDate <= endDate;
+      });
+    }
+
+    // Group multi-day events
+    const groupedEvents = new Map<string, GroupedCalendarEvent>();
+    
+    filteredEvents.forEach(event => {
       // Filter out past events
       const eventDate = parseLocalDate(event.event_date);
       const eventDateTime = new Date(
@@ -468,7 +619,7 @@ export default function RemindersPage() {
 
     // Combine and sort by date
     const combined: Array<{type: 'reminder' | 'event', data: Reminder | GroupedCalendarEvent}> = [
-      ...reminders.map(r => ({ type: 'reminder' as const, data: r })),
+      ...filteredReminders.map(r => ({ type: 'reminder' as const, data: r })),
       ...Array.from(groupedEvents.values()).map(e => ({ type: 'event' as const, data: e }))
     ];
 
@@ -658,6 +809,84 @@ export default function RemindersPage() {
       {/* List View */}
       {activeTab === 'list' && (
         <>
+          {/* Time Range Selector */}
+          <div className="glass-card p-4 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="w-5 h-5 text-emerald-400" />
+              <span className="text-white font-medium">Time Range</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: 'all', label: 'All Time' },
+                { value: 'today', label: 'Today' },
+                { value: 'tomorrow', label: 'Tomorrow' },
+                { value: '2days', label: '2 Days' },
+                { value: '3days', label: '3 Days' },
+                { value: 'week', label: 'This Week' },
+                { value: 'nextweek', label: 'Next 7 Days' },
+                { value: 'month', label: 'This Month' },
+                { value: 'nextmonth', label: 'Next 30 Days' }
+              ].map(range => (
+                <button
+                  key={range.value}
+                  onClick={() => setTimeRange(range.value as any)}
+                  className={`
+                    px-4 py-2 rounded-lg font-medium transition-all text-sm
+                    ${timeRange === range.value
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
+                      : 'bg-white/10 text-emerald-200 hover:bg-white/20'
+                    }
+                  `}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bulk Actions */}
+          {selectedReminders.length > 0 && (
+            <div className="glass-card p-4 mb-6 border-2 border-emerald-500/50">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  <span className="text-white font-medium">
+                    {selectedReminders.length} reminder(s) selected
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handleBulkComplete(true)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-2"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Mark Complete
+                  </button>
+                  <button
+                    onClick={() => handleBulkComplete(false)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+                  >
+                    <Clock className="w-4 h-4" />
+                    Mark Incomplete
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center gap-2"
+                  >
+                    <Bell className="w-4 h-4" />
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => setSelectedReminders([])}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Stats */}
           {reminders && calendarEvents && (
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
@@ -871,7 +1100,21 @@ export default function RemindersPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <>
+              {/* Select All Header */}
+              {showType !== 'events' && (
+                <div className="glass-card p-3 mb-3 flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedReminders.length === getCombinedItems().filter(i => i.type === 'reminder').length && selectedReminders.length > 0}
+                    onChange={handleSelectAll}
+                    className="w-5 h-5 rounded border-gray-600 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-gray-900 cursor-pointer"
+                  />
+                  <span className="text-white font-medium">Select All Reminders</span>
+                </div>
+              )}
+              
+              <div className="space-y-3">
               {combinedItems.map((item) => {
             // Render calendar event
             if (item.type === 'event') {
@@ -981,6 +1224,7 @@ export default function RemindersPage() {
 
             // Render reminder
             const reminder = item.data as Reminder;
+            const isSelected = selectedReminders.includes(reminder.id);
             
             // Handler to open lead modal
             const handleReminderClick = () => {
@@ -1020,12 +1264,30 @@ export default function RemindersPage() {
             return (
               <div 
                 key={`reminder-${reminder.id}`} 
-                className="glass-card p-4 border-l-4 border-emerald-500 cursor-pointer hover:bg-white/5 transition-colors"
-                onClick={handleReminderClick}
+                className={`glass-card p-4 border-l-4 transition-colors ${
+                  reminder.completed 
+                    ? 'border-green-500 bg-green-500/5 opacity-75' 
+                    : 'border-emerald-500 hover:bg-white/5 cursor-pointer'
+                } ${isSelected ? 'ring-2 ring-emerald-500' : ''}`}
               >
                 <div className="flex items-start gap-3">
+                  {/* Checkbox */}
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleToggleSelect(reminder.id);
+                    }}
+                    className="mt-1 w-5 h-5 rounded border-gray-600 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-gray-900 cursor-pointer flex-shrink-0"
+                  />
+
                   {/* Type Icon */}
-                  <div className="flex-shrink-0 text-2xl" title={reminder.reminder_type}>
+                  <div 
+                    className="flex-shrink-0 text-2xl cursor-pointer" 
+                    title={reminder.reminder_type}
+                    onClick={handleReminderClick}
+                  >
                     {reminder.reminder_type === 'callback' ? '📞' :
                      reminder.reminder_type === 'follow_up' ? '📧' :
                      reminder.reminder_type === 'meeting' ? '🤝' :
@@ -1033,9 +1295,11 @@ export default function RemindersPage() {
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0" onClick={handleReminderClick}>
                     {/* Title */}
-                    <h3 className="text-lg font-semibold text-white mb-2">{reminder.title}</h3>
+                    <h3 className={`text-lg font-semibold text-white mb-2 ${reminder.completed ? 'line-through' : ''}`}>
+                      {reminder.title}
+                    </h3>
 
                     {/* Badges Row */}
                     <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -1046,11 +1310,18 @@ export default function RemindersPage() {
                       <span className="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-900/50 text-emerald-300 border border-emerald-500/50">
                         🔔 Reminder
                       </span>
+                      {reminder.completed && (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-900/50 text-green-300 border border-green-500/50">
+                          ✅ Completed
+                        </span>
+                      )}
                     </div>
 
                     {/* Description */}
                     {reminder.description && (
-                      <p className="text-sm text-gray-400 mb-3">{reminder.description}</p>
+                      <p className={`text-sm text-gray-400 mb-3 ${reminder.completed ? 'line-through' : ''}`}>
+                        {reminder.description}
+                      </p>
                     )}
 
                     {/* Lead Info */}
@@ -1078,8 +1349,16 @@ export default function RemindersPage() {
                   </div>
 
                   {/* Action Buttons */}
-                  {!reminder.completed && (
-                    <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                    {reminder.completed ? (
+                      <button
+                        onClick={() => handleCompleteReminder(reminder.id, reminder.lead_id)}
+                        className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-1 whitespace-nowrap"
+                      >
+                        <Clock className="w-4 h-4" />
+                        Reopen
+                      </button>
+                    ) : (
                       <button
                         onClick={() => handleCompleteReminder(reminder.id, reminder.lead_id)}
                         className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-1 whitespace-nowrap"
@@ -1087,20 +1366,21 @@ export default function RemindersPage() {
                         <CheckCircle className="w-4 h-4" />
                         Complete
                       </button>
-                      <button
-                        onClick={() => handleDeleteReminder(reminder.id, reminder.lead_id)}
-                        className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm whitespace-nowrap"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
+                    )}
+                    <button
+                      onClick={() => handleDeleteReminder(reminder.id, reminder.lead_id)}
+                      className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm whitespace-nowrap"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
-        </div>
-      )}
+              </div>
+            </>
+          )}
         </>
       )}
     </div>

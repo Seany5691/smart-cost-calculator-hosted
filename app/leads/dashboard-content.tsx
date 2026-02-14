@@ -50,8 +50,8 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
   const [selectedCalendarUserId, setSelectedCalendarUserId] = useState<string | null>(null);
   const [selectedCalendarOwnerName, setSelectedCalendarOwnerName] = useState<string | null>(null);
-  const [sharedCalendarReminders, setSharedCalendarReminders] = useState<any[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [displayReminders, setDisplayReminders] = useState<any[]>([]);
 
   // Fetch calendar events
   const fetchCalendarEvents = async (userId?: string | null) => {
@@ -93,8 +93,8 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
     }
   };
 
-  // Fetch reminders for selected calendar
-  const fetchRemindersForCalendar = async (userId?: string | null) => {
+  // Fetch reminders - either for selected user or own reminders
+  const fetchReminders = async (userId?: string | null) => {
     try {
       const token = localStorage.getItem('auth-storage');
       let authToken = null;
@@ -118,10 +118,14 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
 
       if (response.ok) {
         const data = await response.json();
-        setSharedCalendarReminders(data.reminders || []);
+        setDisplayReminders(data.reminders || []);
+      } else {
+        console.error('Error fetching reminders:', response.status);
+        setDisplayReminders([]);
       }
     } catch (err) {
-      console.error('Error fetching reminders for calendar:', err);
+      console.error('Error fetching reminders:', err);
+      setDisplayReminders([]);
     }
   };
 
@@ -131,40 +135,19 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
     fetchAllReminders();
     fetchImportSessions(undefined, undefined, 5); // Fetch last 5 imports
     fetchCalendarEvents();
-    // Don't fetch reminders for calendar on mount - only when a shared calendar is selected
+    fetchReminders(); // Fetch own reminders on mount
   }, [fetchRoutes, fetchAllReminders, fetchImportSessions]);
 
   // Re-fetch when selected calendar changes
   useEffect(() => {
     fetchCalendarEvents(selectedCalendarUserId);
-    fetchRemindersForCalendar(selectedCalendarUserId);
+    fetchReminders(selectedCalendarUserId);
   }, [selectedCalendarUserId]);
 
   // Update routes count when routes change
   useEffect(() => {
     setRoutesCount(routes.length);
   }, [routes]);
-
-  // Filter reminders to show only owned reminders when viewing "My Calendar"
-  // When viewing a shared calendar, use sharedCalendarReminders which are already filtered
-  const displayReminders = useMemo(() => {
-    console.log('[Dashboard] displayReminders calculation:', {
-      selectedCalendarUserId,
-      sharedCalendarRemindersCount: sharedCalendarReminders.length,
-      remindersCount: reminders.length
-    });
-    
-    if (selectedCalendarUserId) {
-      // Viewing shared calendar - use the fetched shared calendar reminders
-      console.log('[Dashboard] Returning shared calendar reminders:', sharedCalendarReminders.length);
-      return sharedCalendarReminders;
-    } else {
-      // Viewing own calendar - filter out shared reminders, show only owned ones
-      const ownReminders = reminders.filter(reminder => !reminder.is_shared);
-      console.log('[Dashboard] Returning own reminders:', ownReminders.length);
-      return ownReminders;
-    }
-  }, [selectedCalendarUserId, sharedCalendarReminders, reminders]);
 
   // Requirement: 2.4 - Navigate to corresponding tab when statistic card is clicked
   const handleStatClick = (tab: string) => {
@@ -392,11 +375,7 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
             }}
             onReminderUpdate={() => {
               // Refresh reminders when a reminder is updated
-              if (selectedCalendarUserId) {
-                fetchRemindersForCalendar(selectedCalendarUserId);
-              } else {
-                fetchAllReminders();
-              }
+              fetchReminders(selectedCalendarUserId);
               fetchCalendarEvents(selectedCalendarUserId);
             }}
           />
@@ -461,6 +440,7 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
         onUpdate={() => {
           // Refresh data when lead is updated
           fetchAllReminders();
+          fetchReminders(selectedCalendarUserId);
           fetchCalendarEvents(selectedCalendarUserId);
         }}
       />

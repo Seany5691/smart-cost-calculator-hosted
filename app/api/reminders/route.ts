@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     // If filtering by specific user (viewing shared calendar), only show that user's reminders
     // Otherwise, show both owned and shared reminders
     if (filterUserId) {
-      sql += ` AND r.user_id = $$${paramIndex}`;
+      sql += ` AND r.user_id = $${paramIndex}`;
       params.push(filterUserId);
       paramIndex++;
     } else {
@@ -88,35 +88,37 @@ export async function GET(request: NextRequest) {
 
     // Apply status filter
     if (status) {
-      sql += ` AND r.status = $$${paramIndex}`;
+      sql += ` AND r.status = $${paramIndex}`;
       params.push(status);
       paramIndex++;
     } else if (!includeCompleted) {
-      sql += ` AND r.completed = false`;
+      sql += ` AND r.completed = $${paramIndex}`;
+      params.push(false);
+      paramIndex++;
     }
 
     // Apply type filter
     if (type) {
-      sql += ` AND r.reminder_type = $$${paramIndex}`;
+      sql += ` AND r.reminder_type = $${paramIndex}`;
       params.push(type);
       paramIndex++;
     }
 
     // Apply priority filter
     if (priority) {
-      sql += ` AND r.priority = $$${paramIndex}`;
+      sql += ` AND r.priority = $${paramIndex}`;
       params.push(priority);
       paramIndex++;
     }
 
     // Apply date range filter
     if (dateFrom) {
-      sql += ` AND r.reminder_date >= $$${paramIndex}`;
+      sql += ` AND r.reminder_date >= $${paramIndex}`;
       params.push(dateFrom);
       paramIndex++;
     }
     if (dateTo) {
-      sql += ` AND r.reminder_date <= $$${paramIndex}`;
+      sql += ` AND r.reminder_date <= $${paramIndex}`;
       params.push(dateTo);
       paramIndex++;
     }
@@ -133,7 +135,7 @@ export async function GET(request: NextRequest) {
 
     // Apply same user filter to count
     if (filterUserId) {
-      countSql += ` AND r.user_id = $$${countParamIndex}`;
+      countSql += ` AND r.user_id = $${countParamIndex}`;
       countParams.push(filterUserId);
       countParamIndex++;
     } else {
@@ -141,32 +143,34 @@ export async function GET(request: NextRequest) {
     }
 
     if (status) {
-      countSql += ` AND r.status = $$${countParamIndex}`;
+      countSql += ` AND r.status = $${countParamIndex}`;
       countParams.push(status);
       countParamIndex++;
     } else if (!includeCompleted) {
-      countSql += ` AND r.completed = false`;
+      countSql += ` AND r.completed = $${countParamIndex}`;
+      countParams.push(false);
+      countParamIndex++;
     }
 
     if (type) {
-      countSql += ` AND r.reminder_type = $$${countParamIndex}`;
+      countSql += ` AND r.reminder_type = $${countParamIndex}`;
       countParams.push(type);
       countParamIndex++;
     }
 
     if (priority) {
-      countSql += ` AND r.priority = $$${countParamIndex}`;
+      countSql += ` AND r.priority = $${countParamIndex}`;
       countParams.push(priority);
       countParamIndex++;
     }
 
     if (dateFrom) {
-      countSql += ` AND r.reminder_date >= $$${countParamIndex}`;
+      countSql += ` AND r.reminder_date >= $${countParamIndex}`;
       countParams.push(dateFrom);
       countParamIndex++;
     }
     if (dateTo) {
-      countSql += ` AND r.reminder_date <= $$${countParamIndex}`;
+      countSql += ` AND r.reminder_date <= $${countParamIndex}`;
       countParams.push(dateTo);
       countParamIndex++;
     }
@@ -359,6 +363,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-

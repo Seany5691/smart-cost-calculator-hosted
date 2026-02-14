@@ -148,12 +148,21 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
   // Filter reminders to show only owned reminders when viewing "My Calendar"
   // When viewing a shared calendar, use sharedCalendarReminders which are already filtered
   const displayReminders = useMemo(() => {
+    console.log('[Dashboard] displayReminders calculation:', {
+      selectedCalendarUserId,
+      sharedCalendarRemindersCount: sharedCalendarReminders.length,
+      remindersCount: reminders.length
+    });
+    
     if (selectedCalendarUserId) {
       // Viewing shared calendar - use the fetched shared calendar reminders
+      console.log('[Dashboard] Returning shared calendar reminders:', sharedCalendarReminders.length);
       return sharedCalendarReminders;
     } else {
       // Viewing own calendar - filter out shared reminders, show only owned ones
-      return reminders.filter(reminder => !reminder.is_shared);
+      const ownReminders = reminders.filter(reminder => !reminder.is_shared);
+      console.log('[Dashboard] Returning own reminders:', ownReminders.length);
+      return ownReminders;
     }
   }, [selectedCalendarUserId, sharedCalendarReminders, reminders]);
 

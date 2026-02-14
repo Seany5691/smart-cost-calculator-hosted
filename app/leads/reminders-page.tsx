@@ -39,6 +39,11 @@ interface CalendarEvent {
   created_at: string;
 }
 
+interface GroupedCalendarEvent extends CalendarEvent {
+  end_date?: string; // For multi-day events
+  event_ids?: string[]; // IDs of all events in the group
+}
+
 interface CategorizedReminders {
   overdue: Reminder[];
   today: Reminder[];
@@ -73,6 +78,13 @@ export default function RemindersPage() {
   const [sharedCalendarReminders, setSharedCalendarReminders] = useState<LeadReminder[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeTab, setActiveTab] = useState<'list' | 'calendar'>('list');
+
+  // Helper function to parse date strings in LOCAL timezone (not UTC)
+  const parseLocalDate = (dateStr: string): Date => {
+    const dateOnly = dateStr.split('T')[0];
+    const [year, month, day] = dateOnly.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
 
   const fetchLeads = useCallback(async () => {
     try {
@@ -403,19 +415,70 @@ export default function RemindersPage() {
     const reminders = showType === 'events' ? [] : getFilteredReminders();
     const events = showType === 'reminders' ? [] : getFilteredEvents();
 
+    // Group multi-day events
+    const groupedEvents = new Map<string, GroupedCalendarEvent>();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    events.forEach(event => {
+      // Filter out past events
+      const eventDate = parseLocalDate(event.event_date);
+      const eventDateTime = new Date(
+        eventDate.getFullYear(),
+        eventDate.getMonth(),
+        eventDate.getDate()
+      );
+      
+      // Skip events that are in the past
+      if (eventDateTime < today) return;
+      
+      // Create a unique key for grouping multi-day events
+      const groupKey = `${event.title}|${event.description}|${event.event_time}|${event.event_type}|${event.priority}|${event.location}|${event.created_by}`;
+      
+      if (groupedEvents.has(groupKey)) {
+        const existing = groupedEvents.get(groupKey)!;
+        const existingDate = parseLocalDate(existing.event_date);
+        const currentDate = parseLocalDate(event.event_date);
+        
+        // Update start date if this event is earlier
+        if (currentDate < existingDate) {
+          existing.event_date = event.event_date;
+          existing.id = event.id;
+        }
+        
+        // Update end date if this event is later
+        const existingEndDate = existing.end_date ? parseLocalDate(existing.end_date) : existingDate;
+        if (currentDate > existingEndDate) {
+          existing.end_date = event.event_date;
+        }
+        
+        // Add event ID to the group
+        if (!existing.event_ids) {
+          existing.event_ids = [existing.id];
+        }
+        existing.event_ids.push(event.id);
+      } else {
+        // First occurrence of this event
+        groupedEvents.set(groupKey, {
+          ...event,
+          event_ids: [event.id]
+        });
+      }
+    });
+
     // Combine and sort by date
-    const combined: Array<{type: 'reminder' | 'event', data: Reminder | CalendarEvent}> = [
+    const combined: Array<{type: 'reminder' | 'event', data: Reminder | GroupedCalendarEvent}> = [
       ...reminders.map(r => ({ type: 'reminder' as const, data: r })),
-      ...events.map(e => ({ type: 'event' as const, data: e }))
+      ...Array.from(groupedEvents.values()).map(e => ({ type: 'event' as const, data: e }))
     ];
 
     combined.sort((a, b) => {
       const dateA = a.type === 'reminder' 
         ? new Date((a.data as Reminder).due_date)
-        : new Date((a.data as CalendarEvent).event_date);
+        : new Date((a.data as GroupedCalendarEvent).event_date);
       const dateB = b.type === 'reminder'
         ? new Date((b.data as Reminder).due_date)
-        : new Date((b.data as CalendarEvent).event_date);
+        : new Date((b.data as GroupedCalendarEvent).event_date);
       return dateA.getTime() - dateB.getTime();
     });
 
@@ -738,7 +801,7 @@ export default function RemindersPage() {
               {combinedItems.map((item) => {
             // Render calendar event
             if (item.type === 'event') {
-              const event = item.data as CalendarEvent;
+              const event = item.data as GroupedCalendarEvent;
               const eventTypeIcons: Record<string, string> = {
                 event: '📅',
                 appointment: '🗓️',
@@ -748,16 +811,55 @@ export default function RemindersPage() {
                 other: '📌'
               };
 
+              // Format date display for single or multi-day events
+              const formatEventDate = () => {
+                const startDate = parseLocalDate(event.event_date);
+                
+                if (event.end_date && event.end_date !== event.event_date) {
+                  // Multi-day event
+                  const endDate = parseLocalDate(event.end_date);
+                  const startMonth = startDate.toLocaleDateString('en-US', { month: 'short' });
+                  const endMonth = endDate.toLocaleDateString('en-US', { month: 'short' });
+                  const startDay = startDate.getDate();
+                  const endDay = endDate.getDate();
+                  
+                  // Same month: "Jan 28 - 31"
+                  if (startMonth === endMonth) {
+                    return `${startMonth} ${startDay} - ${endDay}`;
+                  }
+                  // Different months: "Jan 28 - Feb 2"
+                  return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
+                } else {
+                  // Single-day event
+                  return startDate.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                  });
+                }
+              };
+
               return (
                 <div key={`event-${event.id}`} className="glass-card p-4 border-l-4 border-blue-500">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-2xl">{eventTypeIcons[event.event_type] || '📅'}</span>
-                        <h3 className="text-lg font-semibold text-white">{event.title}</h3>
-                        {getEventCategoryBadge(event)}
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${getPriorityColor(event.priority)}`}>
-                          {event.priority}
+                  <div className="flex items-start gap-3">
+                    {/* Type Icon */}
+                    <div className="flex-shrink-0 text-2xl" title={event.event_type}>
+                      {eventTypeIcons[event.event_type] || '📅'}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Title */}
+                      <h3 className="text-lg font-semibold text-white mb-2">{event.title}</h3>
+
+                      {/* Badges Row */}
+                      <div className="flex items-center gap-2 mb-3 flex-wrap">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${
+                          event.priority === 'urgent' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                          event.priority === 'high' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                          event.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                          'bg-green-500/20 text-green-400 border-green-500/30'
+                        }`}>
+                          {event.priority.toUpperCase()}
                         </span>
                         {!event.is_owner && (
                           <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-900/50 text-purple-300 border border-purple-500/50">
@@ -768,30 +870,36 @@ export default function RemindersPage() {
                           📅 Event
                         </span>
                       </div>
+
+                      {/* Description */}
                       {event.description && (
-                        <p className="text-sm text-gray-400 mb-2">{event.description}</p>
+                        <p className="text-sm text-gray-400 mb-3">{event.description}</p>
                       )}
-                      {event.location && (
-                        <p className="text-sm text-gray-500 mb-2">
-                          📍 {event.location}
-                        </p>
-                      )}
+
+                      {/* Date, Time, Location */}
+                      <div className="flex items-center gap-4 text-sm text-gray-400">
+                        <span className="flex items-center gap-1">
+                          📅 {formatEventDate()}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          🕐 {event.is_all_day ? 'All day' : 
+                            event.event_time ? new Date(`2000-01-01T${event.event_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 
+                            'No time set'}
+                        </span>
+                        {event.location && (
+                          <span className="flex items-center gap-1">
+                            📍 {event.location}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Creator */}
                       {event.creator_username && (
-                        <p className="text-sm text-gray-500">
+                        <p className="text-xs text-gray-500 mt-2">
                           Created by: {event.creator_username}
                         </p>
                       )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span>📅 {new Date(event.event_date).toLocaleDateString()}</span>
-                    <span>
-                      🕐 {event.is_all_day ? 'All day' : 
-                        event.event_time ? new Date(`2000-01-01T${event.event_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 
-                        'No time set'}
-                    </span>
-                    <span>🏷️ {event.event_type}</span>
-                    <span>Created {new Date(event.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
               );
@@ -841,52 +949,77 @@ export default function RemindersPage() {
                 className="glass-card p-4 border-l-4 border-emerald-500 cursor-pointer hover:bg-white/5 transition-colors"
                 onClick={handleReminderClick}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg font-semibold text-white">{reminder.title}</h3>
+                <div className="flex items-start gap-3">
+                  {/* Type Icon */}
+                  <div className="flex-shrink-0 text-2xl" title={reminder.reminder_type}>
+                    {reminder.reminder_type === 'callback' ? '📞' :
+                     reminder.reminder_type === 'follow_up' ? '📧' :
+                     reminder.reminder_type === 'meeting' ? '🤝' :
+                     reminder.reminder_type === 'email' ? '✉️' : '🔔'}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Title */}
+                    <h3 className="text-lg font-semibold text-white mb-2">{reminder.title}</h3>
+
+                    {/* Badges Row */}
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
                       {getCategoryBadge(reminder)}
                       <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${getPriorityColor(reminder.priority)}`}>
-                        {reminder.priority}
+                        {reminder.priority.toUpperCase()}
                       </span>
                       <span className="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-900/50 text-emerald-300 border border-emerald-500/50">
                         🔔 Reminder
                       </span>
                     </div>
+
+                    {/* Description */}
                     {reminder.description && (
-                      <p className="text-sm text-gray-400 mb-2">{reminder.description}</p>
+                      <p className="text-sm text-gray-400 mb-3">{reminder.description}</p>
                     )}
+
+                    {/* Lead Info */}
                     {reminder.lead_name && (
-                      <p className="text-sm text-gray-500">
-                        Lead: {reminder.lead_name}
-                        {reminder.lead_phone && ` (${reminder.lead_phone})`}
+                      <p className="text-sm text-gray-400 mb-3">
+                        Lead: <span className="text-white font-medium">{reminder.lead_name}</span>
+                        {reminder.lead_phone && <span className="text-gray-500"> • {reminder.lead_phone}</span>}
                       </p>
                     )}
+
+                    {/* Date and Type */}
+                    <div className="flex items-center gap-4 text-sm text-gray-400">
+                      <span className="flex items-center gap-1">
+                        📅 {new Date(reminder.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        🏷️ {reminder.reminder_type.replace('_', ' ')}
+                      </span>
+                      {reminder.completed_at && (
+                        <span className="flex items-center gap-1 text-green-400">
+                          ✅ Completed {new Date(reminder.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Action Buttons */}
                   {!reminder.completed && (
-                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleCompleteReminder(reminder.id, reminder.lead_id)}
-                        className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-1"
+                        className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-1 whitespace-nowrap"
                       >
                         <CheckCircle className="w-4 h-4" />
                         Complete
                       </button>
                       <button
                         onClick={() => handleDeleteReminder(reminder.id, reminder.lead_id)}
-                        className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                        className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm whitespace-nowrap"
                       >
                         Delete
                       </button>
                     </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-4 text-xs text-gray-500">
-                  <span>📅 {new Date(reminder.due_date).toLocaleDateString()}</span>
-                  <span>🏷️ {reminder.reminder_type}</span>
-                  <span>🕐 Created {new Date(reminder.created_at).toLocaleDateString()}</span>
-                  {reminder.completed_at && (
-                    <span>✅ Completed {new Date(reminder.completed_at).toLocaleDateString()}</span>
                   )}
                 </div>
               </div>

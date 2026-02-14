@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     // Filter by user - EXACTLY like events API (no permission check!)
     if (filterUserId) {
       // Viewing a specific user's calendar (shared)
-      sql += ` AND r.user_id = $$${paramIndex}`;
+      sql += ` AND r.user_id = ${paramIndex}`;
       params.push(filterUserId);
       paramIndex++;
     } else {
@@ -89,37 +89,37 @@ export async function GET(request: NextRequest) {
 
     // Apply status filter
     if (status) {
-      sql += ` AND r.status = $$${paramIndex}`;
+      sql += ` AND r.status = ${paramIndex}`;
       params.push(status);
       paramIndex++;
     } else if (!includeCompleted) {
-      sql += ` AND r.completed = $$${paramIndex}`;
+      sql += ` AND r.completed = ${paramIndex}`;
       params.push(false);
       paramIndex++;
     }
 
     // Apply type filter
     if (type) {
-      sql += ` AND r.reminder_type = $$${paramIndex}`;
+      sql += ` AND r.reminder_type = ${paramIndex}`;
       params.push(type);
       paramIndex++;
     }
 
     // Apply priority filter
     if (priority) {
-      sql += ` AND r.priority = $$${paramIndex}`;
+      sql += ` AND r.priority = ${paramIndex}`;
       params.push(priority);
       paramIndex++;
     }
 
     // Apply date range filter
     if (dateFrom) {
-      sql += ` AND r.reminder_date >= $$${paramIndex}`;
+      sql += ` AND r.reminder_date >= ${paramIndex}`;
       params.push(dateFrom);
       paramIndex++;
     }
     if (dateTo) {
-      sql += ` AND r.reminder_date <= $$${paramIndex}`;
+      sql += ` AND r.reminder_date <= ${paramIndex}`;
       params.push(dateTo);
       paramIndex++;
     }
@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
     let countParamIndex = 2;
 
     if (filterUserId) {
-      countSql += ` AND r.user_id = $$${countParamIndex}`;
+      countSql += ` AND r.user_id = ${countParamIndex}`;
       countParams.push(filterUserId);
       countParamIndex++;
     } else {
@@ -142,34 +142,34 @@ export async function GET(request: NextRequest) {
     }
 
     if (status) {
-      countSql += ` AND r.status = $$${countParamIndex}`;
+      countSql += ` AND r.status = ${countParamIndex}`;
       countParams.push(status);
       countParamIndex++;
     } else if (!includeCompleted) {
-      countSql += ` AND r.completed = $$${countParamIndex}`;
+      countSql += ` AND r.completed = ${countParamIndex}`;
       countParams.push(false);
       countParamIndex++;
     }
 
     if (type) {
-      countSql += ` AND r.reminder_type = $$${countParamIndex}`;
+      countSql += ` AND r.reminder_type = ${countParamIndex}`;
       countParams.push(type);
       countParamIndex++;
     }
 
     if (priority) {
-      countSql += ` AND r.priority = $$${countParamIndex}`;
+      countSql += ` AND r.priority = ${countParamIndex}`;
       countParams.push(priority);
       countParamIndex++;
     }
 
     if (dateFrom) {
-      countSql += ` AND r.reminder_date >= $$${countParamIndex}`;
+      countSql += ` AND r.reminder_date >= ${countParamIndex}`;
       countParams.push(dateFrom);
       countParamIndex++;
     }
     if (dateTo) {
-      countSql += ` AND r.reminder_date <= $$${countParamIndex}`;
+      countSql += ` AND r.reminder_date <= ${countParamIndex}`;
       countParams.push(dateTo);
       countParamIndex++;
     }
@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
     const total = parseInt(countResult.rows[0].count);
 
     sql += ` ORDER BY r.reminder_date ASC, r.reminder_time ASC, r.priority DESC`;
-    sql += ` LIMIT $$${paramIndex} OFFSET $$${paramIndex + 1}`;
+    sql += ` LIMIT ${paramIndex} OFFSET ${paramIndex + 1}`;
     params.push(limit, offset);
 
     const result = await query(sql, params);
@@ -321,7 +321,7 @@ export async function POST(request: NextRequest) {
         recurrence_pattern,
         status,
         completed
-      ) VALUES ($$1, $$2, $$3, $$4, $$5, $$6, $$7, $$8, $$9, $$10, $$11, $$12, $$13, $$14, $$15, $$16, $$17)
+      ) VALUES ($1, $$2, $$3, $$4, $$5, $$6, $$7, $$8, $$9, $$10, $$11, $$12, $$13, $$14, $$15, $$16, $$17)
       RETURNING *
     `;
 
@@ -362,3 +362,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuthStore } from '@/lib/store/auth-simple';
 import { useRemindersStore } from '@/lib/store/reminders';
 import { Bell, Calendar as CalendarIcon, Plus, Filter, Loader2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
@@ -731,7 +731,7 @@ export default function RemindersPage() {
     }
   };
 
-  const combinedItems = getCombinedItems();
+  const combinedItems = useMemo(() => getCombinedItems(), [reminders, calendarEvents, showType, filterType, filterPriority, filterStatus, timeRange]);
   const totalEvents = calendarEvents ? 
     calendarEvents.overdue.length + calendarEvents.today.length + calendarEvents.tomorrow.length + 
     calendarEvents.upcoming.length + calendarEvents.future.length : 0;

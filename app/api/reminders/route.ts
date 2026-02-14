@@ -175,7 +175,7 @@ export async function GET(request: NextRequest) {
     const total = parseInt(countResult.rows[0].count);
 
     sql += ` ORDER BY r.reminder_date ASC, r.reminder_time ASC, r.priority DESC`;
-    sql += ` LIMIT $$${paramIndex} OFFSET $$${paramIndex + 1}`;
+    sql += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limit, offset);
 
     const result = await query(sql, params);

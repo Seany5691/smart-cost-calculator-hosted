@@ -1228,6 +1228,9 @@ export default function RemindersPage() {
             const reminder = item.data as Reminder;
             const isSelected = selectedReminders.includes(reminder.id);
             
+            // Get the full reminder object to access additional fields
+            const fullReminder = (selectedCalendarUserId ? sharedCalendarReminders : storeReminders).find(r => r.id === reminder.id);
+            
             // Handler to open lead modal
             const handleReminderClick = () => {
               if (!reminder.lead_id) return;
@@ -1263,16 +1266,44 @@ export default function RemindersPage() {
               }
             };
             
+            // Format reminder date and time
+            const formatReminderDateTime = () => {
+              const date = new Date(reminder.due_date);
+              const dateStr = date.toLocaleDateString('en-US', { 
+                weekday: 'short',
+                month: 'short', 
+                day: 'numeric',
+                year: 'numeric'
+              });
+              
+              if (fullReminder?.is_all_day) {
+                return `${dateStr} (All Day)`;
+              }
+              
+              if (fullReminder?.reminder_time) {
+                const timeStr = fullReminder.reminder_time.includes('T') 
+                  ? fullReminder.reminder_time.split('T')[1].substring(0, 5)
+                  : fullReminder.reminder_time.substring(0, 5);
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                const isPM = hours >= 12;
+                const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+                const time12 = `${hours12}:${minutes.toString().padStart(2, '0')} ${isPM ? 'PM' : 'AM'}`;
+                return `${dateStr} at ${time12}`;
+              }
+              
+              return dateStr;
+            };
+            
             return (
               <div 
                 key={`reminder-${reminder.id}`} 
-                className={`glass-card p-4 border-l-4 transition-colors ${
+                className={`glass-card p-5 border-l-4 transition-all ${
                   reminder.completed 
                     ? 'border-green-500 bg-green-500/5 opacity-75' 
                     : 'border-emerald-500 hover:bg-white/5 cursor-pointer'
                 } ${isSelected ? 'ring-2 ring-emerald-500' : ''}`}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-4">
                   {/* Checkbox */}
                   <input
                     type="checkbox"
@@ -1286,7 +1317,7 @@ export default function RemindersPage() {
 
                   {/* Type Icon */}
                   <div 
-                    className="flex-shrink-0 text-2xl cursor-pointer" 
+                    className="flex-shrink-0 text-3xl cursor-pointer" 
                     title={reminder.reminder_type}
                     onClick={handleReminderClick}
                   >
@@ -1299,21 +1330,21 @@ export default function RemindersPage() {
                   {/* Content */}
                   <div className="flex-1 min-w-0" onClick={handleReminderClick}>
                     {/* Title */}
-                    <h3 className={`text-lg font-semibold text-white mb-2 ${reminder.completed ? 'line-through' : ''}`}>
+                    <h3 className={`text-xl font-semibold text-white mb-3 ${reminder.completed ? 'line-through' : ''}`}>
                       {reminder.title}
                     </h3>
 
                     {/* Badges Row */}
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <div className="flex items-center gap-2 mb-4 flex-wrap">
                       {getCategoryBadge(reminder)}
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${getPriorityColor(reminder.priority)}`}>
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getPriorityColor(reminder.priority)}`}>
                         {reminder.priority.toUpperCase()}
                       </span>
-                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-emerald-900/50 text-emerald-300 border border-emerald-500/50">
+                      <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-900/50 text-emerald-300 border border-emerald-500/50">
                         🔔 Reminder
                       </span>
                       {reminder.completed && (
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-900/50 text-green-300 border border-green-500/50">
+                        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-900/50 text-green-300 border border-green-500/50">
                           ✅ Completed
                         </span>
                       )}
@@ -1321,46 +1352,102 @@ export default function RemindersPage() {
 
                     {/* Description */}
                     {reminder.description && (
-                      <p className={`text-sm text-gray-400 mb-3 ${reminder.completed ? 'line-through' : ''}`}>
+                      <p className={`text-base text-gray-300 mb-4 ${reminder.completed ? 'line-through' : ''}`}>
                         {reminder.description}
                       </p>
                     )}
 
                     {/* Lead Info */}
                     {reminder.lead_name && (
-                      <p className="text-sm text-gray-400 mb-3">
-                        Lead: <span className="text-white font-medium">{reminder.lead_name}</span>
-                        {reminder.lead_phone && <span className="text-gray-500"> • {reminder.lead_phone}</span>}
-                      </p>
+                      <div className="mb-4 p-3 bg-white/5 rounded-lg border border-white/10">
+                        <p className="text-sm text-gray-400 mb-1">Lead Information</p>
+                        <p className="text-base text-white font-medium">
+                          {reminder.lead_name}
+                          {reminder.lead_phone && <span className="text-gray-400 ml-2">• {reminder.lead_phone}</span>}
+                        </p>
+                      </div>
                     )}
 
-                    {/* Date and Type */}
-                    <div className="flex items-center gap-4 text-sm text-gray-400">
-                      <span className="flex items-center gap-1">
-                        📅 {new Date(reminder.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        🏷️ {reminder.reminder_type.replace('_', ' ')}
-                      </span>
+                    {/* Detailed Information Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      {/* Reminder Date & Time */}
+                      <div className="flex items-start gap-2 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                        <CalendarIcon className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-blue-300 font-medium mb-1">Reminder Date & Time</p>
+                          <p className="text-white">{formatReminderDateTime()}</p>
+                        </div>
+                      </div>
+
+                      {/* Type */}
+                      <div className="flex items-start gap-2 p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                        <Bell className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-purple-300 font-medium mb-1">Type</p>
+                          <p className="text-white capitalize">{reminder.reminder_type.replace('_', ' ')}</p>
+                        </div>
+                      </div>
+
+                      {/* Created Date */}
+                      <div className="flex items-start gap-2 p-3 bg-gray-500/10 rounded-lg border border-gray-500/20">
+                        <Clock className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-gray-300 font-medium mb-1">Created</p>
+                          <p className="text-white">
+                            {new Date(reminder.created_at).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              year: 'numeric'
+                            })} at {new Date(reminder.created_at).toLocaleTimeString('en-US', { 
+                              hour: 'numeric', 
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Created By */}
+                      {fullReminder?.username && (
+                        <div className="flex items-start gap-2 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                          <Bell className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-emerald-300 font-medium mb-1">Created By</p>
+                            <p className="text-white">{fullReminder.username || fullReminder.user_name}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Completed Date */}
                       {reminder.completed_at && (
-                        <span className="flex items-center gap-1 text-green-400">
-                          ✅ Completed {new Date(reminder.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
+                        <div className="flex items-start gap-2 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                          <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-green-300 font-medium mb-1">Completed</p>
+                            <p className="text-white">
+                              {new Date(reminder.completed_at).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: 'numeric'
+                              })} at {new Date(reminder.completed_at).toLocaleTimeString('en-US', { 
+                                hour: 'numeric', 
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex flex-col gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => {
-                        // Find the full LeadReminder object from store
-                        const fullReminder = (selectedCalendarUserId ? sharedCalendarReminders : storeReminders).find(r => r.id === reminder.id);
                         if (fullReminder) {
                           setEditingReminder(fullReminder);
                         }
                       }}
-                      className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-1 whitespace-nowrap"
+                      className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-blue-500/30 hover:border-blue-500/50 text-blue-300 hover:text-blue-200 rounded-lg transition-all text-sm font-medium flex items-center justify-center gap-2 min-w-[120px] backdrop-blur-sm"
                     >
                       <Plus className="w-4 h-4 rotate-45" />
                       Edit
@@ -1368,7 +1455,7 @@ export default function RemindersPage() {
                     {reminder.completed ? (
                       <button
                         onClick={() => handleCompleteReminder(reminder.id, reminder.lead_id)}
-                        className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-1 whitespace-nowrap"
+                        className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-blue-500/30 hover:border-blue-500/50 text-blue-300 hover:text-blue-200 rounded-lg transition-all text-sm font-medium flex items-center justify-center gap-2 min-w-[120px] backdrop-blur-sm"
                       >
                         <Clock className="w-4 h-4" />
                         Reopen
@@ -1376,7 +1463,7 @@ export default function RemindersPage() {
                     ) : (
                       <button
                         onClick={() => handleCompleteReminder(reminder.id, reminder.lead_id)}
-                        className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center gap-1 whitespace-nowrap"
+                        className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-green-500/30 hover:border-green-500/50 text-green-300 hover:text-green-200 rounded-lg transition-all text-sm font-medium flex items-center justify-center gap-2 min-w-[120px] backdrop-blur-sm"
                       >
                         <CheckCircle className="w-4 h-4" />
                         Complete
@@ -1384,8 +1471,9 @@ export default function RemindersPage() {
                     )}
                     <button
                       onClick={() => handleDeleteReminder(reminder.id, reminder.lead_id)}
-                      className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm whitespace-nowrap"
+                      className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-red-500/30 hover:border-red-500/50 text-red-300 hover:text-red-200 rounded-lg transition-all text-sm font-medium flex items-center justify-center gap-2 min-w-[120px] backdrop-blur-sm"
                     >
+                      <Bell className="w-4 h-4" />
                       Delete
                     </button>
                   </div>

@@ -321,7 +321,11 @@ export async function POST(request: NextRequest) {
         'lead_created',
         'lead',
         result.rows[0].id,
-        JSON.stringify({ name, provider, status })
+        JSON.stringify({ 
+          name: name,
+          provider: provider,
+          status: status
+        })
       ]
     );
 

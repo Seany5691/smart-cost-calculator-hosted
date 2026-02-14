@@ -287,6 +287,24 @@ export async function POST(request: NextRequest) {
     // Return URL
     const pdfUrl = `/uploads/pdfs/${filename}`;
     
+    // Log activity
+    const { pool } = await import('@/lib/db');
+    await pool.query(
+      `INSERT INTO activity_log (user_id, activity_type, entity_type, entity_id, metadata)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        user.userId,
+        'proposal_created',
+        'proposal',
+        filename,
+        JSON.stringify({
+          deal_name: dealDetails.dealName,
+          customer_name: dealDetails.customerName,
+          proposal_title: proposalContent.title,
+        })
+      ]
+    );
+    
     return NextResponse.json({
       pdfUrl,
       message: 'Proposal generated successfully',

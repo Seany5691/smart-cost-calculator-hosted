@@ -66,6 +66,9 @@ export default function ActivityTimeline() {
       note_added: '📝',
       reminder_created: '⏰',
       route_generated: '🗺️',
+      calculator_saved: '🧮',
+      calculator_loaded: '📊',
+      proposal_created: '📋',
     };
     return icons[activityType] || '📌';
   };
@@ -84,6 +87,9 @@ export default function ActivityTimeline() {
       note_added: 'text-pink-400',
       reminder_created: 'text-red-400',
       route_generated: 'text-violet-400',
+      calculator_saved: 'text-blue-400',
+      calculator_loaded: 'text-indigo-400',
+      proposal_created: 'text-cyan-400',
     };
     return colors[activityType] || 'text-gray-400';
   };
@@ -94,29 +100,40 @@ export default function ActivityTimeline() {
 
     switch (type) {
       case 'deal_created':
-        return `created a new deal "${metadata.dealName || 'Untitled'}"`;
+        return `created a new deal "${metadata.dealName || metadata.deal_name || 'Untitled'}"`;
       case 'deal_saved':
-        return `saved deal "${metadata.dealName || 'Untitled'}"`;
+        return `saved deal "${metadata.dealName || metadata.deal_name || 'Untitled'}"`;
       case 'proposal_generated':
-        return `generated a proposal for "${metadata.dealName || 'Untitled'}"`;
+        return `generated a proposal for "${metadata.dealName || metadata.deal_name || 'Untitled'}"`;
       case 'pdf_generated':
-        return `generated PDF for "${metadata.dealName || 'Untitled'}"`;
+        return `generated PDF for "${metadata.dealName || metadata.deal_name || 'Untitled'}"`;
       case 'deal_loaded':
-        return `loaded deal "${metadata.dealName || 'Untitled'}"`;
+        return `loaded deal "${metadata.dealName || metadata.deal_name || 'Untitled'}"`;
       case 'lead_created':
-        return `created lead "${metadata.leadName || 'Untitled'}"`;
+        return `created lead "${metadata.leadName || metadata.name || 'Untitled'}"`;
       case 'lead_status_changed':
-        return `changed lead status from "${metadata.oldStatus || 'unknown'}" to "${metadata.newStatus || 'unknown'}"`;
+        const oldStatus = metadata.oldStatus || metadata.old_status || 'unknown';
+        const newStatus = metadata.newStatus || metadata.new_status || 'unknown';
+        const leadName = metadata.leadName || metadata.name || '';
+        return `changed ${leadName ? `"${leadName}" ` : ''}status from "${oldStatus}" to "${newStatus}"`;
       case 'scraping_started':
-        return `started scraping session "${metadata.sessionName || 'Untitled'}"`;
+        return `started scraping session "${metadata.sessionName || metadata.session_name || 'Untitled'}"`;
       case 'scraping_completed':
-        return `completed scraping session with ${metadata.businessesScraped || 0} businesses`;
+        const businesses = metadata.businessesScraped || metadata.businesses_scraped || 0;
+        const sessionName = metadata.sessionName || metadata.session_name || '';
+        return `completed scraping ${sessionName ? `"${sessionName}" ` : ''}with ${businesses} businesses`;
       case 'note_added':
-        return `added a note to lead "${metadata.leadName || 'Untitled'}"`;
+        return `added a note to lead "${metadata.leadName || metadata.name || 'Untitled'}"`;
       case 'reminder_created':
-        return `created a reminder "${metadata.reminderTitle || 'Untitled'}"`;
+        return `created a reminder "${metadata.reminderTitle || metadata.title || 'Untitled'}"`;
       case 'route_generated':
-        return `generated route with ${metadata.stopCount || 0} stops`;
+        return `generated route with ${metadata.stopCount || metadata.stop_count || 0} stops`;
+      case 'calculator_saved':
+        return `saved calculator deal "${metadata.dealName || metadata.deal_name || 'Untitled'}"`;
+      case 'calculator_loaded':
+        return `loaded calculator deal "${metadata.dealName || metadata.deal_name || 'Untitled'}"`;
+      case 'proposal_created':
+        return `created proposal for "${metadata.dealName || metadata.deal_name || 'Untitled'}"`;
       default:
         return type.replace(/_/g, ' ');
     }

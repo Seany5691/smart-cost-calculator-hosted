@@ -131,6 +131,23 @@ export async function POST(request: NextRequest) {
       ]
     );
 
+    // Log activity
+    await pool.query(
+      `INSERT INTO activity_log (user_id, activity_type, entity_type, entity_id, metadata)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        user.userId,
+        'scraping_started',
+        'scraping_session',
+        sessionId,
+        JSON.stringify({
+          session_name: sessionName,
+          towns_count: towns.length,
+          industries_count: industries.length,
+        })
+      ]
+    );
+
     // Create event emitter for this session
     const eventEmitter = new EventEmitter();
 
@@ -190,6 +207,23 @@ export async function POST(request: NextRequest) {
 
           await client.query('COMMIT');
           console.log(`[SCRAPER API] Session ${sessionId} auto-saved successfully with ${businesses.length} businesses`);
+          
+          // Log completion activity
+          await pool.query(
+            `INSERT INTO activity_log (user_id, activity_type, entity_type, entity_id, metadata)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [
+              user.userId,
+              'scraping_completed',
+              'scraping_session',
+              sessionId,
+              JSON.stringify({
+                session_name: sessionName,
+                businesses_scraped: businesses.length,
+                towns_completed: progress.completedTowns.length,
+              })
+            ]
+          );
         } catch (error) {
           await client.query('ROLLBACK');
           console.error(`[SCRAPER API] Error auto-saving session ${sessionId}:`, error);

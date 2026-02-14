@@ -49,6 +49,22 @@ export async function POST(request: NextRequest) {
 
     const deal = result.rows[0];
 
+    // Log activity
+    await pool.query(
+      `INSERT INTO activity_log (user_id, activity_type, entity_type, entity_id, metadata)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        user.userId,
+        'calculator_saved',
+        'deal',
+        deal.id,
+        JSON.stringify({
+          deal_name: dealDetails.dealName,
+          customer_name: dealDetails.customerName,
+        })
+      ]
+    );
+
     return NextResponse.json({
       id: deal.id,
       createdAt: deal.created_at,

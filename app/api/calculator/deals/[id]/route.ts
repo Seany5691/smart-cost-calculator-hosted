@@ -43,6 +43,22 @@ export async function GET(
       );
     }
 
+    // Log activity
+    await pool.query(
+      `INSERT INTO activity_log (user_id, activity_type, entity_type, entity_id, metadata)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        user.userId,
+        'calculator_loaded',
+        'deal',
+        id,
+        JSON.stringify({
+          deal_name: deal.deal_name,
+          customer_name: deal.customer_name,
+        })
+      ]
+    );
+
     // Return deal data
     return NextResponse.json({
       id: deal.id,

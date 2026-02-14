@@ -4,6 +4,9 @@ import { verifyAuth } from '@/lib/middleware';
 
 // GET /api/reminders - Get all reminders for the authenticated user
 export async function GET(request: NextRequest) {
+  let sql = '';
+  let params: any[] = [];
+  
   try {
     const authResult = await verifyAuth(request);
     if (!authResult.authenticated || !authResult.user) {
@@ -27,7 +30,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit;
 
     // Build query with filters
-    let sql = `
+    sql = `
       SELECT 
         r.id,
         r.lead_id,
@@ -70,7 +73,7 @@ export async function GET(request: NextRequest) {
       WHERE 1=1
     `;
 
-    const params: any[] = [authResult.user.userId];
+    params = [authResult.user.userId];
     let paramIndex = 2;
 
     // If filtering by specific user (viewing shared calendar), only show that user's reminders

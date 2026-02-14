@@ -202,11 +202,55 @@ export default function RemindersPage() {
 
   // Fetch reminders for selected calendar when it changes
   useEffect(() => {
-    if (token) {
-      fetchRemindersForCalendar(selectedCalendarUserId);
-      fetchCalendarEventsData();
-    }
-  }, [selectedCalendarUserId, token]); // Removed fetchRemindersForCalendar to prevent infinite loop
+    if (!token) return;
+    
+    const fetchData = async () => {
+      try {
+        // Fetch reminders
+        let url = '/api/reminders?includeCompleted=true';
+        if (selectedCalendarUserId) {
+          url += `&user_id=${selectedCalendarUserId}`;
+        }
+
+        const remindersResponse = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (remindersResponse.ok) {
+          const remindersData = await remindersResponse.json();
+          setSharedCalendarReminders(remindersData.reminders || []);
+        }
+
+        // Fetch events
+        const today = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + 90);
+
+        const startDateStr = today.toISOString().split('T')[0];
+        const endDateStr = endDate.toISOString().split('T')[0];
+
+        let eventsUrl = `/api/calendar/events?start_date=${startDateStr}&end_date=${endDateStr}`;
+        if (selectedCalendarUserId) {
+          eventsUrl += `&user_id=${selectedCalendarUserId}`;
+        }
+
+        const eventsResponse = await fetch(eventsUrl, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (eventsResponse.ok) {
+          const eventsData = await eventsResponse.json();
+          const events = eventsData.events || [];
+          const categorized = categorizeEvents(events);
+          setCalendarEvents(categorized);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
+  }, [selectedCalendarUserId, token]);
 
   // Update local reminders when store reminders or shared calendar reminders change
   // Use useMemo to prevent unnecessary recalculations

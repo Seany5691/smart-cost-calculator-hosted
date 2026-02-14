@@ -131,7 +131,7 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
     fetchAllReminders();
     fetchImportSessions(undefined, undefined, 5); // Fetch last 5 imports
     fetchCalendarEvents();
-    fetchRemindersForCalendar();
+    // Don't fetch reminders for calendar on mount - only when a shared calendar is selected
   }, [fetchRoutes, fetchAllReminders, fetchImportSessions]);
 
   // Re-fetch when selected calendar changes

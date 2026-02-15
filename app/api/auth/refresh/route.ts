@@ -78,7 +78,8 @@ export async function POST(request: NextRequest) {
     // Generate new token
     const newToken = generateToken(user);
 
-    return NextResponse.json(
+    // Create response with new token
+    const response = NextResponse.json(
       {
         success: true,
         token: newToken,
@@ -92,6 +93,20 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
+
+    // Set cookie server-side for immediate availability
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = [
+      `auth-token=${newToken}`,
+      'Path=/',
+      'SameSite=Lax',
+      'Max-Age=86400', // 24 hours
+      isProduction ? 'Secure' : '', // Only use Secure in production (HTTPS)
+    ].filter(Boolean).join('; ');
+    
+    response.headers.set('Set-Cookie', cookieOptions);
+
+    return response;
   } catch (error) {
     console.error('Token refresh error:', error);
 

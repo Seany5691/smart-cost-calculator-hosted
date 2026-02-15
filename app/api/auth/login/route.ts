@@ -33,6 +33,26 @@ export async function POST(request: NextRequest) {
     // Attempt login
     const authResponse = await login(username, password);
 
+    // If login successful, set cookie server-side for immediate availability
+    if (authResponse.success && authResponse.token) {
+      const response = NextResponse.json(authResponse, { status: 200 });
+      
+      // Set HTTP-only cookie (more secure, works immediately)
+      // This works on both localhost (HTTP) and production (HTTPS)
+      const isProduction = process.env.NODE_ENV === 'production';
+      const cookieOptions = [
+        `auth-token=${authResponse.token}`,
+        'Path=/',
+        'SameSite=Lax',
+        'Max-Age=86400', // 24 hours
+        isProduction ? 'Secure' : '', // Only use Secure in production (HTTPS)
+      ].filter(Boolean).join('; ');
+      
+      response.headers.set('Set-Cookie', cookieOptions);
+      
+      return response;
+    }
+
     return NextResponse.json(authResponse, { status: 200 });
   } catch (error) {
     console.error('Login error:', error);

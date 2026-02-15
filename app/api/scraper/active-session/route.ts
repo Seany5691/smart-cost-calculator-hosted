@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
     const user = authResult.user;
 
     // Query for active session belonging to this user
-    // Only show sessions that are actually running (updated within last 2 hours)
+    // Only show sessions that are actually running (updated within last 5 minutes)
+    // This matches the queue system's active session detection
     const pool = getPool();
     const result = await pool.query(
       `SELECT 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
        FROM scraping_sessions
        WHERE user_id = $1 
        AND status = 'running'
-       AND updated_at > NOW() - INTERVAL '2 hours'
+       AND updated_at > NOW() - INTERVAL '5 minutes'
        ORDER BY created_at DESC
        LIMIT 1`,
       [user.userId]

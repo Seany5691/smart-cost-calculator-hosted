@@ -17,8 +17,7 @@ export default function Home() {
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    // Hydrate auth store from localStorage
-    useAuthStore.getState().hydrate();
+    // Wait for auth hydration (handled by AuthProvider)
     setIsHydrated(true);
   }, []);
 

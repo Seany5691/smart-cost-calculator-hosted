@@ -100,9 +100,8 @@ export default function LeadsPage() {
     routesCount: 0
   });
 
-  // Hydrate auth store and mount
+  // Wait for auth hydration (handled by AuthProvider)
   useEffect(() => {
-    useAuthStore.getState().hydrate();
     setMounted(true);
   }, []);
 

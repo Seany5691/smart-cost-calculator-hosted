@@ -18,9 +18,8 @@ function CalculatorContent() {
   const { isAuthenticated } = useAuthStore();
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Hydrate auth store from localStorage
+  // Wait for auth hydration (handled by AuthProvider)
   useEffect(() => {
-    useAuthStore.getState().hydrate();
     setIsHydrated(true);
   }, []);
 

@@ -31,9 +31,8 @@ export default function AdminPage() {
   
   const [mounted, setMounted] = useState(false);
 
-  // Hydrate auth store from localStorage
+  // Wait for auth hydration (handled by AuthProvider)
   useEffect(() => {
-    useAuthStore.getState().hydrate();
     setMounted(true);
   }, []);
 

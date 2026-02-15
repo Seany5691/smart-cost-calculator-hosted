@@ -14,6 +14,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  isHydrated: boolean; // Track if hydration is complete
 
   // Actions
   login: (username: string, password: string) => Promise<void>;
@@ -21,6 +22,8 @@ interface AuthState {
   clearError: () => void;
   setLoading: (loading: boolean) => void;
   hydrate: () => void;
+  refreshToken: () => Promise<boolean>; // New: Refresh token
+  checkTokenExpiration: () => boolean; // New: Check if token is near expiration
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -29,6 +32,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  isHydrated: false,
 
   hydrate: () => {
     if (typeof window === 'undefined') return;
@@ -55,6 +59,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 user: data.user,
                 token: cookieToken,
                 isAuthenticated: true,
+                isHydrated: true,
               });
             }
           } catch (e) {
@@ -80,6 +85,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               user: data.user,
               token: cookieToken,
               isAuthenticated: true,
+              isHydrated: true,
             });
             // Sync to localStorage
             localStorage.setItem('auth-storage', JSON.stringify({
@@ -93,6 +99,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               user: null,
               token: null,
               isAuthenticated: false,
+              isHydrated: true,
             });
             localStorage.removeItem('auth-storage');
             document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
@@ -105,6 +112,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             user: null,
             token: null,
             isAuthenticated: false,
+            isHydrated: true,
           });
           localStorage.removeItem('auth-storage');
           document.cookie = 'auth-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
@@ -119,6 +127,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             user: data.user,
             token: data.token,
             isAuthenticated: true,
+            isHydrated: true,
           });
           
           // Then verify the token is still valid in the background
@@ -139,6 +148,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 user: apiData.user,
                 token: data.token,
                 isAuthenticated: true,
+                isHydrated: true,
               });
               
               // Re-set cookie from localStorage
@@ -153,6 +163,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 user: null,
                 token: null,
                 isAuthenticated: false,
+                isHydrated: true,
               });
               localStorage.removeItem('auth-storage');
             }
@@ -164,10 +175,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               user: null,
               token: null,
               isAuthenticated: false,
+              isHydrated: true,
             });
             localStorage.removeItem('auth-storage');
           });
+        } else {
+          // No valid data, mark as hydrated
+          set({ isHydrated: true });
         }
+      } else {
+        // No auth data found, mark as hydrated
+        set({ isHydrated: true });
       }
     } catch (error) {
       console.error('Failed to hydrate auth state:', error);
@@ -176,6 +194,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: null,
         token: null,
         isAuthenticated: false,
+        isHydrated: true,
       });
     }
   },
@@ -342,5 +361,86 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setLoading: (loading: boolean) => {
     set({ isLoading: loading });
+  },
+
+  /**
+   * Check if token is near expiration (within 5 minutes)
+   */
+  checkTokenExpiration: () => {
+    const token = get().token;
+    if (!token) return false;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expiresAt = payload.exp * 1000;
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
+      
+      return (expiresAt - now) < fiveMinutes;
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Refresh the current token
+   * Returns true if successful, false otherwise
+   */
+  refreshToken: async () => {
+    const token = get().token;
+    if (!token) return false;
+
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.token) {
+        // Update state with new token
+        const newState = {
+          token: data.token,
+          user: data.user,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        };
+        
+        set(newState);
+        
+        // Update localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth-storage', JSON.stringify({
+            user: data.user,
+            token: data.token,
+            isAuthenticated: true,
+          }));
+          
+          // Update cookie
+          const expires = new Date();
+          expires.setHours(expires.getHours() + 24);
+          const isProduction = window.location.protocol === 'https:';
+          const secureFlag = isProduction ? '; Secure' : '';
+          document.cookie = `auth-token=${data.token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax${secureFlag}`;
+        }
+        
+        console.log('[Auth] Token refreshed successfully');
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('[Auth] Token refresh failed:', error);
+      return false;
+    }
   },
 }));

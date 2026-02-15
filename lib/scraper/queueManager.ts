@@ -132,15 +132,18 @@ async function calculateEstimatedWait(queuePosition: number): Promise<number> {
   
   // Get average duration of last 10 completed sessions
   const result = await pool.query(
-    `SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 60) as avg_minutes
-     FROM scraping_sessions
-     WHERE status = 'completed'
-     AND updated_at > created_at
-     ORDER BY updated_at DESC
-     LIMIT 10`
+    `SELECT AVG(duration_minutes) as avg_minutes
+     FROM (
+       SELECT EXTRACT(EPOCH FROM (updated_at - created_at)) / 60 as duration_minutes
+       FROM scraping_sessions
+       WHERE status = 'completed'
+       AND updated_at > created_at
+       ORDER BY updated_at DESC
+       LIMIT 10
+     ) recent_sessions`
   );
   
-  const avgMinutes = result.rows[0]?.avg_minutes || 15; // Default to 15 minutes if no history
+  const avgMinutes = parseFloat(result.rows[0]?.avg_minutes) || 15; // Default to 15 minutes if no history
   
   // Estimate: (position - 1) * average duration
   // Subtract 1 because position 1 is next to process

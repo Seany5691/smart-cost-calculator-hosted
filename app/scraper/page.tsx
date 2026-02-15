@@ -31,6 +31,7 @@ import ScrapingAnalytics from '@/components/scraper/ScrapingAnalytics';
 import RetryFailedModal from '@/components/scraper/RetryFailedModal';
 import BatchExportModal from '@/components/scraper/BatchExportModal';
 import ExcelProviderLookup from '@/components/scraper/ExcelProviderLookup';
+import QueueStatus from '@/components/scraper/QueueStatus';
 
 function getDefaultIndustries(): string[] {
   return [
@@ -204,6 +205,11 @@ export default function ScraperPage() {
   // Active session detection (Resume Viewing)
   const [activeSession, setActiveSession] = useState<any>(null);
   const [showActiveBanner, setShowActiveBanner] = useState(false);
+  
+  // Queue status
+  const [isQueued, setIsQueued] = useState(false);
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
+  const [estimatedWaitMinutes, setEstimatedWaitMinutes] = useState<number | null>(null);
 
   // Load industries from localStorage on mount
   useEffect(() => {
@@ -448,12 +454,30 @@ export default function ScraperPage() {
     }
 
     // No duplicates or user chose to continue
-    startScraping();
+    startScrapingWithQueueHandling();
   };
 
   const handleContinueWithDuplicates = () => {
     setShowDuplicateWarning(false);
-    startScraping();
+    startScrapingWithQueueHandling();
+  };
+  
+  const startScrapingWithQueueHandling = async () => {
+    const result = await startScraping();
+    
+    if (result && result.queued) {
+      // Session was queued
+      setIsQueued(true);
+      setQueuePosition(result.queuePosition ?? null);
+      setEstimatedWaitMinutes(result.estimatedWaitMinutes ?? null);
+      
+      toast.info(`Your scrape has been added to the queue (Position #${result.queuePosition})`);
+    } else {
+      // Session started immediately
+      setIsQueued(false);
+      setQueuePosition(null);
+      setEstimatedWaitMinutes(null);
+    }
   };
 
   const handleLoadDuplicateSession = async (sessionId: string) => {
@@ -807,6 +831,20 @@ export default function ScraperPage() {
               </div>
             )}
           </div>
+        )}
+        
+        {/* Queue Status - Show when session is queued */}
+        {isQueued && sessionId && (
+          <QueueStatus
+            sessionId={sessionId}
+            onCancel={() => {
+              setIsQueued(false);
+              setQueuePosition(null);
+              setEstimatedWaitMinutes(null);
+              useScraperStore.getState().setSessionId(null);
+              toast.info('Queued scrape cancelled');
+            }}
+          />
         )}
 
         {/* Provider Lookup Progress (Phase 2) */}

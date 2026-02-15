@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/middleware';
 import { getSession, deleteSession } from '@/lib/scraper/sessionStore';
 import { getPool } from '@/lib/db';
+import { markAsCompleted, processNextInQueue } from '@/lib/scraper/queueManager';
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,6 +55,22 @@ export async function POST(request: NextRequest) {
 
     // Remove from memory
     deleteSession(sessionId);
+
+    // Mark queue item as completed if it exists
+    await markAsCompleted(sessionId).catch(err => {
+      console.log(`[SCRAPER API] No queue item to mark complete: ${err.message}`);
+    });
+    
+    // Process next item in queue
+    console.log(`[SCRAPER API] Session stopped, checking for next queued session...`);
+    const nextSessionId = await processNextInQueue();
+    
+    if (nextSessionId) {
+      console.log(`[SCRAPER API] Starting next queued session: ${nextSessionId}`);
+      // Import the helper function from start route
+      const { startQueuedSession } = await import('../start/route');
+      await startQueuedSession(nextSessionId);
+    }
 
     return NextResponse.json({ 
       status: 'stopped',

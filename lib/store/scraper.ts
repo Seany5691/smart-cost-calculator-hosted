@@ -69,7 +69,7 @@ export interface LogEntry {
   level: 'info' | 'success' | 'warning' | 'error';
 }
 
-export type ScrapingStatus = 'idle' | 'running' | 'paused' | 'stopped' | 'completed' | 'error';
+export type ScrapingStatus = 'idle' | 'running' | 'paused' | 'stopped' | 'completed' | 'error' | 'queued';
 
 interface ScraperState {
   // Scraping state
@@ -103,7 +103,7 @@ interface ScraperState {
   reset: () => void;
   
   // Session management actions
-  startScraping: () => Promise<void>;
+  startScraping: () => Promise<{ queued: boolean; queuePosition?: number; estimatedWaitMinutes?: number } | void>;
   stopScraping: () => Promise<void>;
 }
 
@@ -281,6 +281,21 @@ export const useScraperStore = create<ScraperState>()(
           
           set({ sessionId: data.sessionId });
           
+          // Check if the session was queued
+          if (data.status === 'queued') {
+            set({ status: 'idle' }); // Keep status as idle when queued
+            
+            get().addLog({
+              timestamp: new Date().toISOString(),
+              message: `Scraping request queued (Position #${data.queuePosition}). Estimated wait: ${data.estimatedWaitMinutes} minutes.`,
+              level: 'info',
+            });
+            
+            // Return the queue info so the UI can display it
+            return { queued: true, queuePosition: data.queuePosition, estimatedWaitMinutes: data.estimatedWaitMinutes };
+          }
+          
+          // Session started immediately
           get().updateProgress({
             startTime: Date.now(),
             totalTowns: state.towns.length,
@@ -292,6 +307,8 @@ export const useScraperStore = create<ScraperState>()(
             message: `Scraping session started with ID: ${data.sessionId}`,
             level: 'success',
           });
+          
+          return { queued: false };
         } catch (error) {
           console.error('[SCRAPER] Error in startScraping:', error);
           set({ status: 'error' });

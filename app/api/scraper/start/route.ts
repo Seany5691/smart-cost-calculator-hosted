@@ -13,6 +13,7 @@ import { ScrapeConfig } from '@/lib/scraper/types';
 import { getPool } from '@/lib/db';
 import { EventEmitter } from 'events';
 import { randomUUID } from 'crypto';
+import { isScrapingActive, addToQueue, processNextInQueue, markAsCompleted } from '@/lib/scraper/queueManager';
 
 export async function POST(request: NextRequest) {
   try {
@@ -131,6 +132,43 @@ export async function POST(request: NextRequest) {
       ]
     );
 
+    // Check if another scraping session is currently active
+    const isActive = await isScrapingActive();
+    
+    if (isActive) {
+      // Another session is running - add this request to the queue
+      console.log(`[SCRAPER API] Another session is active, adding ${sessionId} to queue`);
+      
+      const queueItem = await addToQueue(user.userId, sessionId, scrapeConfig);
+      
+      // Log queued activity
+      await pool.query(
+        `INSERT INTO activity_log (user_id, activity_type, entity_type, entity_id, metadata)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          user.userId,
+          'scraping_queued',
+          'scraping_session',
+          sessionId,
+          JSON.stringify({
+            session_name: sessionName,
+            queue_position: queueItem.queuePosition,
+            estimated_wait_minutes: queueItem.estimatedWaitMinutes,
+          })
+        ]
+      );
+      
+      return NextResponse.json({ 
+        sessionId, 
+        status: 'queued',
+        queuePosition: queueItem.queuePosition,
+        estimatedWaitMinutes: queueItem.estimatedWaitMinutes
+      }, { status: 201 });
+    }
+
+    // No active session - start immediately
+    console.log(`[SCRAPER API] No active session, starting ${sessionId} immediately`);
+
     // Log activity
     await pool.query(
       `INSERT INTO activity_log (user_id, activity_type, entity_type, entity_id, metadata)
@@ -224,6 +262,24 @@ export async function POST(request: NextRequest) {
               })
             ]
           );
+          
+          // Mark queue item as completed if it exists
+          await markAsCompleted(sessionId).catch(err => {
+            console.log(`[SCRAPER API] No queue item to mark complete (session started immediately): ${err.message}`);
+          });
+          
+          // Process next item in queue
+          console.log(`[SCRAPER API] Checking for next queued session...`);
+          const nextSessionId = await processNextInQueue();
+          
+          if (nextSessionId) {
+            console.log(`[SCRAPER API] Starting next queued session: ${nextSessionId}`);
+            // Trigger the next session to start
+            // We'll call a helper function to start the session
+            await startQueuedSession(nextSessionId);
+          } else {
+            console.log(`[SCRAPER API] No more sessions in queue`);
+          }
         } catch (error) {
           await client.query('ROLLBACK');
           console.error(`[SCRAPER API] Error auto-saving session ${sessionId}:`, error);
@@ -253,5 +309,162 @@ export async function POST(request: NextRequest) {
       { error: error.message || 'Internal server error' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Helper function to start a queued session
+ * This is called when the previous session completes
+ * Exported so it can be used by stop route
+ */
+export async function startQueuedSession(sessionId: string): Promise<void> {
+  try {
+    const pool = getPool();
+    
+    // Get session details from database
+    const sessionResult = await pool.query(
+      `SELECT user_id, name, config FROM scraping_sessions WHERE id = $1`,
+      [sessionId]
+    );
+    
+    if (sessionResult.rows.length === 0) {
+      console.error(`[SCRAPER API] Queued session ${sessionId} not found in database`);
+      return;
+    }
+    
+    const session = sessionResult.rows[0];
+    const scrapeConfig: ScrapeConfig = JSON.parse(session.config);
+    
+    console.log(`[SCRAPER API] Starting queued session ${sessionId} for user ${session.user_id}`);
+    
+    // Create event emitter for this session
+    const eventEmitter = new EventEmitter();
+
+    // Create orchestrator
+    const orchestrator = new ScrapingOrchestrator(
+      scrapeConfig.towns,
+      scrapeConfig.industries,
+      scrapeConfig,
+      eventEmitter
+    );
+
+    // Store session in memory
+    setSession(sessionId, {
+      orchestrator,
+      eventEmitter,
+      createdAt: Date.now(),
+    });
+
+    // Listen for completion event to auto-save session and process next in queue
+    eventEmitter.once('complete', async () => {
+      try {
+        console.log(`[SCRAPER API] Queued session ${sessionId} completed, auto-saving...`);
+        
+        const loggingManager = orchestrator.getLoggingManager();
+        const businesses = orchestrator.getResults();
+        const summary = loggingManager.getSummary();
+        const progress = orchestrator.getProgress();
+
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+
+          // Update session with summary
+          await client.query(
+            `UPDATE scraping_sessions 
+             SET summary = $1, status = $2, progress = $3, updated_at = NOW()
+             WHERE id = $4`,
+            [
+              JSON.stringify({
+                totalBusinesses: businesses.length,
+                townsCompleted: progress.completedTowns,
+                errors: summary.totalErrors,
+                totalDuration: summary.totalDuration,
+                averageDuration: summary.averageDuration,
+              }),
+              'completed',
+              100,
+              sessionId,
+            ]
+          );
+
+          // Save businesses to database using batch operations
+          if (businesses.length > 0) {
+            const { batchInsertBusinesses } = await import('@/lib/scraper/batchOperations');
+            await batchInsertBusinesses(client, sessionId, businesses);
+          }
+
+          await client.query('COMMIT');
+          console.log(`[SCRAPER API] Queued session ${sessionId} auto-saved successfully with ${businesses.length} businesses`);
+          
+          // Log completion activity
+          await pool.query(
+            `INSERT INTO activity_log (user_id, activity_type, entity_type, entity_id, metadata)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [
+              session.user_id,
+              'scraping_completed',
+              'scraping_session',
+              sessionId,
+              JSON.stringify({
+                session_name: session.name,
+                businesses_scraped: businesses.length,
+                towns_completed: progress.completedTowns,
+              })
+            ]
+          );
+          
+          // Mark queue item as completed
+          await markAsCompleted(sessionId).catch(err => {
+            console.log(`[SCRAPER API] Error marking queue item complete: ${err.message}`);
+          });
+          
+          // Process next item in queue (recursive)
+          console.log(`[SCRAPER API] Checking for next queued session...`);
+          const nextSessionId = await processNextInQueue();
+          
+          if (nextSessionId) {
+            console.log(`[SCRAPER API] Starting next queued session: ${nextSessionId}`);
+            await startQueuedSession(nextSessionId);
+          } else {
+            console.log(`[SCRAPER API] No more sessions in queue`);
+          }
+        } catch (error) {
+          await client.query('ROLLBACK');
+          console.error(`[SCRAPER API] Error auto-saving queued session ${sessionId}:`, error);
+        } finally {
+          client.release();
+        }
+      } catch (error) {
+        console.error(`[SCRAPER API] Error in completion handler for queued session ${sessionId}:`, error);
+      }
+    });
+
+    // Start scraping in background (don't await)
+    orchestrator.start().catch(async (error) => {
+      console.error(`Error in queued scraping session ${sessionId}:`, error);
+      
+      // Update session status to error
+      await pool.query(
+        `UPDATE scraping_sessions SET status = $1, updated_at = NOW() WHERE id = $2`,
+        ['error', sessionId]
+      );
+      
+      // Mark queue item as completed (even on error)
+      await markAsCompleted(sessionId).catch(err => {
+        console.log(`[SCRAPER API] Error marking failed queue item complete: ${err.message}`);
+      });
+      
+      // Process next in queue despite error
+      const nextSessionId = await processNextInQueue();
+      if (nextSessionId) {
+        console.log(`[SCRAPER API] Starting next queued session after error: ${nextSessionId}`);
+        await startQueuedSession(nextSessionId);
+      }
+    });
+    
+    console.log(`[SCRAPER API] Queued session ${sessionId} started successfully`);
+  } catch (error) {
+    console.error(`[SCRAPER API] Error starting queued session ${sessionId}:`, error);
   }
 }

@@ -276,28 +276,44 @@ export default function RemindersPage() {
     }
   }, [token, selectedCalendarUserId, categorizeEvents]);
 
+  // Initial data load - only run once on mount
   useEffect(() => {
     if (!token) return;
     
-    // Call functions directly to avoid dependency issues
+    let isMounted = true;
+    
     const loadData = async () => {
       try {
         await fetchAllReminders();
+        
+        if (isMounted) {
+          // Fetch leads and shared calendars in parallel
+          await Promise.all([
+            fetchLeads(),
+            fetchSharedCalendars()
+          ]);
+        }
       } catch (error) {
         console.error('Error fetching reminders:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     
     loadData();
-    fetchLeads();
-    fetchSharedCalendars();
-  }, [token, fetchAllReminders, fetchLeads, fetchSharedCalendars]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [token]); // Only depend on token, not the callback functions
 
   // Fetch reminders for selected calendar when it changes
   useEffect(() => {
     if (!token) return;
+    
+    let isMounted = true;
     
     const fetchData = async () => {
       try {
@@ -311,7 +327,7 @@ export default function RemindersPage() {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        if (remindersResponse.ok) {
+        if (remindersResponse.ok && isMounted) {
           const remindersData = await remindersResponse.json();
           setSharedCalendarReminders(remindersData.reminders || []);
         }
@@ -333,7 +349,7 @@ export default function RemindersPage() {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        if (eventsResponse.ok) {
+        if (eventsResponse.ok && isMounted) {
           const eventsData = await eventsResponse.json();
           const events = eventsData.events || [];
           const categorized = categorizeEvents(events);
@@ -345,19 +361,29 @@ export default function RemindersPage() {
     };
 
     fetchData();
-  }, [selectedCalendarUserId, token, categorizeEvents]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCalendarUserId, token]); // Removed categorizeEvents from dependencies
 
   // Update local reminders when store reminders or shared calendar reminders change
-  // Use useMemo to prevent unnecessary recalculations
-  useEffect(() => {
-    // Use shared calendar reminders if a calendar is selected, otherwise use store reminders
+  // Memoize the categorized reminders to prevent unnecessary recalculations
+  const categorizedReminders = useMemo(() => {
     const remindersToUse = selectedCalendarUserId ? sharedCalendarReminders : storeReminders;
     
-    if (remindersToUse.length >= 0) { // Changed from > 0 to >= 0 to handle empty state
-      const categorized = categorizeReminders(remindersToUse);
-      setReminders(categorized);
+    if (remindersToUse.length >= 0) {
+      return categorizeReminders(remindersToUse);
     }
+    return null;
   }, [storeReminders, sharedCalendarReminders, selectedCalendarUserId, categorizeReminders]);
+
+  // Update state only when categorized reminders change
+  useEffect(() => {
+    if (categorizedReminders) {
+      setReminders(categorizedReminders);
+    }
+  }, [categorizedReminders]);
 
   const handleCompleteReminder = async (reminderId: string, leadId: string) => {
     try {
@@ -404,7 +430,7 @@ export default function RemindersPage() {
   };
 
   const handleSelectAll = () => {
-    const allReminderIds = getCombinedItems()
+    const allReminderIds = combinedItems
       .filter(item => item.type === 'reminder')
       .map(item => (item.data as Reminder).id);
     
@@ -419,7 +445,7 @@ export default function RemindersPage() {
     if (selectedReminders.length === 0) return;
     
     try {
-      const allReminders = getCombinedItems()
+      const allReminders = combinedItems
         .filter(item => item.type === 'reminder')
         .map(item => item.data as Reminder);
       
@@ -459,7 +485,7 @@ export default function RemindersPage() {
     if (!window.confirm(`Are you sure you want to delete ${selectedReminders.length} reminder(s)?`)) return;
     
     try {
-      const allReminders = getCombinedItems()
+      const allReminders = combinedItems
         .filter(item => item.type === 'reminder')
         .map(item => item.data as Reminder);
       
@@ -736,7 +762,7 @@ export default function RemindersPage() {
     calendarEvents.overdue.length + calendarEvents.today.length + calendarEvents.tomorrow.length + 
     calendarEvents.upcoming.length + calendarEvents.future.length : 0;
 
-  if (loading) {
+  if (loading || storeLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
@@ -1153,7 +1179,7 @@ export default function RemindersPage() {
                 <div className="glass-card p-3 mb-3 flex items-center gap-3">
                   <input
                     type="checkbox"
-                    checked={selectedReminders.length === getCombinedItems().filter(i => i.type === 'reminder').length && selectedReminders.length > 0}
+                    checked={selectedReminders.length === combinedItems.filter(i => i.type === 'reminder').length && selectedReminders.length > 0}
                     onChange={handleSelectAll}
                     className="w-5 h-5 rounded border-gray-600 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-gray-900 cursor-pointer"
                   />

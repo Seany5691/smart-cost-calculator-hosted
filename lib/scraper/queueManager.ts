@@ -53,27 +53,45 @@ export async function isScrapingActive(): Promise<boolean> {
   // Check for any session with status 'running' that was updated recently (within last 5 minutes)
   // This prevents false positives from stale sessions that crashed without updating status
   const result = await pool.query(
-    `SELECT COUNT(*) as count 
+    `SELECT id, name, status, updated_at,
+     EXTRACT(EPOCH FROM (NOW() - updated_at)) / 60 as minutes_since_update
      FROM scraping_sessions 
      WHERE status = 'running'
      AND updated_at > NOW() - INTERVAL '5 minutes'`
   );
   
-  const count = parseInt(result.rows[0].count, 10);
+  const count = result.rows.length;
   
-  // Also check if there's a queue item currently processing
-  if (count === 0) {
-    const queueResult = await pool.query(
-      `SELECT COUNT(*) as count 
-       FROM scraper_queue 
-       WHERE status = 'processing'
-       AND started_at > NOW() - INTERVAL '5 minutes'`
-    );
-    const queueCount = parseInt(queueResult.rows[0].count, 10);
-    return queueCount > 0;
+  if (count > 0) {
+    console.log(`[QueueManager] Found ${count} active session(s):`, result.rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      minutesSinceUpdate: r.minutes_since_update
+    })));
+    return true;
   }
   
-  return count > 0;
+  // Also check if there's a queue item currently processing
+  const queueResult = await pool.query(
+    `SELECT id, session_id, status, started_at,
+     EXTRACT(EPOCH FROM (NOW() - started_at)) / 60 as minutes_since_start
+     FROM scraper_queue 
+     WHERE status = 'processing'
+     AND started_at > NOW() - INTERVAL '5 minutes'`
+  );
+  const queueCount = queueResult.rows.length;
+  
+  if (queueCount > 0) {
+    console.log(`[QueueManager] Found ${queueCount} processing queue item(s):`, queueResult.rows.map(r => ({
+      id: r.id,
+      sessionId: r.session_id,
+      minutesSinceStart: r.minutes_since_start
+    })));
+    return true;
+  }
+  
+  console.log('[QueueManager] No active sessions or processing queue items found');
+  return false;
 }
 
 /**
@@ -107,33 +125,46 @@ export async function addToQueue(
 ): Promise<QueueItem> {
   const pool = getPool();
   
-  // Get next queue position
-  const positionResult = await pool.query('SELECT get_next_queue_position() as position');
-  const queuePosition = positionResult.rows[0].position;
-  
-  // Calculate estimated wait time based on average session duration
-  const estimatedWaitMinutes = await calculateEstimatedWait(queuePosition);
-  
-  // Insert into queue
-  const result = await pool.query(
-    `INSERT INTO scraper_queue (user_id, session_id, config, status, queue_position, estimated_wait_minutes)
-     VALUES ($1, $2, $3, 'queued', $4, $5)
-     RETURNING id, user_id, session_id, config, status, queue_position, estimated_wait_minutes, created_at`,
-    [userId, sessionId, JSON.stringify(config), queuePosition, estimatedWaitMinutes]
-  );
-  
-  const row = result.rows[0];
-  
-  return {
-    id: row.id,
-    userId: row.user_id,
-    sessionId: row.session_id,
-    config: JSON.parse(row.config),
-    status: row.status,
-    queuePosition: row.queue_position,
-    estimatedWaitMinutes: row.estimated_wait_minutes,
-    createdAt: new Date(row.created_at),
-  };
+  try {
+    // Get next queue position
+    const positionResult = await pool.query('SELECT get_next_queue_position() as position');
+    const queuePosition = positionResult.rows[0].position;
+    
+    // Calculate estimated wait time based on average session duration
+    const estimatedWaitMinutes = await calculateEstimatedWait(queuePosition);
+    
+    // Serialize config to JSON string
+    const configJson = JSON.stringify(config);
+    console.log('[QueueManager] Serialized config:', configJson);
+    
+    // Insert into queue
+    const result = await pool.query(
+      `INSERT INTO scraper_queue (user_id, session_id, config, status, queue_position, estimated_wait_minutes)
+       VALUES ($1, $2, $3::jsonb, 'queued', $4, $5)
+       RETURNING id, user_id, session_id, config::text as config, status, queue_position, estimated_wait_minutes, created_at`,
+      [userId, sessionId, configJson, queuePosition, estimatedWaitMinutes]
+    );
+    
+    const row = result.rows[0];
+    console.log('[QueueManager] Queue item created:', { id: row.id, sessionId: row.session_id });
+    
+    // Parse the config back from JSON
+    const parsedConfig = typeof row.config === 'string' ? JSON.parse(row.config) : row.config;
+    
+    return {
+      id: row.id,
+      userId: row.user_id,
+      sessionId: row.session_id,
+      config: parsedConfig,
+      status: row.status,
+      queuePosition: row.queue_position,
+      estimatedWaitMinutes: row.estimated_wait_minutes,
+      createdAt: new Date(row.created_at),
+    };
+  } catch (error) {
+    console.error('[QueueManager] Error in addToQueue:', error);
+    throw error;
+  }
 }
 
 /**

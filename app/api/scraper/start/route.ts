@@ -177,7 +177,60 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // No active session - start immediately
+    // No active session - check if there are queued items that should be processed first
+    const { getNextInQueue } = await import('@/lib/scraper/queueManager');
+    const nextInQueue = await getNextInQueue();
+    
+    if (nextInQueue && nextInQueue.sessionId !== sessionId) {
+      // There's already something in the queue - add this to the queue too
+      console.log(`[SCRAPER API] Found existing queue, adding ${sessionId} to queue`);
+      
+      try {
+        const queueItem = await addToQueue(user.userId, sessionId, scrapeConfig);
+        
+        // Log queued activity
+        await pool.query(
+          `INSERT INTO activity_log (user_id, activity_type, entity_type, entity_id, metadata)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [
+            user.userId,
+            'scraping_queued',
+            'scraping_session',
+            sessionId,
+            JSON.stringify({
+              session_name: sessionName,
+              queue_position: queueItem.queuePosition,
+              estimated_wait_minutes: queueItem.estimatedWaitMinutes,
+            })
+          ]
+        );
+        
+        // Auto-start the first queued item since no session is active
+        console.log(`[SCRAPER API] Auto-starting first queued session: ${nextInQueue.sessionId}`);
+        const { markAsProcessing } = await import('@/lib/scraper/queueManager');
+        await markAsProcessing(nextInQueue.id);
+        startQueuedSession(nextInQueue.sessionId).catch(err => {
+          console.error(`[SCRAPER API] Error auto-starting queued session:`, err);
+        });
+        
+        return NextResponse.json({ 
+          sessionId, 
+          status: 'queued',
+          queuePosition: queueItem.queuePosition,
+          estimatedWaitMinutes: queueItem.estimatedWaitMinutes
+        }, { status: 201 });
+      } catch (queueError: any) {
+        console.error('[SCRAPER API] Error adding to queue:', queueError);
+        await pool.query('DELETE FROM scraping_sessions WHERE id = $1', [sessionId]);
+        const errorMessage = queueError instanceof Error ? queueError.message : String(queueError);
+        return NextResponse.json(
+          { error: `Failed to add to queue: ${errorMessage}` },
+          { status: 500 }
+        );
+      }
+    }
+
+    // No active session and no queue - start immediately
     console.log(`[SCRAPER API] No active session, starting ${sessionId} immediately`);
 
     // Log activity

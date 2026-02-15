@@ -29,6 +29,7 @@ export default function QueueStatus({ sessionId, onCancel }: QueueStatusProps) {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
+    let autoStartAttempted = false;
 
     const fetchQueueStatus = async () => {
       try {
@@ -63,6 +64,22 @@ export default function QueueStatus({ sessionId, onCancel }: QueueStatusProps) {
         const data = await response.json();
         setQueueInfo(data);
         setLoading(false);
+        
+        // Auto-trigger queue processing if we're position 1 and haven't tried yet
+        if (data.queuePosition === 1 && !autoStartAttempted && !data.currentlyProcessing) {
+          console.log('[QueueStatus] Position 1 with no active session, triggering queue processing');
+          autoStartAttempted = true;
+          
+          // Trigger queue processing
+          fetch('/api/scraper/process-queue', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }).catch(err => {
+            console.error('[QueueStatus] Error triggering queue processing:', err);
+          });
+        }
       } catch (err) {
         console.error('Error fetching queue status:', err);
         setError(err instanceof Error ? err.message : 'Unknown error');

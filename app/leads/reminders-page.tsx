@@ -771,6 +771,16 @@ export default function RemindersPage() {
     );
   }
 
+  // Don't render until we have data structures ready
+  if (!reminders || !calendarEvents) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+        <span className="ml-3 text-gray-300">Preparing data...</span>
+      </div>
+    );
+  }
+
   return (
     <>
     <div>
@@ -786,10 +796,10 @@ export default function RemindersPage() {
         <button
           onClick={() => setActiveTab('list')}
           className={`
-            px-8 py-4 rounded-xl font-semibold text-lg transition-all flex items-center gap-3 shadow-lg
+            px-8 py-4 rounded-xl font-semibold text-lg transition-colors flex items-center gap-3 shadow-lg
             ${activeTab === 'list'
-              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white scale-105'
-              : 'bg-white/10 text-emerald-200 hover:bg-white/20 hover:scale-102'
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'
+              : 'bg-white/10 text-emerald-200 hover:bg-white/20'
             }
           `}
         >
@@ -799,10 +809,10 @@ export default function RemindersPage() {
         <button
           onClick={() => setActiveTab('calendar')}
           className={`
-            px-8 py-4 rounded-xl font-semibold text-lg transition-all flex items-center gap-3 shadow-lg
+            px-8 py-4 rounded-xl font-semibold text-lg transition-colors flex items-center gap-3 shadow-lg
             ${activeTab === 'calendar'
-              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white scale-105'
-              : 'bg-white/10 text-emerald-200 hover:bg-white/20 hover:scale-102'
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'
+              : 'bg-white/10 text-emerald-200 hover:bg-white/20'
             }
           `}
         >
@@ -1105,7 +1115,7 @@ export default function RemindersPage() {
                   key={range.value}
                   onClick={() => setTimeRange(range.value as any)}
                   className={`
-                    px-3 py-2 rounded-lg font-medium transition-all text-sm
+                    px-3 py-2 rounded-lg font-medium transition-colors text-sm
                     ${timeRange === range.value
                       ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
                       : 'bg-white/10 text-emerald-200 hover:bg-white/20'

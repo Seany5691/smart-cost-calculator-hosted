@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, User, Phone, Building2, MapPin, Briefcase, FileText } from 'lucide-react';
+import { X, Plus, User, Phone, Building2, MapPin, Briefcase, FileText, Search } from 'lucide-react';
 
 // Helper function to get auth token from localStorage
 function getAuthToken(): string | null {
@@ -39,6 +39,7 @@ export default function AddLeadButton({ defaultStatus = 'leads', onSuccess }: Ad
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingProvider, setIsCheckingProvider] = useState(false);
   const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
@@ -59,6 +60,53 @@ export default function AddLeadButton({ defaultStatus = 'leads', onSuccess }: Ad
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleCheckProvider = async () => {
+    if (!formData.phone.trim()) {
+      setError('Please enter a phone number first');
+      return;
+    }
+
+    setIsCheckingProvider(true);
+    setError('');
+
+    try {
+      const token = getAuthToken();
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/dashboard/lookup-number', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          phoneNumber: formData.phone.trim()
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to lookup provider');
+      }
+
+      const result = await response.json();
+      
+      // Auto-fill the provider field
+      if (result.provider && result.provider !== 'Unknown') {
+        setFormData({ ...formData, provider: result.provider });
+      } else {
+        setError('Provider not found for this number');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to lookup provider');
+    } finally {
+      setIsCheckingProvider(false);
+    }
+  };
 
   const handleSubmit = async () => {
     // Validation - only name is required
@@ -235,14 +283,35 @@ export default function AddLeadButton({ defaultStatus = 'leads', onSuccess }: Ad
                   <Phone className="w-4 h-4 inline mr-1" />
                   Phone Number
                 </label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+27 12 345 6789"
-                  className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  disabled={isSubmitting}
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+27 12 345 6789"
+                    className="flex-1 h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    disabled={isSubmitting || isCheckingProvider}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCheckProvider}
+                    disabled={isSubmitting || isCheckingProvider || !formData.phone.trim()}
+                    className="px-4 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                    title="Check provider using porting.co.za"
+                  >
+                    {isCheckingProvider ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                        <span className="hidden sm:inline">Checking...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Search className="w-4 h-4" />
+                        <span className="hidden sm:inline">Check Provider</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Provider */}
@@ -257,7 +326,7 @@ export default function AddLeadButton({ defaultStatus = 'leads', onSuccess }: Ad
                   onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
                   placeholder="e.g., Telkom, Vodacom, MTN"
                   className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isCheckingProvider}
                 />
               </div>
 

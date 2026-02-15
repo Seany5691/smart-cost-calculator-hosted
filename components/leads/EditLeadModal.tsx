@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Lead } from '@/lib/leads/types';
-import { X, Edit, User, Phone, Building2, MapPin, Briefcase, FileText, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Edit, User, Phone, Building2, MapPin, Briefcase, FileText, AlertCircle, Loader2, Search } from 'lucide-react';
 
 // Helper function to get auth token
 function getAuthToken(): string | null {
@@ -29,6 +29,7 @@ interface EditLeadModalProps {
 
 export default function EditLeadModal({ lead, onClose, onUpdate }: EditLeadModalProps) {
   const [loading, setLoading] = useState(false);
+  const [isCheckingProvider, setIsCheckingProvider] = useState(false);
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
   const [formData, setFormData] = useState({
@@ -61,6 +62,53 @@ export default function EditLeadModal({ lead, onClose, onUpdate }: EditLeadModal
     });
     setError('');
   }, [lead]);
+
+  const handleCheckProvider = async () => {
+    if (!formData.phone.trim()) {
+      setError('Please enter a phone number first');
+      return;
+    }
+
+    setIsCheckingProvider(true);
+    setError('');
+
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        setError('Not authenticated');
+        return;
+      }
+
+      const response = await fetch('/api/dashboard/lookup-number', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          phoneNumber: formData.phone.trim()
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to lookup provider');
+      }
+
+      const result = await response.json();
+      
+      // Auto-fill the provider field
+      if (result.provider && result.provider !== 'Unknown') {
+        setFormData({ ...formData, provider: result.provider });
+      } else {
+        setError('Provider not found for this number');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to lookup provider');
+    } finally {
+      setIsCheckingProvider(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,14 +243,35 @@ export default function EditLeadModal({ lead, onClose, onUpdate }: EditLeadModal
               <Phone className="w-4 h-4 inline mr-1" />
               Phone Number
             </label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="+27 12 345 6789"
-              disabled={loading}
-              className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-            />
+            <div className="flex gap-2">
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="+27 12 345 6789"
+                disabled={loading || isCheckingProvider}
+                className="flex-1 h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              />
+              <button
+                type="button"
+                onClick={handleCheckProvider}
+                disabled={loading || isCheckingProvider || !formData.phone.trim()}
+                className="px-4 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                title="Check provider using porting.co.za"
+              >
+                {isCheckingProvider ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="hidden sm:inline">Checking...</span>
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4" />
+                    <span className="hidden sm:inline">Check Provider</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Provider */}
@@ -216,7 +285,7 @@ export default function EditLeadModal({ lead, onClose, onUpdate }: EditLeadModal
               value={formData.provider}
               onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
               placeholder="e.g., Telkom, Vodacom, MTN"
-              disabled={loading}
+              disabled={loading || isCheckingProvider}
               className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
             />
           </div>

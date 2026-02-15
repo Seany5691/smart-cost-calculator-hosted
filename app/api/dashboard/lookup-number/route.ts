@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/middleware';
-import { batchLookupProviders } from '@/lib/scraper/provider-lookup';
+import { ProviderLookupService } from '@/lib/scraper/provider-lookup-service';
 
 /**
  * POST /api/dashboard/lookup-number
- * Looks up provider information for a phone number
+ * Looks up provider information for a phone number using the new ProviderLookupService
  */
 export async function POST(request: NextRequest) {
   try {
@@ -36,11 +36,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Lookup provider using the scraper service
-    const results = await batchLookupProviders([cleanedPhone], 1);
-    const providerInfo = results.get(cleanedPhone);
+    console.log(`[API /api/dashboard/lookup-number] Looking up provider for: ${cleanedPhone}`);
 
-    if (!providerInfo) {
+    // Use the new ProviderLookupService (handles browser management, caching, batching, captcha detection)
+    const providerLookup = new ProviderLookupService({
+      maxConcurrentBatches: 1,
+    });
+
+    // Lookup provider - service handles phone number cleaning (27/+27 -> 0, removes spaces)
+    const results = await providerLookup.lookupProviders([cleanedPhone]);
+    
+    // Cleanup service
+    await providerLookup.cleanup();
+
+    const provider = results.get(cleanedPhone);
+
+    if (!provider || provider === 'Unknown') {
       return NextResponse.json({
         phoneNumber: cleanedPhone,
         provider: 'Unknown',
@@ -50,8 +61,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       phoneNumber: cleanedPhone,
-      provider: providerInfo.provider,
-      confidence: providerInfo.confidence,
+      provider: provider,
+      confidence: 1, // New service returns provider name directly, assume high confidence
     });
 
   } catch (error) {

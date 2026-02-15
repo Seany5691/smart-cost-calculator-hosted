@@ -50,14 +50,29 @@ export interface QueueStatus {
 export async function isScrapingActive(): Promise<boolean> {
   const pool = getPool();
   
-  // Check for any session with status 'running' in the database
+  // Check for any session with status 'running' that was updated recently (within last 5 minutes)
+  // This prevents false positives from stale sessions that crashed without updating status
   const result = await pool.query(
     `SELECT COUNT(*) as count 
      FROM scraping_sessions 
-     WHERE status = 'running'`
+     WHERE status = 'running'
+     AND updated_at > NOW() - INTERVAL '5 minutes'`
   );
   
   const count = parseInt(result.rows[0].count, 10);
+  
+  // Also check if there's a queue item currently processing
+  if (count === 0) {
+    const queueResult = await pool.query(
+      `SELECT COUNT(*) as count 
+       FROM scraper_queue 
+       WHERE status = 'processing'
+       AND started_at > NOW() - INTERVAL '5 minutes'`
+    );
+    const queueCount = parseInt(queueResult.rows[0].count, 10);
+    return queueCount > 0;
+  }
+  
   return count > 0;
 }
 

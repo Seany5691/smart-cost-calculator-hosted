@@ -139,31 +139,42 @@ export async function POST(request: NextRequest) {
       // Another session is running - add this request to the queue
       console.log(`[SCRAPER API] Another session is active, adding ${sessionId} to queue`);
       
-      const queueItem = await addToQueue(user.userId, sessionId, scrapeConfig);
-      
-      // Log queued activity
-      await pool.query(
-        `INSERT INTO activity_log (user_id, activity_type, entity_type, entity_id, metadata)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [
-          user.userId,
-          'scraping_queued',
-          'scraping_session',
-          sessionId,
-          JSON.stringify({
-            session_name: sessionName,
-            queue_position: queueItem.queuePosition,
-            estimated_wait_minutes: queueItem.estimatedWaitMinutes,
-          })
-        ]
-      );
-      
-      return NextResponse.json({ 
-        sessionId, 
-        status: 'queued',
-        queuePosition: queueItem.queuePosition,
-        estimatedWaitMinutes: queueItem.estimatedWaitMinutes
-      }, { status: 201 });
+      try {
+        const queueItem = await addToQueue(user.userId, sessionId, scrapeConfig);
+        
+        // Log queued activity
+        await pool.query(
+          `INSERT INTO activity_log (user_id, activity_type, entity_type, entity_id, metadata)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [
+            user.userId,
+            'scraping_queued',
+            'scraping_session',
+            sessionId,
+            JSON.stringify({
+              session_name: sessionName,
+              queue_position: queueItem.queuePosition,
+              estimated_wait_minutes: queueItem.estimatedWaitMinutes,
+            })
+          ]
+        );
+        
+        return NextResponse.json({ 
+          sessionId, 
+          status: 'queued',
+          queuePosition: queueItem.queuePosition,
+          estimatedWaitMinutes: queueItem.estimatedWaitMinutes
+        }, { status: 201 });
+      } catch (queueError: any) {
+        console.error('[SCRAPER API] Error adding to queue:', queueError);
+        // If queue fails, delete the session and return error
+        await pool.query('DELETE FROM scraping_sessions WHERE id = $1', [sessionId]);
+        const errorMessage = queueError instanceof Error ? queueError.message : String(queueError);
+        return NextResponse.json(
+          { error: `Failed to add to queue: ${errorMessage}` },
+          { status: 500 }
+        );
+      }
     }
 
     // No active session - start immediately

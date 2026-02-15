@@ -46,7 +46,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
         s.created_at,
         COUNT(b.id) as business_count
        FROM scraping_sessions s
-       LEFT JOIN scraped_businesses b ON s.session_id = b.session_id
+       LEFT JOIN scraped_businesses b ON s.id = b.session_id
        WHERE s.user_id = $1
          AND s.status = 'completed'
        GROUP BY s.id, s.name, s.config, s.status, s.created_at

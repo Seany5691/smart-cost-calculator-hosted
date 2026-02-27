@@ -24,6 +24,8 @@ import {
   calculateTotalMRC,
 } from '@/lib/calculator';
 
+import SaveConfirmModal from './SaveConfirmModal';
+
 export default function TotalCostsStep() {
   const { 
     totalsData, 
@@ -54,6 +56,8 @@ export default function TotalCostsStep() {
   const [isEditingInstallationBase, setIsEditingInstallationBase] = useState(false);
   const [customInstallationBaseInput, setCustomInstallationBaseInput] = useState('');
   const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
+  const [showSaveConfirmForProposal, setShowSaveConfirmForProposal] = useState(false);
+  const [showSaveConfirmForPDF, setShowSaveConfirmForPDF] = useState(false);
   const proposalGeneratorRef = useRef<ProposalGeneratorRef>(null);
   const customGrossProfitRef = useRef(totalsData?.customGrossProfit);
 
@@ -535,18 +539,38 @@ export default function TotalCostsStep() {
     }
   };
 
+  // Handle generate PDF with save prompt
+  const handleGeneratePDFClick = () => {
+    setShowSaveConfirmForPDF(true);
+  };
+
+  const handleConfirmPDFWithSave = async () => {
+    setShowSaveConfirmForPDF(false);
+    try {
+      await saveDeal();
+      console.log('[TOTAL COSTS] Deal saved before PDF generation');
+      toast.success('Deal Saved', {
+        message: 'Deal saved successfully',
+        section: 'calculator'
+      });
+    } catch (saveError) {
+      console.warn('[TOTAL COSTS] Save failed:', saveError);
+      toast.error('Save Failed', {
+        message: 'Failed to save deal, but continuing with PDF generation',
+        section: 'calculator'
+      });
+    }
+    await handleGeneratePDF();
+  };
+
+  const handleConfirmPDFWithoutSave = async () => {
+    setShowSaveConfirmForPDF(false);
+    await handleGeneratePDF();
+  };
+
   // Handle generate PDF
   const handleGeneratePDF = async () => {
     try {
-      // Auto-save deal before generating PDF (AC-2.3)
-      try {
-        await saveDeal();
-        console.log('[TOTAL COSTS] Deal auto-saved before PDF generation');
-      } catch (saveError) {
-        console.warn('[TOTAL COSTS] Auto-save failed, continuing with PDF generation:', saveError);
-        // Don't block PDF generation if auto-save fails
-      }
-      
       const pdfUrl = await generatePDF();
       toast.success('PDF Generated Successfully', {
         message: 'Opening PDF in new tab...',
@@ -574,7 +598,36 @@ export default function TotalCostsStep() {
     }
   };
 
-  // Handle generate proposal
+  // Handle generate proposal with save prompt
+  const handleGenerateProposalClick = () => {
+    setShowSaveConfirmForProposal(true);
+  };
+
+  const handleConfirmProposalWithSave = async () => {
+    setShowSaveConfirmForProposal(false);
+    try {
+      await saveDeal();
+      console.log('[TOTAL COSTS] Deal saved before proposal generation');
+      toast.success('Deal Saved', {
+        message: 'Deal saved successfully',
+        section: 'calculator'
+      });
+    } catch (saveError) {
+      console.warn('[TOTAL COSTS] Save failed:', saveError);
+      toast.error('Save Failed', {
+        message: 'Failed to save deal, but continuing with proposal generation',
+        section: 'calculator'
+      });
+    }
+    setIsProposalModalOpen(true);
+  };
+
+  const handleConfirmProposalWithoutSave = () => {
+    setShowSaveConfirmForProposal(false);
+    setIsProposalModalOpen(true);
+  };
+
+  // Handle generate proposal (old function - no longer used directly)
   const handleGenerateProposal = async () => {
     // Auto-save deal before generating proposal (AC-2.1)
     try {
@@ -997,16 +1050,41 @@ export default function TotalCostsStep() {
           {isSaving ? 'Saving...' : 'Save Deal'}
         </button>
         
-        {/* PDF Generator Component */}
-        <PDFGenerator />
+        {/* PDF Generator Component - Wrapped with save prompt */}
+        <button
+          onClick={handleGeneratePDFClick}
+          className="px-6 py-3 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-base rounded-lg hover:shadow-lg transition-all font-semibold flex items-center justify-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <span>Generate PDF</span>
+        </button>
         
         <button
-          onClick={handleGenerateProposal}
+          onClick={handleGenerateProposalClick}
           className="px-6 py-3 h-12 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-base rounded-lg hover:shadow-lg transition-all font-semibold"
         >
           Generate Proposal
         </button>
       </div>
+      
+      {/* Save Confirmation Modals */}
+      <SaveConfirmModal
+        isOpen={showSaveConfirmForProposal}
+        onConfirm={handleConfirmProposalWithSave}
+        onCancel={handleConfirmProposalWithoutSave}
+        title="Save Deal Before Generating Proposal?"
+        message="Would you like to save the deal before generating the proposal?"
+      />
+      
+      <SaveConfirmModal
+        isOpen={showSaveConfirmForPDF}
+        onConfirm={handleConfirmPDFWithSave}
+        onCancel={handleConfirmPDFWithoutSave}
+        title="Save Deal Before Generating PDF?"
+        message="Would you like to save the deal before generating the PDF?"
+      />
       
       {/* Proposal Modal */}
       <ProposalModal

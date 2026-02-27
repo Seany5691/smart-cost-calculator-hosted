@@ -58,7 +58,7 @@ export default function AddReminderModal({
       if (token) {
         const data = JSON.parse(token);
         authToken = data.state?.token || data.token;
-        currentUserId = data.state?.user?.id || data.user?.id;
+        currentUserId = data.state?.user?.userId || data.user?.userId;
       }
 
       if (!authToken) return;

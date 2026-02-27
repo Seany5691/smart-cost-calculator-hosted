@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCalculatorStore } from '@/lib/store/calculator';
+import { useCalculatorStore, type CalculatorStep } from '@/lib/store/calculator';
 import { useConfigStore } from '@/lib/store/config';
 import { useAuthStore } from '@/lib/store/auth-simple';
 import { useToast } from '@/components/ui/Toast/useToast';
@@ -23,9 +23,18 @@ const STEPS = [
   { id: 'total-costs', label: 'Total Costs', number: 6 },
 ] as const;
 
+const STEP_ORDER: CalculatorStep[] = [
+  'deal-details',
+  'hardware',
+  'connectivity',
+  'licensing',
+  'settlement',
+  'total-costs',
+];
+
 export default function CalculatorWizard() {
   const router = useRouter();
-  const { currentStep, setCurrentStep, nextStep, previousStep, goToStep } = useCalculatorStore();
+  const { currentStep, setCurrentStep, nextStep, previousStep, goToStep, saveDeal, dealDetails } = useCalculatorStore();
   const { 
     fetchHardware, 
     fetchConnectivity, 
@@ -52,6 +61,21 @@ export default function CalculatorWizard() {
   
   // State for exit confirmation
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  // Auto-save on step navigation
+  const handleStepChange = async (newStep: CalculatorStep) => {
+    // Only auto-save if customer name is filled (minimum requirement)
+    if (dealDetails.customerName && dealDetails.customerName.trim() !== '') {
+      try {
+        await saveDeal();
+        console.log('[CALCULATOR WIZARD] Auto-saved on step change');
+      } catch (error) {
+        console.error('[CALCULATOR WIZARD] Auto-save failed:', error);
+        // Don't block navigation on save failure
+      }
+    }
+    setCurrentStep(newStep);
+  };
 
   // Initialize all configs when component mounts
   useEffect(() => {
@@ -119,7 +143,7 @@ export default function CalculatorWizard() {
           event.preventDefault();
           if (currentStepIndex < STEPS.length - 1) {
             if (validateCurrentStep()) {
-              nextStep();
+              handleStepChange(STEP_ORDER[currentStepIndex + 1]);
               showNavigationFeedback(STEPS[currentStepIndex + 1].label);
             }
           }
@@ -128,7 +152,7 @@ export default function CalculatorWizard() {
         case 'ArrowLeft':
           event.preventDefault();
           if (currentStepIndex > 0) {
-            previousStep();
+            handleStepChange(STEP_ORDER[currentStepIndex - 1]);
             showNavigationFeedback(STEPS[currentStepIndex - 1].label);
           }
           break;
@@ -142,7 +166,7 @@ export default function CalculatorWizard() {
           event.preventDefault();
           const stepNumber = parseInt(event.key);
           if (validateCurrentStep()) {
-            goToStep(stepNumber);
+            handleStepChange(STEP_ORDER[stepNumber - 1]);
             showNavigationFeedback(STEPS[stepNumber - 1].label);
           }
           break;
@@ -379,7 +403,7 @@ export default function CalculatorWizard() {
             return (
               <button
                 key={step.id}
-                onClick={() => setCurrentStep(step.id as any)}
+                onClick={() => handleStepChange(step.id as any)}
                 className={`
                   flex-1 min-w-[120px] px-4 py-3 rounded-lg font-medium transition-all
                   ${
@@ -421,7 +445,11 @@ export default function CalculatorWizard() {
       {/* Navigation Buttons */}
       <div className="flex flex-col sm:flex-row justify-between gap-3">
         <button
-          onClick={previousStep}
+          onClick={() => {
+            if (currentStepIndex > 0) {
+              handleStepChange(STEP_ORDER[currentStepIndex - 1]);
+            }
+          }}
           disabled={currentStepIndex === 0}
           className={`
             px-6 py-3 sm:py-2 rounded-lg font-medium transition-all h-12 sm:h-auto
@@ -437,8 +465,8 @@ export default function CalculatorWizard() {
         
         <button
           onClick={() => {
-            if (validateCurrentStep()) {
-              nextStep();
+            if (validateCurrentStep() && currentStepIndex < STEPS.length - 1) {
+              handleStepChange(STEP_ORDER[currentStepIndex + 1]);
             }
           }}
           disabled={currentStepIndex === STEPS.length - 1}

@@ -268,8 +268,8 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
       return dateA.getTime() - dateB.getTime();
     });
     
-    // Limit to 10 items
-    return combined.slice(0, 10);
+    // Return all items (unlimited scrolling)
+    return combined;
   }, [reminders, calendarEvents, selectedRange, selectedCalendarUserId]);
 
   // Check if reminder is overdue or today
@@ -780,25 +780,6 @@ export default function UpcomingReminders({ reminders, leads, onLeadClick, onRem
               </div>
             );
           })}
-
-          {/* View All link if there are more reminders */}
-          {reminders.length > 10 && (
-            <button
-              onClick={() => {
-                // Navigate to Reminders tab
-                if (typeof window !== 'undefined') {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set('tab', 'reminders');
-                  window.history.pushState({}, '', url.toString());
-                  // Dispatch custom event instead of reload
-                  window.dispatchEvent(new CustomEvent('tabchange', { detail: { tab: 'reminders' } }));
-                }
-              }}
-              className="w-full py-3 text-center text-emerald-300 hover:text-emerald-200 font-semibold hover:bg-white/10 rounded-lg transition-colors min-h-[44px]"
-            >
-              View All Reminders →
-            </button>
-          )}
         </div>
       )}
     </div>

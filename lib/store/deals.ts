@@ -75,6 +75,7 @@ export interface CostingItem {
   actualCost: number;
   repCost: number;
   profit: number;
+  hasCustomCost?: boolean; // Flag to indicate if custom cost is applied
 }
 
 export interface CostingSection {

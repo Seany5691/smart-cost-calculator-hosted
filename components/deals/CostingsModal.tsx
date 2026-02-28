@@ -10,6 +10,7 @@ import LicensingBreakdown from './costings/LicensingBreakdown';
 import TotalsComparison from './costings/TotalsComparison';
 import GrossProfitAnalysis from './costings/GrossProfitAnalysis';
 import TermAnalysis from './costings/TermAnalysis';
+import { useAuthStore } from '@/lib/store/auth-simple';
 
 interface CostingsModalProps {
   isOpen: boolean;
@@ -28,17 +29,134 @@ interface CostingsModalProps {
  * - Term analysis
  * - Print-friendly layout
  * - Uses portal to render above all content
+ * - Admin can edit actual costs per item
  * 
  * Requirements: AC-6.1 through AC-9.6
  */
 export default function CostingsModal({ isOpen, onClose, costings, isLoading }: CostingsModalProps) {
   const [mounted, setMounted] = useState(false);
+  const [localCostings, setLocalCostings] = useState<Costings | null>(costings);
+  const [isSaving, setIsSaving] = useState(false);
+  const { user } = useAuthStore();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    setLocalCostings(costings);
+  }, [costings]);
+
   if (!isOpen || !mounted) return null;
+
+  const handleCostUpdate = async (
+    category: 'hardware' | 'connectivity' | 'licensing',
+    itemName: string,
+    newCost: number | null
+  ) => {
+    if (!localCostings) return;
+
+    // Update local state immediately for responsive UI
+    const updatedCostings = { ...localCostings };
+    const section = updatedCostings[category];
+    
+    // Find and update the item
+    const itemIndex = section.items.findIndex(item => item.name === itemName);
+    if (itemIndex === -1) return;
+
+    const item = section.items[itemIndex];
+    const oldActualCost = item.actualCost;
+    
+    // If newCost is null, we need to reset to original (remove custom cost)
+    // For now, we'll just update the actualCost and mark hasCustomCost
+    if (newCost !== null) {
+      item.actualCost = newCost;
+      item.profit = item.repCost - newCost;
+      item.hasCustomCost = true;
+    } else {
+      // Reset would require fetching original cost from config
+      // For now, we'll handle this in the backend
+      item.hasCustomCost = false;
+    }
+
+    // Recalculate section totals
+    section.totalActual = section.items.reduce((sum, i) => sum + (i.actualCost * i.quantity), 0);
+    section.totalProfit = section.items.reduce((sum, i) => sum + (i.profit * i.quantity), 0);
+
+    // Recalculate overall totals
+    updatedCostings.totals.hardwareTotal.actual = updatedCostings.hardware.totalActual;
+    updatedCostings.totals.connectivityTotal.actual = updatedCostings.connectivity.totalActual;
+    updatedCostings.totals.licensingTotal.actual = updatedCostings.licensing.totalActual;
+
+    // Recalculate Total MRC
+    updatedCostings.totals.totalMRC.actual = 
+      updatedCostings.totals.hardwareRental.actual +
+      updatedCostings.connectivity.totalActual +
+      updatedCostings.licensing.totalActual;
+
+    // Recalculate Actual GP
+    updatedCostings.grossProfit.actualGP = 
+      updatedCostings.totals.totalPayout.actual -
+      updatedCostings.totals.financeFee.actual -
+      updatedCostings.totals.settlement.actual -
+      updatedCostings.totals.installationTotal.actual -
+      updatedCostings.hardware.totalActual;
+
+    updatedCostings.grossProfit.difference = 
+      updatedCostings.grossProfit.actualGP - updatedCostings.grossProfit.repGP;
+
+    // Recalculate term analysis
+    updatedCostings.termAnalysis.connectivityOverTerm.actual = 
+      updatedCostings.connectivity.totalActual * updatedCostings.term;
+    updatedCostings.termAnalysis.licensingOverTerm.actual = 
+      updatedCostings.licensing.totalActual * updatedCostings.term;
+    updatedCostings.termAnalysis.totalRecurringOverTerm.actual = 
+      updatedCostings.termAnalysis.connectivityOverTerm.actual +
+      updatedCostings.termAnalysis.licensingOverTerm.actual;
+    updatedCostings.termAnalysis.gpOverTerm = 
+      updatedCostings.termAnalysis.totalRecurringOverTerm.rep -
+      updatedCostings.termAnalysis.totalRecurringOverTerm.actual;
+
+    setLocalCostings(updatedCostings);
+
+    // Save to backend
+    try {
+      setIsSaving(true);
+      
+      // Build custom costs payload
+      const customCosts: any = {
+        hardware: updatedCostings.hardware.items
+          .filter(i => i.hasCustomCost)
+          .map(i => ({ name: i.name, customActualCost: i.actualCost })),
+        connectivity: updatedCostings.connectivity.items
+          .filter(i => i.hasCustomCost)
+          .map(i => ({ name: i.name, customActualCost: i.actualCost })),
+        licensing: updatedCostings.licensing.items
+          .filter(i => i.hasCustomCost)
+          .map(i => ({ name: i.name, customActualCost: i.actualCost })),
+      };
+
+      const response = await fetch(`/api/deals/${updatedCostings.dealId}/custom-costs`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(customCosts),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save custom costs');
+      }
+
+      console.log('[COSTINGS-MODAL] Custom costs saved successfully');
+    } catch (error) {
+      console.error('[COSTINGS-MODAL] Error saving custom costs:', error);
+      // Revert to original costings on error
+      setLocalCostings(costings);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const modalContent = (
     <div 
@@ -53,9 +171,17 @@ export default function CostingsModal({ isOpen, onClose, costings, isLoading }: 
       <div className="relative w-full max-w-6xl bg-gradient-to-br from-slate-900 via-orange-900/20 to-slate-900 rounded-2xl shadow-2xl border border-orange-500/30 max-h-[90vh] overflow-hidden">
         {/* Header with Close Button */}
         <div className="flex items-center justify-between p-6 border-b border-orange-500/20 sticky top-0 bg-gradient-to-br from-slate-900 via-orange-900/20 to-slate-900 z-10">
-          <h2 id="costings-modal-title" className="text-2xl font-bold text-white bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
-            Cost Breakdown Analysis
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 id="costings-modal-title" className="text-2xl font-bold text-white bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
+              Cost Breakdown Analysis
+            </h2>
+            {isSaving && (
+              <span className="text-sm text-blue-400 flex items-center gap-2">
+                <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+                Saving...
+              </span>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -77,60 +203,75 @@ export default function CostingsModal({ isOpen, onClose, costings, isLoading }: 
           )}
 
           {/* Content */}
-          {!isLoading && costings && (
+          {!isLoading && localCostings && (
             <div className="p-8 space-y-8">
               {/* Deal Info */}
               <div className="border-b border-orange-500/20 pb-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-gray-400">Deal Name</p>
-                    <p className="text-white font-semibold">{costings.dealName}</p>
+                    <p className="text-white font-semibold">{localCostings.dealName}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Customer</p>
-                    <p className="text-white font-semibold">{costings.customerName}</p>
+                    <p className="text-white font-semibold">{localCostings.customerName}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Created By</p>
-                    <p className="text-white font-semibold">{costings.createdBy}</p>
+                    <p className="text-white font-semibold">{localCostings.createdBy}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">User Role</p>
-                    <p className="text-white font-semibold capitalize">{costings.userRole}</p>
+                    <p className="text-white font-semibold capitalize">{localCostings.userRole}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Term</p>
-                    <p className="text-white font-semibold">{costings.term} months</p>
+                    <p className="text-white font-semibold">{localCostings.term} months</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Escalation</p>
-                    <p className="text-white font-semibold">{costings.escalation}%</p>
+                    <p className="text-white font-semibold">{localCostings.escalation}%</p>
                   </div>
                 </div>
               </div>
 
               {/* Hardware Breakdown */}
-              <HardwareBreakdown hardware={costings.hardware} />
+              <HardwareBreakdown 
+                hardware={localCostings.hardware} 
+                dealId={localCostings.dealId}
+                isAdmin={user?.role === 'admin'}
+                onCostUpdate={handleCostUpdate}
+              />
 
               {/* Connectivity Breakdown */}
-              <ConnectivityBreakdown connectivity={costings.connectivity} />
+              <ConnectivityBreakdown 
+                connectivity={localCostings.connectivity} 
+                dealId={localCostings.dealId}
+                isAdmin={user?.role === 'admin'}
+                onCostUpdate={handleCostUpdate}
+              />
 
               {/* Licensing Breakdown */}
-              <LicensingBreakdown licensing={costings.licensing} />
+              <LicensingBreakdown 
+                licensing={localCostings.licensing} 
+                dealId={localCostings.dealId}
+                isAdmin={user?.role === 'admin'}
+                onCostUpdate={handleCostUpdate}
+              />
 
               {/* Totals Comparison */}
-              <TotalsComparison totals={costings.totals} />
+              <TotalsComparison totals={localCostings.totals} />
 
               {/* Gross Profit Analysis */}
-              <GrossProfitAnalysis grossProfit={costings.grossProfit} />
+              <GrossProfitAnalysis grossProfit={localCostings.grossProfit} />
 
               {/* Term Analysis */}
-              <TermAnalysis termAnalysis={costings.termAnalysis} />
+              <TermAnalysis termAnalysis={localCostings.termAnalysis} />
 
               {/* Print Button */}
               <div className="flex justify-center pt-6 border-t border-orange-500/20">
                 <button
-                  onClick={() => generateCostingsHTML(costings)}
+                  onClick={() => generateCostingsHTML(localCostings)}
                   className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 transition-all duration-300 shadow-lg hover:shadow-orange-500/50 font-medium flex items-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

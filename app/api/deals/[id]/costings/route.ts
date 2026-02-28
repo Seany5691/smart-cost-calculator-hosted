@@ -57,12 +57,23 @@ export async function GET(
     const totalsData = deal.totals_data;
     const dealDetails = deal.deal_details;
     const userRole = deal.user_role;
+    const customActualCosts = deal.custom_actual_costs || {};
+
+    // Helper function to get custom actual cost for an item
+    const getCustomActualCost = (category: string, itemName: string): number | null => {
+      if (!customActualCosts[category]) return null;
+      const customItem = customActualCosts[category].find((c: any) => c.name === itemName);
+      return customItem?.customActualCost ?? null;
+    };
 
     // =====================================================
     // Hardware Breakdown
     // =====================================================
     const hardwareItems = (sectionsData?.hardware || []).map((item: any) => {
-      const actualCost = item.cost || 0; // Admin cost price
+      const defaultActualCost = item.cost || 0; // Admin cost price from config
+      const customCost = getCustomActualCost('hardware', item.name || 'Unknown');
+      const actualCost = customCost !== null ? customCost : defaultActualCost; // Use custom if available
+      
       const repCost = userRole === 'admin' || userRole === 'manager' 
         ? (item.managerCost || item.cost || 0)
         : (item.userCost || item.cost || 0);
@@ -72,7 +83,8 @@ export async function GET(
         quantity: item.selectedQuantity || item.quantity || 0,
         actualCost,
         repCost,
-        profit: repCost - actualCost
+        profit: repCost - actualCost,
+        hasCustomCost: customCost !== null // Flag to indicate if custom cost is applied
       };
     });
 
@@ -83,7 +95,10 @@ export async function GET(
     // Connectivity Breakdown
     // =====================================================
     const connectivityItems = (sectionsData?.connectivity || []).map((item: any) => {
-      const actualCost = item.cost || 0; // Admin cost price
+      const defaultActualCost = item.cost || 0; // Admin cost price from config
+      const customCost = getCustomActualCost('connectivity', item.name || 'Unknown');
+      const actualCost = customCost !== null ? customCost : defaultActualCost; // Use custom if available
+      
       const repCost = userRole === 'admin' || userRole === 'manager' 
         ? (item.managerCost || item.cost || 0)
         : (item.userCost || item.cost || 0);
@@ -93,7 +108,8 @@ export async function GET(
         quantity: item.selectedQuantity || item.quantity || 0,
         actualCost,
         repCost,
-        profit: repCost - actualCost
+        profit: repCost - actualCost,
+        hasCustomCost: customCost !== null // Flag to indicate if custom cost is applied
       };
     });
 
@@ -104,7 +120,10 @@ export async function GET(
     // Licensing Breakdown
     // =====================================================
     const licensingItems = (sectionsData?.licensing || []).map((item: any) => {
-      const actualCost = item.cost || 0; // Admin cost price
+      const defaultActualCost = item.cost || 0; // Admin cost price from config
+      const customCost = getCustomActualCost('licensing', item.name || 'Unknown');
+      const actualCost = customCost !== null ? customCost : defaultActualCost; // Use custom if available
+      
       const repCost = userRole === 'admin' || userRole === 'manager' 
         ? (item.managerCost || item.cost || 0)
         : (item.userCost || item.cost || 0);
@@ -114,7 +133,8 @@ export async function GET(
         quantity: item.selectedQuantity || item.quantity || 0,
         actualCost,
         repCost,
-        profit: repCost - actualCost
+        profit: repCost - actualCost,
+        hasCustomCost: customCost !== null // Flag to indicate if custom cost is applied
       };
     });
 

@@ -107,6 +107,16 @@ export default function DealsManager() {
   const handleDeleteDeal = async (dealId: string) => {
     try {
       await deleteDeal(dealId);
+      
+      // Check if we need to navigate to a different page after deletion
+      const { deals: currentDeals, currentPage, totalPages, setCurrentPage } = useDealsStore.getState();
+      
+      // If we just deleted the last deal on a page that's not page 1
+      if (currentDeals.length === 0 && currentPage > 1) {
+        // Navigate to the previous page
+        setCurrentPage(currentPage - 1);
+      }
+      
       // Refresh the deals list after deletion
       await fetchDeals();
     } catch (error) {

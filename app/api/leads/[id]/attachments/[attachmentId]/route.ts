@@ -19,7 +19,7 @@ const pool = new Pool({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; attachmentId: string } }
+  context: { params: Promise<{ id: string; attachmentId: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request);
@@ -27,7 +27,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { attachmentId } = params;
+    const { attachmentId } = await context.params;
 
     // Get attachment details
     const result = await pool.query(
@@ -68,7 +68,7 @@ export async function GET(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; attachmentId: string } }
+  context: { params: Promise<{ id: string; attachmentId: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request);
@@ -76,7 +76,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: leadId, attachmentId } = params;
+    const { id: leadId, attachmentId } = await context.params;
     const userId = authResult.user.userId;
 
     // Get attachment details

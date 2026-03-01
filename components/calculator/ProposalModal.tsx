@@ -17,10 +17,11 @@ export interface ProposalData {
   specialistEmail: string;
   specialistPhone: string;
   proposalType: 'normal' | 'comparative' | 'cash';
+  cashPrice?: number; // Optional: Only used for cash proposals
 }
 
 export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalModalProps) {
-  const { dealDetails } = useCalculatorStore();
+  const { dealDetails, totalsData } = useCalculatorStore();
   const modalRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -32,7 +33,8 @@ export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalMod
     currentMRC: 0,
     specialistEmail: '',
     specialistPhone: '',
-    proposalType: 'normal'
+    proposalType: 'normal',
+    cashPrice: totalsData?.totalPayout || 0 // Initialize with Total Payout
   });
 
   // Set mounted state on client side only
@@ -48,6 +50,16 @@ export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalMod
       customerName: dealDetails.customerName || ''
     }));
   }, [dealDetails.customerName]);
+
+  // Update cash price when totalsData changes or when switching to cash proposal
+  useEffect(() => {
+    if (formData.proposalType === 'cash') {
+      setFormData(prev => ({
+        ...prev,
+        cashPrice: totalsData?.totalPayout || 0
+      }));
+    }
+  }, [totalsData?.totalPayout, formData.proposalType]);
 
   // Handle escape key
   useEffect(() => {
@@ -111,7 +123,8 @@ export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalMod
       currentMRC: 0,
       specialistEmail: '',
       specialistPhone: '',
-      proposalType: 'normal'
+      proposalType: 'normal',
+      cashPrice: totalsData?.totalPayout || 0
     });
     onClose();
   };
@@ -230,6 +243,30 @@ export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalMod
             />
             <p className="text-sm text-purple-300/70">Monthly amounts excluding current hardware rental (R)</p>
           </div>
+
+          {/* Cash Price - Only show for Cash Proposal */}
+          {formData.proposalType === 'cash' && (
+            <div className="space-y-2 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+              <label htmlFor="cashPrice" className="text-white font-medium flex items-center gap-2">
+                Cash Price <span className="text-red-400">*</span>
+                <span className="text-xs text-purple-300/70 font-normal">(Defaults to Total Payout)</span>
+              </label>
+              <input
+                type="number"
+                id="cashPrice"
+                value={formData.cashPrice || 0}
+                onChange={(e) => handleInputChange('cashPrice', parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                className="w-full px-4 py-3 h-12 bg-white/10 border border-purple-500/30 rounded-lg text-white text-base placeholder-purple-300/50 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500 transition-all"
+                required
+              />
+              <p className="text-sm text-purple-300/70">
+                This amount will be used as the Total Payout on the cash proposal. Default: R {(totalsData?.totalPayout || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+              </p>
+            </div>
+          )}
 
           {/* Specialist Email */}
           <div className="space-y-2">

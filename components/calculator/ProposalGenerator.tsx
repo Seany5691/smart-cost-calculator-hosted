@@ -230,7 +230,12 @@ const ProposalGenerator = forwardRef<ProposalGeneratorRef, ProposalGeneratorProp
           'Monthly Service Term 2': 'Month-To-Month',
           'Total Monthly Service Term': 'Month-To-Month',
           
-          'Total Payout': formatCurrencyWithR(totalsData?.totalPayout || 0),
+          // Use cashPrice for cash proposals, otherwise use totalPayout
+          'Total Payout': formatCurrencyWithR(
+            proposalData.proposalType === 'cash' && proposalData.cashPrice !== undefined
+              ? proposalData.cashPrice
+              : (totalsData?.totalPayout || 0)
+          ),
           
           'Specialist Email Address': proposalData.specialistEmail,
           'Specialist Phone Number': proposalData.specialistPhone,

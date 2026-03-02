@@ -42,13 +42,13 @@ export async function GET(
     const attachment = result.rows[0];
 
     // Read file from storage
-    const fileBuffer = await readFile(attachment.file_path);
+    const fileBuffer = await readFile(attachment.storage_path);
 
     // Return file with appropriate headers
     return new NextResponse(fileBuffer as any, {
       headers: {
-        'Content-Type': attachment.mime_type || 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${attachment.filename}"`,
+        'Content-Type': attachment.file_type || 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${attachment.file_name}"`,
         'Content-Length': attachment.file_size.toString(),
       },
     });
@@ -92,7 +92,7 @@ export async function DELETE(
     const attachment = result.rows[0];
 
     // Delete file from storage
-    await deleteFile(attachment.file_path);
+    await deleteFile(attachment.storage_path);
 
     // Delete record from database
     await pool.query(`DELETE FROM attachments WHERE id = $1`, [attachmentId]);
@@ -110,8 +110,8 @@ export async function DELETE(
         leadId,
         userId,
         'attachment_deleted',
-        attachment.filename,
-        JSON.stringify({ filename: attachment.filename }),
+        attachment.file_name,
+        JSON.stringify({ filename: attachment.file_name }),
       ]
     );
 

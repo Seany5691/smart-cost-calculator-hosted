@@ -775,12 +775,26 @@ export default function ScraperPage() {
         <div className="max-w-7xl mx-auto space-y-4 lg:space-y-6">
         {/* Header */}
         <div className="glass-card p-4 lg:p-6">
-          <h1 className="text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-rose-400 to-red-400 bg-clip-text text-transparent">
-            Smart Scrape
-          </h1>
-          <p className="text-gray-300">
-            Scrape business data from Google Maps for multiple towns and industries
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl lg:text-4xl font-bold mb-2 bg-gradient-to-r from-rose-400 to-red-400 bg-clip-text text-transparent">
+                Smart Scrape
+              </h1>
+              <p className="text-gray-300">
+                Scrape business data from Google Maps for multiple towns and industries
+              </p>
+            </div>
+            <a
+              href="/scraper/queue-management"
+              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg flex items-center gap-2 transition-colors text-sm"
+              title="Manage scraping queue"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              Queue
+            </a>
+          </div>
         </div>
 
         {/* Active Session Banner (Resume Viewing) */}

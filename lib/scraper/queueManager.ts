@@ -45,10 +45,14 @@ export interface QueueStatus {
 
 /**
  * Check if any scraping session is currently active
+ * Also automatically cleans up stale sessions (not updated in 5+ minutes)
  * @returns true if a session is running, false otherwise
  */
 export async function isScrapingActive(): Promise<boolean> {
   const pool = getPool();
+  
+  // First, clean up stale sessions automatically
+  await cleanStaleSessions();
   
   // Check for any session with status 'running' that was updated recently (within last 5 minutes)
   // This prevents false positives from stale sessions that crashed without updating status
@@ -92,6 +96,45 @@ export async function isScrapingActive(): Promise<boolean> {
   
   console.log('[QueueManager] No active sessions or processing queue items found');
   return false;
+}
+
+/**
+ * Clean up stale sessions that haven't been updated in 5+ minutes
+ * This prevents the queue from getting stuck due to crashed sessions
+ */
+export async function cleanStaleSessions(): Promise<number> {
+  const pool = getPool();
+  
+  try {
+    // Update stale running sessions to 'stopped'
+    const sessionResult = await pool.query(
+      `UPDATE scraping_sessions 
+       SET status = 'stopped', updated_at = NOW()
+       WHERE status = 'running' 
+       AND updated_at < NOW() - INTERVAL '5 minutes'
+       RETURNING id, name`
+    );
+    
+    // Update stale processing queue items to 'cancelled'
+    const queueResult = await pool.query(
+      `UPDATE scraper_queue 
+       SET status = 'cancelled', completed_at = NOW()
+       WHERE status = 'processing'
+       AND started_at < NOW() - INTERVAL '5 minutes'
+       RETURNING id, session_id`
+    );
+    
+    const totalCleaned = sessionResult.rows.length + queueResult.rows.length;
+    
+    if (totalCleaned > 0) {
+      console.log(`[QueueManager] Cleaned ${sessionResult.rows.length} stale session(s) and ${queueResult.rows.length} stale queue item(s)`);
+    }
+    
+    return totalCleaned;
+  } catch (error) {
+    console.error('[QueueManager] Error cleaning stale sessions:', error);
+    return 0;
+  }
 }
 
 /**

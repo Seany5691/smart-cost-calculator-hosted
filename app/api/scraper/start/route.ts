@@ -112,34 +112,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create session in database
+    // CRITICAL FIX: Check if another scraping session is currently active BEFORE creating this session
     const pool = getPool();
-    await pool.query(
-      `INSERT INTO scraping_sessions (id, user_id, name, config, status, progress, state, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
-      [
-        sessionId,
-        user.userId,
-        sessionName,
-        JSON.stringify(scrapeConfig),
-        'running',
-        0,
-        JSON.stringify({
-          currentTownIndex: 0,
-          currentIndustryIndex: 0,
-          completedTowns: [],
-        }),
-      ]
-    );
-
-    // Check if another scraping session is currently active
     const isActive = await isScrapingActive();
     
     if (isActive) {
-      // Another session is running - add this request to the queue
+      // Another session is running - create session in DB and add to queue
       console.log(`[SCRAPER API] Another session is active, adding ${sessionId} to queue`);
       
       try {
+        // Create session in database with 'queued' status
+        await pool.query(
+          `INSERT INTO scraping_sessions (id, user_id, name, config, status, progress, state, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+          [
+            sessionId,
+            user.userId,
+            sessionName,
+            JSON.stringify(scrapeConfig),
+            'queued', // Set as queued, not running
+            0,
+            JSON.stringify({
+              currentTownIndex: 0,
+              currentIndustryIndex: 0,
+              completedTowns: [],
+            }),
+          ]
+        );
+
         const queueItem = await addToQueue(user.userId, sessionId, scrapeConfig);
         
         // Log queued activity
@@ -186,6 +186,25 @@ export async function POST(request: NextRequest) {
       console.log(`[SCRAPER API] Found existing queue, adding ${sessionId} to queue`);
       
       try {
+        // Create session in database with 'queued' status
+        await pool.query(
+          `INSERT INTO scraping_sessions (id, user_id, name, config, status, progress, state, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+          [
+            sessionId,
+            user.userId,
+            sessionName,
+            JSON.stringify(scrapeConfig),
+            'queued', // Set as queued, not running
+            0,
+            JSON.stringify({
+              currentTownIndex: 0,
+              currentIndustryIndex: 0,
+              completedTowns: [],
+            }),
+          ]
+        );
+
         const queueItem = await addToQueue(user.userId, sessionId, scrapeConfig);
         
         // Log queued activity
@@ -232,6 +251,25 @@ export async function POST(request: NextRequest) {
 
     // No active session and no queue - start immediately
     console.log(`[SCRAPER API] No active session, starting ${sessionId} immediately`);
+
+    // Create session in database with 'running' status
+    await pool.query(
+      `INSERT INTO scraping_sessions (id, user_id, name, config, status, progress, state, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+      [
+        sessionId,
+        user.userId,
+        sessionName,
+        JSON.stringify(scrapeConfig),
+        'running',
+        0,
+        JSON.stringify({
+          currentTownIndex: 0,
+          currentIndustryIndex: 0,
+          completedTowns: [],
+        }),
+      ]
+    );
 
     // Log activity
     await pool.query(
@@ -400,6 +438,12 @@ export async function startQueuedSession(sessionId: string): Promise<void> {
     const scrapeConfig: ScrapeConfig = JSON.parse(session.config);
     
     console.log(`[SCRAPER API] Starting queued session ${sessionId} for user ${session.user_id}`);
+    
+    // Update session status to running
+    await pool.query(
+      `UPDATE scraping_sessions SET status = 'running', updated_at = NOW() WHERE id = $1`,
+      [sessionId]
+    );
     
     // Create event emitter for this session
     const eventEmitter = new EventEmitter();

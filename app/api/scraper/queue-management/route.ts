@@ -97,8 +97,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('[QUEUE-MGMT] JSON parse error:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+
     const { action, itemId, sessionId } = body;
+
+    if (!action) {
+      return NextResponse.json(
+        { error: 'Missing action parameter' },
+        { status: 400 }
+      );
+    }
 
     const pool = getPool();
 

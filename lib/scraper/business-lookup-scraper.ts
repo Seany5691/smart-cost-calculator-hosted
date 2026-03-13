@@ -25,8 +25,14 @@ export class BusinessLookupScraper {
    */
   async scrape(): Promise<ScrapedBusiness[]> {
     try {
+      // Format query: convert "Business, Town" to "Business in Town"
+      let searchQuery = this.businessQuery;
+      if (searchQuery.includes(',')) {
+        searchQuery = searchQuery.replace(/,\s*/g, ' in ');
+      }
+
       // Navigate to Google Maps search
-      const url = `https://www.google.com/maps/search/${encodeURIComponent(this.businessQuery)}`;
+      const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
       await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
       // Wait for page to load

@@ -75,7 +75,7 @@ export class ProviderLookupService {
     this.batchManager = new BatchManager({
       minBatchSize: 3,
       maxBatchSize: 5, // CRITICAL: Never exceed 5
-      interBatchDelay: [2000, 5000], // 2-5 seconds between batches
+      interBatchDelay: [5000, 10000], // 5-10 seconds between batches (increased to avoid rate limiting)
       successRateThreshold: 0.5, // Reduce batch size if success rate < 50%
       enableCaptchaDetection: config.enableCaptchaDetection ?? false, // Disabled by default
     });
@@ -321,6 +321,13 @@ export class ProviderLookupService {
             await browser.close();
             this.activeBrowsers--;
             console.log(`[ProviderLookup] [Batch ${batchNumber}] Browser closed successfully (Active browsers: ${this.activeBrowsers})`);
+            
+            // Wait 3 seconds after closing browser before processing next batch
+            // This helps avoid rate limiting detection
+            if (i < phonesToLookup.length - 1) {
+              console.log(`[ProviderLookup] [Batch ${batchNumber}] Waiting 3 seconds before next batch to avoid rate limiting...`);
+              await this.sleep(3000);
+            }
           }
         }
       }
@@ -536,7 +543,14 @@ export class ProviderLookupService {
         }
 
         // Wait for the result element to be available
-        await page.waitForSelector('span.p1', { timeout: 5000 });
+        try {
+          await page.waitForSelector('span.p1', { timeout: 5000 });
+        } catch (error) {
+          // If span.p1 not found, log the page content for debugging
+          const pageContent = await page.content();
+          console.error(`[ProviderLookup] span.p1 not found for ${phoneNumber}. Page content:`, pageContent.substring(0, 500));
+          throw error;
+        }
 
         // Give a bit more time for content to fully load
         await this.sleep(500);

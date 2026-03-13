@@ -75,7 +75,7 @@ export class ProviderLookupService {
     this.batchManager = new BatchManager({
       minBatchSize: 3,
       maxBatchSize: 5, // CRITICAL: Never exceed 5
-      interBatchDelay: [5000, 10000], // 5-10 seconds between batches (increased to avoid rate limiting)
+      interBatchDelay: [0, 0], // No delay needed - captcha detection handles it
       successRateThreshold: 0.5, // Reduce batch size if success rate < 50%
       enableCaptchaDetection: config.enableCaptchaDetection ?? false, // Disabled by default
     });
@@ -229,10 +229,7 @@ export class ProviderLookupService {
               // Pass isFirstLookup flag (true for first lookup in batch)
               const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber, lookupIndex === 1);
               
-              // Add 500ms delay between lookups (except after last one)
-              if (lookupIndex < batchSize) {
-                await this.sleep(500);
-              }
+              // No delay needed - page refresh handles cleanup
               
               return provider === 'Unknown' ? null : provider;
               
@@ -260,10 +257,7 @@ export class ProviderLookupService {
                 try {
                   const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber, true); // First lookup with new browser
                   
-                  // Add 500ms delay between lookups (except after last one)
-                  if (lookupIndex < batchSize) {
-                    await this.sleep(500);
-                  }
+                  // No delay needed - page refresh handles cleanup
                   
                   return provider === 'Unknown' ? null : provider;
                 } catch (retryError) {
@@ -322,13 +316,7 @@ export class ProviderLookupService {
             await browser.close();
             this.activeBrowsers--;
             console.log(`[ProviderLookup] [Batch ${batchNumber}] Browser closed successfully (Active browsers: ${this.activeBrowsers})`);
-            
-            // Wait 3 seconds after closing browser before processing next batch
-            // This helps avoid rate limiting detection
-            if (i < phonesToLookup.length - 1) {
-              console.log(`[ProviderLookup] [Batch ${batchNumber}] Waiting 3 seconds before next batch to avoid rate limiting...`);
-              await this.sleep(3000);
-            }
+            // No wait needed - captcha detection handles everything
           }
         }
       }
@@ -558,10 +546,10 @@ export class ProviderLookupService {
         // Navigate to the form page (or refresh if not first lookup)
         const formUrl = 'https://www.porting.co.za/PublicWebsiteApp/#/number-inquiry';
         console.log(`[ProviderLookup] ${isFirstLookup ? 'Navigating to' : 'Refreshing'} form: ${formUrl}`);
-        await page.goto(formUrl, { waitUntil: 'networkidle0', timeout: 15000 });
+        await page.goto(formUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
 
-        // Wait for Angular to load
-        await this.sleep(2000);
+        // Wait for Angular to load (reduced from 2000ms)
+        await this.sleep(1000);
 
         // Wait for the input field to be available
         await page.waitForSelector('#numberTextInput', { timeout: 5000 });
@@ -581,8 +569,8 @@ export class ProviderLookupService {
         await page.click('#retrieveBtn');
         console.log(`[ProviderLookup] Clicked Query button`);
 
-        // Wait a moment for either the result or error message to appear
-        await this.sleep(1500);
+        // Wait a moment for either the result or error message to appear (reduced from 1500ms)
+        await this.sleep(500);
 
         // Check for captcha error message FIRST
         const hasCaptchaError = await page.evaluate(() => {
@@ -599,10 +587,10 @@ export class ProviderLookupService {
         }
 
         // Wait for the result to appear
-        await page.waitForSelector('#dataMsg', { timeout: 10000 });
+        await page.waitForSelector('#dataMsg', { timeout: 8000 });
         
-        // Wait a bit for the result to fully populate
-        await this.sleep(1000);
+        // Wait a bit for the result to fully populate (reduced from 1000ms)
+        await this.sleep(500);
 
         // Extract provider name from the result
         const provider = await this.extractProviderFromFormResult(page);

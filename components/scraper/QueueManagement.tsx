@@ -36,8 +36,8 @@ interface RunningSession {
   progress: number;
   created_at: string;
   updated_at: string;
-  minutes_since_update: string;
-  total_duration_minutes: string;
+  hours_since_update: string;
+  total_duration_hours: string;
 }
 
 interface QueueData {
@@ -261,7 +261,7 @@ export default function QueueManagement() {
                 {data.staleSessions.length} Stale Session(s) Detected
               </h3>
               <p className="text-sm text-slate-300 mb-3">
-                These sessions are marked as "running" but haven't been updated in over 5 minutes. 
+                These sessions are marked as "running" but haven't been updated in over 12 hours. 
                 They're likely crashed or stuck and should be cleared.
               </p>
               <div className="space-y-2">
@@ -270,9 +270,9 @@ export default function QueueManagement() {
                     <div>
                       <div className="text-white font-medium">{session.name}</div>
                       <div className="text-xs text-slate-400">
-                        Last updated: {formatDuration(parseFloat(session.minutes_since_update))} ago
+                        Last updated: {formatDuration(parseFloat(session.hours_since_update) * 60)} ago
                         {' • '}
-                        Total duration: {formatDuration(parseFloat(session.total_duration_minutes))}
+                        Total duration: {formatDuration(parseFloat(session.total_duration_hours) * 60)}
                       </div>
                     </div>
                     <button
@@ -297,7 +297,7 @@ export default function QueueManagement() {
           <h3 className="text-lg font-semibold text-white mb-3">Running Sessions</h3>
           <div className="space-y-2">
             {data.runningSessions.map((session) => {
-              const isStale = parseFloat(session.minutes_since_update) > 5;
+              const isStale = parseFloat(session.hours_since_update) > 12;
               return (
                 <div
                   key={session.id}
@@ -314,9 +314,9 @@ export default function QueueManagement() {
                       <div className="text-sm text-slate-400 mt-1">
                         Progress: {session.progress}%
                         {' • '}
-                        Last update: {formatDuration(parseFloat(session.minutes_since_update))} ago
+                        Last update: {formatDuration(parseFloat(session.hours_since_update) * 60)} ago
                         {' • '}
-                        Running for: {formatDuration(parseFloat(session.total_duration_minutes))}
+                        Running for: {formatDuration(parseFloat(session.total_duration_hours) * 60)}
                       </div>
                     </div>
                     <button

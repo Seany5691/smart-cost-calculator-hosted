@@ -45,7 +45,7 @@ export interface QueueStatus {
 
 /**
  * Check if any scraping session is currently active
- * Also automatically cleans up stale sessions (not updated in 5+ minutes)
+ * Also automatically cleans up stale sessions (not updated in 12+ hours)
  * @returns true if a session is running, false otherwise
  */
 export async function isScrapingActive(): Promise<boolean> {
@@ -54,14 +54,14 @@ export async function isScrapingActive(): Promise<boolean> {
   // First, clean up stale sessions automatically
   await cleanStaleSessions();
   
-  // Check for any session with status 'running' that was updated recently (within last 5 minutes)
+  // Check for any session with status 'running' that was updated recently (within last 12 hours)
   // This prevents false positives from stale sessions that crashed without updating status
   const result = await pool.query(
     `SELECT id, name, status, updated_at,
-     EXTRACT(EPOCH FROM (NOW() - updated_at)) / 60 as minutes_since_update
+     EXTRACT(EPOCH FROM (NOW() - updated_at)) / 3600 as hours_since_update
      FROM scraping_sessions 
      WHERE status = 'running'
-     AND updated_at > NOW() - INTERVAL '5 minutes'`
+     AND updated_at > NOW() - INTERVAL '12 hours'`
   );
   
   const count = result.rows.length;
@@ -70,7 +70,7 @@ export async function isScrapingActive(): Promise<boolean> {
     console.log(`[QueueManager] Found ${count} active session(s):`, result.rows.map(r => ({
       id: r.id,
       name: r.name,
-      minutesSinceUpdate: r.minutes_since_update
+      hoursSinceUpdate: r.hours_since_update
     })));
     return true;
   }
@@ -78,10 +78,10 @@ export async function isScrapingActive(): Promise<boolean> {
   // Also check if there's a queue item currently processing
   const queueResult = await pool.query(
     `SELECT id, session_id, status, started_at,
-     EXTRACT(EPOCH FROM (NOW() - started_at)) / 60 as minutes_since_start
+     EXTRACT(EPOCH FROM (NOW() - started_at)) / 3600 as hours_since_start
      FROM scraper_queue 
      WHERE status = 'processing'
-     AND started_at > NOW() - INTERVAL '5 minutes'`
+     AND started_at > NOW() - INTERVAL '12 hours'`
   );
   const queueCount = queueResult.rows.length;
   
@@ -89,7 +89,7 @@ export async function isScrapingActive(): Promise<boolean> {
     console.log(`[QueueManager] Found ${queueCount} processing queue item(s):`, queueResult.rows.map(r => ({
       id: r.id,
       sessionId: r.session_id,
-      minutesSinceStart: r.minutes_since_start
+      hoursSinceStart: r.hours_since_start
     })));
     return true;
   }
@@ -99,35 +99,35 @@ export async function isScrapingActive(): Promise<boolean> {
 }
 
 /**
- * Clean up stale sessions that haven't been updated in 5+ minutes
+ * Clean up stale sessions that haven't been updated in 12+ hours
  * This prevents the queue from getting stuck due to crashed sessions
  */
 export async function cleanStaleSessions(): Promise<number> {
   const pool = getPool();
   
   try {
-    // Update stale running sessions to 'stopped'
+    // Update stale running sessions to 'stopped' (12+ hours old)
     const sessionResult = await pool.query(
       `UPDATE scraping_sessions 
        SET status = 'stopped', updated_at = NOW()
        WHERE status = 'running' 
-       AND updated_at < NOW() - INTERVAL '5 minutes'
+       AND updated_at < NOW() - INTERVAL '12 hours'
        RETURNING id, name`
     );
     
-    // Update stale processing queue items to 'cancelled'
+    // Update stale processing queue items to 'cancelled' (12+ hours old)
     const queueResult = await pool.query(
       `UPDATE scraper_queue 
        SET status = 'cancelled', completed_at = NOW()
        WHERE status = 'processing'
-       AND started_at < NOW() - INTERVAL '5 minutes'
+       AND started_at < NOW() - INTERVAL '12 hours'
        RETURNING id, session_id`
     );
     
     const totalCleaned = sessionResult.rows.length + queueResult.rows.length;
     
     if (totalCleaned > 0) {
-      console.log(`[QueueManager] Cleaned ${sessionResult.rows.length} stale session(s) and ${queueResult.rows.length} stale queue item(s)`);
+      console.log(`[QueueManager] Cleaned ${sessionResult.rows.length} stale session(s) and ${queueResult.rows.length} stale queue item(s) (12+ hours old)`);
     }
     
     return totalCleaned;

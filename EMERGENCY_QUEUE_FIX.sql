@@ -11,27 +11,27 @@ UPDATE scraper_queue
 SET status = 'cancelled', completed_at = NOW()
 WHERE session_id = '69256204-0694-4b86-b913-b352b7916679';
 
--- 3. Clear any other stale sessions (not updated in 5+ minutes)
+-- 3. Clear any other stale sessions (not updated in 12+ hours)
 UPDATE scraping_sessions 
 SET status = 'stopped', updated_at = NOW()
 WHERE status = 'running' 
-AND updated_at < NOW() - INTERVAL '5 minutes';
+AND updated_at < NOW() - INTERVAL '12 hours';
 
--- 4. Cancel all stale queue items
+-- 4. Cancel all stale queue items (12+ hours old)
 UPDATE scraper_queue 
 SET status = 'cancelled', completed_at = NOW()
 WHERE status IN ('queued', 'processing')
-AND created_at < NOW() - INTERVAL '10 minutes';
+AND created_at < NOW() - INTERVAL '12 hours';
 
 -- 5. Check current status
 SELECT 'RUNNING SESSIONS' as type, id, name, status, updated_at,
-       EXTRACT(EPOCH FROM (NOW() - updated_at)) / 60 as minutes_since_update
+       EXTRACT(EPOCH FROM (NOW() - updated_at)) / 3600 as hours_since_update
 FROM scraping_sessions 
 WHERE status = 'running'
 UNION ALL
 SELECT 'QUEUE ITEMS' as type, q.id::text, s.name, q.status::text, q.created_at,
-       EXTRACT(EPOCH FROM (NOW() - q.created_at)) / 60 as minutes_since_created
+       EXTRACT(EPOCH FROM (NOW() - q.created_at)) / 3600 as hours_since_created
 FROM scraper_queue q
 LEFT JOIN scraping_sessions s ON q.session_id = s.id
 WHERE q.status IN ('queued', 'processing')
-ORDER BY type, minutes_since_update DESC;
+ORDER BY type, hours_since_update DESC;

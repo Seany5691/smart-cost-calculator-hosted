@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     const pool = getPool();
 
-    // Get all queue items
+    // Get active queue items (not cancelled or completed)
     const queueResult = await pool.query(
       `SELECT 
         q.id,
@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
       FROM scraper_queue q
       LEFT JOIN scraping_sessions s ON q.session_id = s.id
       LEFT JOIN users u ON q.user_id = u.id
+      WHERE q.status IN ('queued', 'processing')
       ORDER BY q.queue_position ASC`
     );
 
@@ -56,16 +57,16 @@ export async function GET(request: NextRequest) {
         progress,
         created_at,
         updated_at,
-        EXTRACT(EPOCH FROM (NOW() - updated_at)) / 60 as minutes_since_update,
-        EXTRACT(EPOCH FROM (NOW() - created_at)) / 60 as total_duration_minutes
+        EXTRACT(EPOCH FROM (NOW() - updated_at)) / 3600 as hours_since_update,
+        EXTRACT(EPOCH FROM (NOW() - created_at)) / 3600 as total_duration_hours
       FROM scraping_sessions 
       WHERE status = 'running'
       ORDER BY updated_at DESC`
     );
 
-    // Identify stale sessions (not updated in 5+ minutes)
+    // Identify stale sessions (not updated in 12+ hours)
     const staleSessions = sessionsResult.rows.filter(
-      (s) => parseFloat(s.minutes_since_update) > 5
+      (s) => parseFloat(s.hours_since_update) > 12
     );
 
     return NextResponse.json({
@@ -121,20 +122,20 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'clearStale': {
-        // Clear stale running sessions (not updated in 5+ minutes)
+        // Clear stale running sessions (not updated in 12+ hours)
         const result = await pool.query(
           `UPDATE scraping_sessions 
            SET status = 'stopped', updated_at = NOW()
            WHERE status = 'running' 
-           AND updated_at < NOW() - INTERVAL '5 minutes'
+           AND updated_at < NOW() - INTERVAL '12 hours'
            RETURNING id, name`
         );
 
-        console.log(`[QUEUE-MGMT] Cleared ${result.rows.length} stale sessions`);
+        console.log(`[QUEUE-MGMT] Cleared ${result.rows.length} stale sessions (12+ hours old)`);
         
         return NextResponse.json({
           success: true,
-          message: `Cleared ${result.rows.length} stale session(s)`,
+          message: `Cleared ${result.rows.length} stale session(s) (12+ hours old)`,
           clearedSessions: result.rows,
         });
       }
@@ -159,33 +160,37 @@ export async function POST(request: NextRequest) {
 
       case 'clearItem': {
         if (!itemId) {
+          console.log(`[QUEUE-MGMT] clearItem called without itemId`);
           return NextResponse.json(
             { error: 'Missing itemId parameter' },
             { status: 400 }
           );
         }
 
+        console.log(`[QUEUE-MGMT] Attempting to clear queue item: ${itemId}`);
+
         // Clear specific queue item
         const result = await pool.query(
           `UPDATE scraper_queue 
            SET status = 'cancelled', completed_at = NOW()
-           WHERE id = $1
-           RETURNING id, session_id`,
+           WHERE id = $1 AND status IN ('queued', 'processing')
+           RETURNING id, session_id, status`,
           [itemId]
         );
 
         if (result.rows.length === 0) {
+          console.log(`[QUEUE-MGMT] Queue item not found or already processed: ${itemId}`);
           return NextResponse.json(
-            { error: 'Queue item not found' },
+            { error: 'Queue item not found or already processed' },
             { status: 404 }
           );
         }
 
-        console.log(`[QUEUE-MGMT] Cleared queue item: ${itemId}`);
+        console.log(`[QUEUE-MGMT] Successfully cleared queue item: ${itemId}`, result.rows[0]);
         
         return NextResponse.json({
           success: true,
-          message: 'Queue item cleared',
+          message: 'Queue item removed',
           clearedItem: result.rows[0],
         });
       }

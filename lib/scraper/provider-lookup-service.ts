@@ -226,7 +226,8 @@ export class ProviderLookupService {
             
             try {
               // Try lookup with current browser
-              const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber);
+              // Pass isFirstLookup flag (true for first lookup in batch)
+              const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber, lookupIndex === 1);
               
               // Add 500ms delay between lookups (except after last one)
               if (lookupIndex < batchSize) {
@@ -257,7 +258,7 @@ export class ProviderLookupService {
                 
                 // Retry the lookup with new browser
                 try {
-                  const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber);
+                  const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber, true); // First lookup with new browser
                   
                   // Add 500ms delay between lookups (except after last one)
                   if (lookupIndex < batchSize) {
@@ -522,18 +523,24 @@ export class ProviderLookupService {
   /**
    * Looks up provider for a single phone number using the provided browser
    * 
-   * OPTIMIZED APPROACH (Direct URL):
-   * - Uses direct URL: https://www.porting.co.za/PublicWebsite/crdb?msisdn={phoneNumber}
-   * - Extracts provider from: <span class="p1">The number ... serviced by PROVIDER.</span>
-   * - Much faster than form interaction (no clicking, typing, waiting)
-   * - Still handles captcha detection if needed
+   * FORM INTERACTION WITH CAPTCHA ERROR DETECTION:
+   * 1. Navigate to /PublicWebsiteApp/#/number-inquiry (done once per browser)
+   * 2. Fill input field: <input id="numberTextInput" />
+   * 3. Click Query button: <button id="retrieveBtn">
+   * 4. Check for captcha error: <div id="erromsg">Verification Code - Field(s) value must be entered.</div>
+   * 5. If error appears → throw CAPTCHA_DETECTED → restart browser with fresh user data → retry same number
+   * 6. Otherwise, wait for result element: <label id="dataMsg">
+   * 7. Extract provider from dataMsg text
+   * 8. Hard refresh the page (clears any potential captcha state)
+   * 9. Repeat for next number
    * 
    * @param browser - Browser instance to use
    * @param phoneNumber - Phone number to lookup
+   * @param isFirstLookup - Whether this is the first lookup in the batch (to navigate to form)
    * @returns Provider name or "Unknown"
-   * @throws Error if captcha detected (triggers browser restart)
+   * @throws Error with 'CAPTCHA_DETECTED' if captcha error message appears
    */
-  async lookupSingleProvider(browser: Browser, phoneNumber: string): Promise<string> {
+  async lookupSingleProvider(browser: Browser, phoneNumber: string, isFirstLookup: boolean = false): Promise<string> {
     return this.retryStrategy.execute(async () => {
       const page = await browser.newPage();
       this.activePages.add(page); // Track page to prevent leaks
@@ -548,32 +555,57 @@ export class ProviderLookupService {
         
         console.log(`[ProviderLookup] Looking up phone: ${phoneNumber} -> cleaned: ${cleanPhone}`);
 
-        // Navigate directly to the lookup URL with the phone number
-        const lookupUrl = `https://www.porting.co.za/PublicWebsite/crdb?msisdn=${cleanPhone}`;
-        await page.goto(lookupUrl, { waitUntil: 'networkidle0', timeout: 15000 });
+        // Navigate to the form page (or refresh if not first lookup)
+        const formUrl = 'https://www.porting.co.za/PublicWebsiteApp/#/number-inquiry';
+        console.log(`[ProviderLookup] ${isFirstLookup ? 'Navigating to' : 'Refreshing'} form: ${formUrl}`);
+        await page.goto(formUrl, { waitUntil: 'networkidle0', timeout: 15000 });
 
-        // Check for captcha
-        const hasCaptcha = await this.detectCaptchaOnPage(page);
-        if (hasCaptcha) {
-          console.warn(`[ProviderLookup] Captcha detected on page for ${phoneNumber}, will restart browser`);
+        // Wait for Angular to load
+        await this.sleep(2000);
+
+        // Wait for the input field to be available
+        await page.waitForSelector('#numberTextInput', { timeout: 5000 });
+        
+        // Clear and fill the input field
+        await page.evaluate(() => {
+          const input = document.querySelector('#numberTextInput') as HTMLInputElement;
+          if (input) {
+            input.value = '';
+          }
+        });
+        await page.type('#numberTextInput', cleanPhone);
+        
+        console.log(`[ProviderLookup] Entered phone number: ${cleanPhone}`);
+
+        // Click the Query button
+        await page.click('#retrieveBtn');
+        console.log(`[ProviderLookup] Clicked Query button`);
+
+        // Wait a moment for either the result or error message to appear
+        await this.sleep(1500);
+
+        // Check for captcha error message FIRST
+        const hasCaptchaError = await page.evaluate(() => {
+          const errorDiv = document.querySelector('#erromsg');
+          if (!errorDiv) return false;
+          
+          const errorText = errorDiv.textContent || '';
+          return errorText.includes('Verification Code') && errorText.includes('Field(s) value must be entered');
+        });
+
+        if (hasCaptchaError) {
+          console.warn(`[ProviderLookup] CAPTCHA ERROR detected for ${phoneNumber} - "Verification Code - Field(s) value must be entered."`);
           throw new Error('CAPTCHA_DETECTED');
         }
 
-        // Wait for the result element to be available
-        try {
-          await page.waitForSelector('span.p1', { timeout: 5000 });
-        } catch (error) {
-          // If span.p1 not found, log the page content for debugging
-          const pageContent = await page.content();
-          console.error(`[ProviderLookup] span.p1 not found for ${phoneNumber}. Page content:`, pageContent.substring(0, 500));
-          throw error;
-        }
-
-        // Give a bit more time for content to fully load
-        await this.sleep(500);
+        // Wait for the result to appear
+        await page.waitForSelector('#dataMsg', { timeout: 10000 });
+        
+        // Wait a bit for the result to fully populate
+        await this.sleep(1000);
 
         // Extract provider name from the result
-        const provider = await this.extractProviderFromDirectUrl(page);
+        const provider = await this.extractProviderFromFormResult(page);
         
         console.log(`[ProviderLookup] Result for ${phoneNumber}: ${provider}`);
 
@@ -695,8 +727,10 @@ export class ProviderLookupService {
   /**
    * Extracts provider name from the form result
    * 
-   * @deprecated This method is no longer used as we now use direct URL access.
-   * Kept for backward compatibility.
+   * FORM RESULT FORMAT:
+   * - Element: <label id="dataMsg">The number 0686128512 has not been ported and is still serviced by MTN/MTN.</label>
+   * - OR: <label id="dataMsg">0686128512 has been ported and is serviced by VODACOM.</label>
+   * - Extracts provider name after "serviced by " marker
    * 
    * @param page - Puppeteer page with results
    * @returns Provider name or "Unknown"
@@ -716,27 +750,8 @@ export class ProviderLookupService {
 
       console.log(`[ProviderLookup] dataMsg text: "${dataMsgText}"`);
 
-      // Extract the last word from the text
-      // Text format: "The number 0686128512 has not been ported and is still serviced by MTN/MTN."
-      // We want to extract "MTN" (the last word before the period)
-      
-      // Remove trailing punctuation and split by whitespace
-      const cleanedText = dataMsgText.trim().replace(/[.,;:!?]+$/, '');
-      const words = cleanedText.split(/\s+/);
-      
-      if (words.length === 0) {
-        console.log('[ProviderLookup] No words found in dataMsg text');
-        return 'Unknown';
-      }
-
-      // Get the last word
-      const lastWord = words[words.length - 1].trim();
-      
-      // Remove any remaining punctuation from the last word
-      const provider = lastWord.replace(/[.,;:!?]+$/, '');
-      
-      console.log(`[ProviderLookup] Extracted provider: "${provider}"`);
-      return provider || 'Unknown';
+      // Use the existing parseProvider method to extract provider name
+      return this.parseProvider(dataMsgText);
 
     } catch (error) {
       console.warn('[ProviderLookup] Failed to extract provider from form result:', error);

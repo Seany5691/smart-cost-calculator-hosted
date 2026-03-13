@@ -478,9 +478,24 @@ export class ProviderLookupService {
       this.activeBrowsers++;
       console.log(`[ProviderLookup] Creating browser instance... (Active browsers: ${this.activeBrowsers})`);
       const puppeteer = await import('puppeteer');
+      const os = await import('os');
+      const path = await import('path');
+      const fs = await import('fs');
+      
+      // Create a unique temporary directory for this browser instance
+      // This ensures each browser has a completely fresh profile (like opening a new Chrome user)
+      const tempDir = path.join(os.tmpdir(), `puppeteer-profile-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+      
+      // Ensure the temp directory exists
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      
+      console.log(`[ProviderLookup] Using fresh user data directory: ${tempDir}`);
       
       const launchOptions = {
         headless: true,
+        userDataDir: tempDir, // CRITICAL: Fresh profile for each browser to avoid captcha tracking
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -489,6 +504,8 @@ export class ProviderLookupService {
           '--no-first-run',
           '--no-zygote',
           '--disable-gpu',
+          '--disable-blink-features=AutomationControlled', // Hide automation detection
+          '--disable-features=IsolateOrigins,site-per-process', // Reduce fingerprinting
         ],
       };
       

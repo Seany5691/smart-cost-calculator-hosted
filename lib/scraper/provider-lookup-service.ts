@@ -498,17 +498,11 @@ export class ProviderLookupService {
   /**
    * Looks up provider for a single phone number using the provided browser
    * 
-   * NEW APPROACH (2025-01-30):
-   * - porting.co.za changed their site - direct URL access no longer works
-   * - Now uses form interaction:
-   *   1. Navigate to /PublicWebsiteApp/#/number-inquiry
-   *   2. Check for captcha BEFORE entering number
-   *   3. Fill input field #numberTextInput with phone number
-   *   4. Click Query button #retrieveBtn
-   *   5. Wait for result element #dataMsg
-   *   6. Extract last word from dataMsg text (provider name)
-   * - Detects captcha and throws error to trigger browser restart
-   * - Captcha is now randomized (not every 5th lookup)
+   * OPTIMIZED APPROACH (Direct URL):
+   * - Uses direct URL: https://www.porting.co.za/PublicWebsite/crdb?msisdn={phoneNumber}
+   * - Extracts provider from: <span class="p1">The number ... serviced by PROVIDER.</span>
+   * - Much faster than form interaction (no clicking, typing, waiting)
+   * - Still handles captcha detection if needed
    * 
    * @param browser - Browser instance to use
    * @param phoneNumber - Phone number to lookup
@@ -522,10 +516,6 @@ export class ProviderLookupService {
 
       try {
         // Set timeouts to prevent hanging on individual operations
-        // IMPORTANT: These are PER-OPERATION timeouts, NOT total page lifetime
-        // - page.setDefaultTimeout: Each operation (waitForSelector, etc.) times out after 30s
-        // - page.setDefaultNavigationTimeout: Each navigation (goto, etc.) times out after 30s
-        // The page can stay open for hours as long as each operation completes within 30s
         page.setDefaultTimeout(30000); // 30 second timeout per operation
         page.setDefaultNavigationTimeout(30000); // 30 second timeout per navigation
         
@@ -534,43 +524,25 @@ export class ProviderLookupService {
         
         console.log(`[ProviderLookup] Looking up phone: ${phoneNumber} -> cleaned: ${cleanPhone}`);
 
-        // Navigate to the porting.co.za number inquiry page
-        await page.goto('https://www.porting.co.za/PublicWebsiteApp/#/number-inquiry', { waitUntil: 'networkidle0', timeout: 15000 });
+        // Navigate directly to the lookup URL with the phone number
+        const lookupUrl = `https://www.porting.co.za/PublicWebsite/crdb?msisdn=${cleanPhone}`;
+        await page.goto(lookupUrl, { waitUntil: 'networkidle0', timeout: 15000 });
 
-        // Check for captcha BEFORE entering number
+        // Check for captcha
         const hasCaptcha = await this.detectCaptchaOnPage(page);
         if (hasCaptcha) {
           console.warn(`[ProviderLookup] Captcha detected on page for ${phoneNumber}, will restart browser`);
           throw new Error('CAPTCHA_DETECTED');
         }
 
-        // Wait for the input field to be available
-        await page.waitForSelector('#numberTextInput', { timeout: 5000 });
-
-        // Clear and type the phone number into the input field
-        await page.click('#numberTextInput');
-        await page.evaluate(() => {
-          const input = document.querySelector('#numberTextInput') as HTMLInputElement;
-          if (input) input.value = '';
-        });
-        await page.type('#numberTextInput', cleanPhone, { delay: 100 });
-
-        console.log(`[ProviderLookup] Entered phone number: ${cleanPhone}`);
-
-        // Click the "Query" button
-        await page.waitForSelector('#retrieveBtn', { timeout: 5000 });
-        await page.click('#retrieveBtn');
-
-        console.log(`[ProviderLookup] Clicked Query button`);
-
-        // Wait for result to appear (wait for the dataMsg element)
-        await page.waitForSelector('#dataMsg', { timeout: 10000 });
+        // Wait for the result element to be available
+        await page.waitForSelector('span.p1', { timeout: 5000 });
 
         // Give a bit more time for content to fully load
-        await this.sleep(1000);
+        await this.sleep(500);
 
         // Extract provider name from the result
-        const provider = await this.extractProviderFromFormResult(page);
+        const provider = await this.extractProviderFromDirectUrl(page);
         
         console.log(`[ProviderLookup] Result for ${phoneNumber}: ${provider}`);
 
@@ -656,12 +628,44 @@ export class ProviderLookupService {
   }
 
   /**
+   * Extracts provider name from the direct URL result
+   * 
+   * DIRECT URL FORMAT:
+   * - Element: <span class="p1">The number 0113935483 has not been ported and is still serviced by TELKOM.<img src="transparent.gif" width="1" height="5"><br>[ <a href=".">Query another number</a> ]<br></span>
+   * - Extracts provider name after "serviced by " marker
+   * 
+   * @param page - Puppeteer page with results
+   * @returns Provider name or "Unknown"
+   */
+  private async extractProviderFromDirectUrl(page: Page): Promise<string> {
+    try {
+      // Get text from the span.p1 element
+      const spanText = await page.evaluate(() => {
+        const element = document.querySelector('span.p1');
+        return element ? element.textContent || '' : '';
+      });
+      
+      if (!spanText) {
+        console.log('[ProviderLookup] No span.p1 element found or empty');
+        return 'Unknown';
+      }
+
+      console.log(`[ProviderLookup] span.p1 text: "${spanText}"`);
+
+      // Parse provider from text using existing parseProvider method
+      return this.parseProvider(spanText);
+
+    } catch (error) {
+      console.warn('[ProviderLookup] Failed to extract provider from direct URL result:', error);
+      return 'Unknown';
+    }
+  }
+
+  /**
    * Extracts provider name from the form result
    * 
-   * NEW FORMAT (2025-01-30):
-   * - Looks for element: <label id="dataMsg">
-   * - Text format: "The number 0686128512 has not been ported and is still serviced by MTN/MTN."
-   * - Extracts the last word from the text (e.g., "MTN")
+   * @deprecated This method is no longer used as we now use direct URL access.
+   * Kept for backward compatibility.
    * 
    * @param page - Puppeteer page with results
    * @returns Provider name or "Unknown"
@@ -705,40 +709,6 @@ export class ProviderLookupService {
 
     } catch (error) {
       console.warn('[ProviderLookup] Failed to extract provider from form result:', error);
-      return 'Unknown';
-    }
-  }
-
-  /**
-   * Extracts provider name from the lookup result page (OLD METHOD - DEPRECATED)
-   * 
-   * @deprecated This method is no longer used as porting.co.za changed their site.
-   * Use extractProviderFromFormResult instead.
-   * 
-   * @param page - Puppeteer page with results
-   * @returns Provider name or "Unknown"
-   */
-  private async extractProviderFromPage(page: Page): Promise<string> {
-    try {
-      // Look for the span.p1 element
-      const spanElement = await page.$('span.p1');
-      if (!spanElement) {
-        console.log('[ProviderLookup] No span.p1 element found');
-        return 'Unknown';
-      }
-
-      const text = await spanElement.evaluate(el => el.textContent);
-      console.log(`[ProviderLookup] Extracted text from page: "${text}"`);
-      
-      if (!text || text.trim() === '') {
-        return 'Unknown';
-      }
-
-      // Parse provider from text
-      return this.parseProvider(text.trim());
-
-    } catch (error) {
-      console.warn('[ProviderLookup] Failed to extract provider from page:', error);
       return 'Unknown';
     }
   }

@@ -117,11 +117,11 @@ export async function POST(request: NextRequest) {
     const isActive = await isScrapingActive();
     
     if (isActive) {
-      // Another session is running - create session in DB and add to queue
+      // Another session is running - create session in DB with 'stopped' status and add to queue
       console.log(`[SCRAPER API] Another session is active, adding ${sessionId} to queue`);
       
       try {
-        // Create session in database with 'queued' status
+        // Create session in database with 'stopped' status (will be changed to 'running' when processed)
         await pool.query(
           `INSERT INTO scraping_sessions (id, user_id, name, config, status, progress, state, created_at, updated_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
@@ -130,12 +130,13 @@ export async function POST(request: NextRequest) {
             user.userId,
             sessionName,
             JSON.stringify(scrapeConfig),
-            'queued', // Set as queued, not running
+            'stopped', // Use 'stopped' instead of 'queued' to satisfy constraint
             0,
             JSON.stringify({
               currentTownIndex: 0,
               currentIndustryIndex: 0,
               completedTowns: [],
+              queuedAt: new Date().toISOString(), // Mark when it was queued
             }),
           ]
         );
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
       console.log(`[SCRAPER API] Found existing queue, adding ${sessionId} to queue`);
       
       try {
-        // Create session in database with 'queued' status
+        // Create session in database with 'stopped' status (will be changed to 'running' when processed)
         await pool.query(
           `INSERT INTO scraping_sessions (id, user_id, name, config, status, progress, state, created_at, updated_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
@@ -195,12 +196,13 @@ export async function POST(request: NextRequest) {
             user.userId,
             sessionName,
             JSON.stringify(scrapeConfig),
-            'queued', // Set as queued, not running
+            'stopped', // Use 'stopped' instead of 'queued' to satisfy constraint
             0,
             JSON.stringify({
               currentTownIndex: 0,
               currentIndustryIndex: 0,
               completedTowns: [],
+              queuedAt: new Date().toISOString(), // Mark when it was queued
             }),
           ]
         );

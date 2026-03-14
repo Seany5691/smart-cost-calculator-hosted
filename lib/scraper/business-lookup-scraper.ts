@@ -39,9 +39,9 @@ export class BusinessLookupScraper {
       console.log(`[BusinessLookup] Navigating to: ${url}`);
       await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-      // Wait for page to load
-      console.log(`[BusinessLookup] Waiting 2 seconds for page to load...`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait for page to load (reduced from 2000ms to 1000ms)
+      console.log(`[BusinessLookup] Waiting 1 second for page to load...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Detect view type
       console.log(`[BusinessLookup] Detecting view type...`);

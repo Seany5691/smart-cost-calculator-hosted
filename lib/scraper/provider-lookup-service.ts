@@ -263,9 +263,9 @@ export class ProviderLookupService {
                 } catch (retryError) {
                   console.error(`[ProviderLookup] [Batch ${batchNumber}] Retry failed for ${lookup.phoneNumber}:`, retryError);
                   
-                  // Add 500ms delay between lookups (except after last one)
+                  // Add minimal delay between lookups (optimized from 500ms to 100ms)
                   if (lookupIndex < batchSize) {
-                    await this.sleep(500);
+                    await this.sleep(100);
                   }
                   
                   return null;
@@ -275,9 +275,9 @@ export class ProviderLookupService {
               // All retries exhausted or other error
               console.error(`[ProviderLookup] All retries exhausted for ${lookup.phoneNumber}:`, error);
               
-              // Add 500ms delay between lookups (except after last one)
+              // Add minimal delay between lookups (optimized from 500ms to 100ms)
               if (lookupIndex < batchSize) {
-                await this.sleep(500);
+                await this.sleep(100);
               }
               
               return null;
@@ -414,9 +414,9 @@ export class ProviderLookupService {
         const provider = await this.lookupSingleProvider(browser, phone);
         results.set(phone, provider);
         
-        // Requirement 24.2: Wait 500ms between provider lookups in batch
+        // Requirement 24.2: Minimal wait between provider lookups in batch (optimized from 500ms to 100ms)
         if (i < batch.length - 1) {
-          await this.sleep(500);
+          await this.sleep(100);
         }
       }
       
@@ -548,8 +548,8 @@ export class ProviderLookupService {
         console.log(`[ProviderLookup] ${isFirstLookup ? 'Navigating to' : 'Refreshing'} form: ${formUrl}`);
         await page.goto(formUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
 
-        // Wait for Angular to load (reduced from 2000ms)
-        await this.sleep(1000);
+        // Wait for Angular to load (optimized from 1000ms to 500ms)
+        await this.sleep(500);
 
         // Wait for the input field to be available
         await page.waitForSelector('#numberTextInput', { timeout: 5000 });
@@ -569,8 +569,8 @@ export class ProviderLookupService {
         await page.click('#retrieveBtn');
         console.log(`[ProviderLookup] Clicked Query button`);
 
-        // Wait a moment for either the result or error message to appear (reduced from 1500ms)
-        await this.sleep(500);
+        // Wait a moment for either the result or error message to appear (optimized from 500ms to 300ms)
+        await this.sleep(300);
 
         // Check for captcha error message FIRST
         const hasCaptchaError = await page.evaluate(() => {
@@ -589,8 +589,8 @@ export class ProviderLookupService {
         // Wait for the result to appear
         await page.waitForSelector('#dataMsg', { timeout: 8000 });
         
-        // Wait a bit for the result to fully populate (reduced from 1000ms)
-        await this.sleep(500);
+        // Wait a bit for the result to fully populate (optimized from 500ms to 200ms)
+        await this.sleep(200);
 
         // Extract provider name from the result
         const provider = await this.extractProviderFromFormResult(page);

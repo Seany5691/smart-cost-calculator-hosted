@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       
       // Use the new ProviderLookupService (handles browser management, caching, batching, captcha detection)
       providerLookup = new ProviderLookupService({
-        maxConcurrentBatches: 1,
+        maxConcurrentBatches: 2, // Increased from 1 to 2 for faster business lookup
       });
 
       // Service handles phone number cleaning (27/+27 -> 0, removes spaces)

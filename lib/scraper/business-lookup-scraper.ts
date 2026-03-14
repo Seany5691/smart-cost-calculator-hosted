@@ -246,7 +246,7 @@ export class BusinessLookupScraper {
         console.log(`[BusinessLookup] Feed element found`);
 
         // Get business cards (limit to 3) - FIXED: Use $$() to get array of elements
-        const cards = await this.page.$$('div[role="feed"] > div > div');
+        const cards = await this.page.$$('div[role="feed"] a.hfpxzc');
         console.log(`[BusinessLookup] Found ${cards.length} business cards in list view`);
 
         const limitedCards = cards.slice(0, 3);
@@ -286,58 +286,52 @@ export class BusinessLookupScraper {
    */
   async parseBusinessCard(cardElement: any): Promise<ScrapedBusiness | null> {
     try {
-      const data = await cardElement.evaluate((element: Element) => {
-        // Find the link element
-        const linkElement = element.querySelector('a');
-        const href = linkElement?.getAttribute('href') || '';
-
-        // Extract name - try multiple strategies
-        let name = '';
+      const data = await cardElement.evaluate((linkElement: Element) => {
+        // We're now receiving the <a> element directly
+        const href = linkElement.getAttribute('href') || '';
+        const ariaLabel = linkElement.getAttribute('aria-label') || '';
         
-        // Strategy 1: Try common class-based selectors
-        const nameSelectors = [
-          'div[class*="fontHeadlineSmall"]',
-          'div[class*="fontHeadline"]',
-          'div.qBF1Pd',
-          'div[aria-label]',
-        ];
-
-        for (const selector of nameSelectors) {
-          const nameElement = element.querySelector(selector);
-          if (nameElement) {
-            name = nameElement.textContent?.trim() || '';
-            if (name) break;
-          }
+        // Get the parent container to access siblings
+        const container = linkElement.parentElement;
+        if (!container) {
+          return {
+            maps_address: href,
+            name: ariaLabel, // Fallback to aria-label
+            phone: '',
+            address: '',
+            debugInfo: {
+              hasLink: true,
+              ariaLabel,
+              textLength: 0,
+              linesCount: 0,
+              firstLine: ariaLabel,
+            }
+          };
         }
 
-        // Strategy 2: If no name found, try to get it from the link's aria-label
-        if (!name && linkElement) {
-          const ariaLabel = linkElement.getAttribute('aria-label');
-          if (ariaLabel) {
-            name = ariaLabel.trim();
-          }
-        }
-
-        // Strategy 3: If still no name, get first non-empty text from the card
+        // Extract name from aria-label (most reliable) or from div.qBF1Pd
+        let name = ariaLabel;
         if (!name) {
-          const allText = element.textContent || '';
-          const lines = allText.split('\n').map(line => line.trim()).filter(line => line);
-          if (lines.length > 0) {
-            // First line is usually the business name
-            name = lines[0];
-          }
+          const nameDiv = container.querySelector('div.qBF1Pd');
+          name = nameDiv?.textContent?.trim() || '';
         }
 
-        // Extract all text content for phone and address
-        const allText = element.textContent || '';
+        // Extract phone from span.UsdlK
+        let phone = '';
+        const phoneSpan = container.querySelector('span.UsdlK');
+        if (phoneSpan) {
+          phone = phoneSpan.textContent?.trim() || '';
+        }
+
+        // Extract all text content for address
+        const allText = container.textContent || '';
         const lines = allText.split('\n').map(line => line.trim()).filter(line => line);
 
-        // Extract phone and address
-        let phone = '';
+        // Extract address
         let address = '';
-
         for (const line of lines) {
           if (line === name) continue;
+          if (line === phone) continue;
 
           // Remove leading separator character if present
           let cleanLine = line;
@@ -355,12 +349,9 @@ export class BusinessLookupScraper {
           // Skip ratings
           if (/^\d+(\.\d+)?\s*\([\d,]+\)/.test(cleanLine)) continue;
 
-          // Check for phone
+          // Skip if it looks like a phone number (already extracted)
           if (/\d{3}.*\d{3}.*\d{4}/.test(cleanLine) || /\+?\d{10,}/.test(cleanLine)) {
-            if (!/^\d+(\.\d+)?\s*\(/.test(cleanLine)) {
-              phone = cleanLine;
-              continue;
-            }
+            continue;
           }
 
           // Everything else is address
@@ -375,8 +366,8 @@ export class BusinessLookupScraper {
           phone,
           address,
           debugInfo: {
-            hasLink: !!linkElement,
-            ariaLabel: linkElement?.getAttribute('aria-label') || '',
+            hasLink: true,
+            ariaLabel,
             textLength: allText.length,
             linesCount: lines.length,
             firstLine: lines[0] || '',

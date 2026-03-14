@@ -31,25 +31,35 @@ export class BusinessLookupScraper {
         searchQuery = searchQuery.replace(/,\s*/g, ' in ');
       }
 
+      console.log(`[BusinessLookup] Original query: "${this.businessQuery}"`);
+      console.log(`[BusinessLookup] Formatted query: "${searchQuery}"`);
+
       // Navigate to Google Maps search
       const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
+      console.log(`[BusinessLookup] Navigating to: ${url}`);
       await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
       // Wait for page to load
+      console.log(`[BusinessLookup] Waiting 2 seconds for page to load...`);
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Detect view type
+      console.log(`[BusinessLookup] Detecting view type...`);
       const viewType = await this.detectViewType();
+      console.log(`[BusinessLookup] Detected view type: ${viewType}`);
 
       if (viewType === 'details') {
         // Single business details view
+        console.log(`[BusinessLookup] Extracting from details view...`);
         const business = await this.extractFromDetailsView();
         return business ? [business] : [];
       } else {
         // List view with multiple results
+        console.log(`[BusinessLookup] Extracting from list view...`);
         return await this.extractFromListView();
       }
     } catch (error) {
+      console.error(`[BusinessLookup] Error scraping business:`, error);
       this.errorLogger.logError(`Failed to scrape business: ${this.businessQuery}`, error);
       throw error;
     }
@@ -65,6 +75,8 @@ export class BusinessLookupScraper {
         return document.querySelector('div[role="feed"]') !== null;
       });
 
+      console.log(`[BusinessLookup] Has feed element: ${hasFeed}`);
+
       if (hasFeed) {
         return 'list';
       }
@@ -78,13 +90,17 @@ export class BusinessLookupScraper {
         return h1 !== null;
       });
 
+      console.log(`[BusinessLookup] Has details panel: ${hasDetailsPanel}`);
+
       if (hasDetailsPanel) {
         return 'details';
       }
 
       // Default to list view
+      console.log(`[BusinessLookup] No feed or details panel found, defaulting to list view`);
       return 'list';
     } catch (error) {
+      console.error(`[BusinessLookup] Error detecting view type:`, error);
       this.errorLogger.logError('Failed to detect view type', error);
       return 'list';
     }
@@ -223,34 +239,47 @@ export class BusinessLookupScraper {
    * Extract businesses from list view (limit to 3)
    */
   async extractFromListView(): Promise<ScrapedBusiness[]> {
-    try {
-      // Wait for feed to load
-      await this.page.waitForSelector('div[role="feed"]', { timeout: 10000 });
+      try {
+        // Wait for feed to load
+        console.log(`[BusinessLookup] Waiting for feed element...`);
+        await this.page.waitForSelector('div[role="feed"]', { timeout: 10000 });
+        console.log(`[BusinessLookup] Feed element found`);
 
-      // Get business cards (limit to 3)
-      const cards = await this.page.$$('div[role="feed"] > div > div');
-      const limitedCards = cards.slice(0, 3);
+        // Get business cards (limit to 3) - FIXED: Use $$() to get array of elements
+        const cards = await this.page.$$('div[role="feed"] > div > div');
+        console.log(`[BusinessLookup] Found ${cards.length} business cards in list view`);
 
-      const businesses: ScrapedBusiness[] = [];
+        const limitedCards = cards.slice(0, 3);
+        console.log(`[BusinessLookup] Processing ${limitedCards.length} cards (limited to 3)`);
 
-      for (const card of limitedCards) {
-        try {
-          const business = await this.parseBusinessCard(card);
-          if (business) {
-            businesses.push(business);
+        const businesses: ScrapedBusiness[] = [];
+
+        for (let i = 0; i < limitedCards.length; i++) {
+          try {
+            console.log(`[BusinessLookup] Parsing card ${i + 1}/${limitedCards.length}`);
+            const business = await this.parseBusinessCard(limitedCards[i]);
+            if (business) {
+              console.log(`[BusinessLookup] Card ${i + 1}: ${business.name}`);
+              businesses.push(business);
+            } else {
+              console.log(`[BusinessLookup] Card ${i + 1}: Skipped (no name)`);
+            }
+          } catch (error) {
+            // Log error but continue with next card
+            console.error(`[BusinessLookup] Failed to parse card ${i + 1}:`, error);
+            this.errorLogger.logError('Failed to parse business card in list view', error);
           }
-        } catch (error) {
-          // Log error but continue with next card
-          this.errorLogger.logError('Failed to parse business card in list view', error);
         }
-      }
 
-      return businesses;
-    } catch (error) {
-      this.errorLogger.logError('Failed to extract from list view', error);
-      return [];
+        console.log(`[BusinessLookup] Extracted ${businesses.length} businesses from list view`);
+        return businesses;
+      } catch (error) {
+        console.error('[BusinessLookup] Failed to extract from list view:', error);
+        this.errorLogger.logError('Failed to extract from list view', error);
+        return [];
+      }
     }
-  }
+
 
   /**
    * Parse a single business card from list view

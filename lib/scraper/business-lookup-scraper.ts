@@ -291,8 +291,10 @@ export class BusinessLookupScraper {
         const linkElement = element.querySelector('a');
         const href = linkElement?.getAttribute('href') || '';
 
-        // Extract name
+        // Extract name - try multiple strategies
         let name = '';
+        
+        // Strategy 1: Try common class-based selectors
         const nameSelectors = [
           'div[class*="fontHeadlineSmall"]',
           'div[class*="fontHeadline"]',
@@ -308,7 +310,25 @@ export class BusinessLookupScraper {
           }
         }
 
-        // Extract all text content
+        // Strategy 2: If no name found, try to get it from the link's aria-label
+        if (!name && linkElement) {
+          const ariaLabel = linkElement.getAttribute('aria-label');
+          if (ariaLabel) {
+            name = ariaLabel.trim();
+          }
+        }
+
+        // Strategy 3: If still no name, get first non-empty text from the card
+        if (!name) {
+          const allText = element.textContent || '';
+          const lines = allText.split('\n').map(line => line.trim()).filter(line => line);
+          if (lines.length > 0) {
+            // First line is usually the business name
+            name = lines[0];
+          }
+        }
+
+        // Extract all text content for phone and address
         const allText = element.textContent || '';
         const lines = allText.split('\n').map(line => line.trim()).filter(line => line);
 
@@ -354,11 +374,28 @@ export class BusinessLookupScraper {
           name,
           phone,
           address,
+          debugInfo: {
+            hasLink: !!linkElement,
+            ariaLabel: linkElement?.getAttribute('aria-label') || '',
+            textLength: allText.length,
+            linesCount: lines.length,
+            firstLine: lines[0] || '',
+          }
         };
+      });
+
+      // Log debug info
+      console.log(`[BusinessLookup] Card debug:`, {
+        name: data.name,
+        hasLink: data.debugInfo?.hasLink,
+        ariaLabel: data.debugInfo?.ariaLabel,
+        firstLine: data.debugInfo?.firstLine,
+        linesCount: data.debugInfo?.linesCount,
       });
 
       // Skip if no name
       if (!data.name || data.name.trim() === '') {
+        console.log(`[BusinessLookup] Skipping card - no name found`);
         return null;
       }
 

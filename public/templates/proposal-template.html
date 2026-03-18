@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Integrate • Proposal 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+        
+        :root {
+            --orange: #f97316;
+        }
+        
+        .tail-container {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .logo-font {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 15px auto;
+            background: white;
+            box-shadow: 0 15px 50px rgba(249, 115, 22, 0.12);
+            overflow: hidden;
+            position: relative;
+            page-break-after: always;
+            font-size: 10pt;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media print {
+            html, body {
+                width: 210mm;
+                height: 297mm;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .page {
+                margin: 0 !important;
+                padding: 10mm 12mm !important;
+                box-shadow: none;
+                width: 210mm;
+                height: 297mm;
+                min-height: 297mm;
+                max-height: 297mm;
+                page-break-after: always;
+                page-break-inside: avoid;
+                page-break-before: avoid;
+                font-size: 8.5pt;
+                line-height: 1.45;
+                box-sizing: border-box;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .page:first-of-type {
+                padding: 0 !important;
+                position: relative !important;
+                page-break-after: always;
+            }
+            
+            .page:first-of-type + .page {
+                page-break-before: avoid;
+            }
+            
+            .page > *:last-child {
+                margin-top: auto !important;
+            }
+            
+            body { 
+                background: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .no-print { display: none !important; }
+            
+            * {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            img {
+                max-width: 100%;
+                page-break-inside: avoid;
+            }
+            
+            .space-y-10 > * + * {
+                margin-top: 2rem !important;
+            }
+            
+            .mb-10 {
+                margin-bottom: 1.5rem !important;
+            }
+            
+            .mb-12 {
+                margin-bottom: 1.5rem !important;
+            }
+            
+            .mb-14 {
+                margin-bottom: 1.5rem !important;
+            }
+            
+            .mt-10 {
+                margin-top: 1.5rem !important;
+            }
+            
+            .mt-12 {
+                margin-top: 1.5rem !important;
+            }
+            
+            .mt-16 {
+                margin-top: 1.5rem !important;
+            }
+            
+            .pt-8 {
+                padding-top: 1rem !important;
+            }
+            
+            .pt-10 {
+                padding-top: 1rem !important;
+            }
+            
+            .pt-12 {
+                padding-top: 1rem !important;
+            }
+            
+            .gap-8 {
+                gap: 1.25rem !important;
+            }
+            
+            .py-7 {
+                padding-top: 1rem !important;
+                padding-bottom: 1rem !important;
+            }
+        }
+
+        .header-bar {
+            background: linear-gradient(90deg, #f97316 0%, #fb923c 100%);
+            height: 5px;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            letter-spacing: -0.04em;
+            position: relative;
+        }
+        
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 48px;
+            height: 3px;
+            background: #f97316;
+            border-radius: 9999px;
+        }
+
+        .feature-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px -12px rgb(249 115 22 / 0.25);
+        }
+
+        .accent-line {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #f97316, transparent);
+        }
+    </style>
+</head>
+<body class="tail-container bg-slate-50 py-8">
+
+    <div class="max-w-[210mm] mx-auto">
+
+        <!-- PAGE 1: COVER -->
+        <div class="page" style="position: relative;">
+            <div class="header-bar w-full"></div>
+            
+            <!-- Main Content Area - Absolutely centered, moved up 2cm more -->
+            <div style="position: absolute; top: calc(42% - 20mm); left: 50%; transform: translate(-50%, -50%); width: 100%; max-width: 900px;">
+                <div class="text-center px-12">
+                    <!-- Logo -->
+                    <div class="inline-flex w-32 h-32 items-center justify-center mb-8">
+                        <img src="{{CLIENT_LOGO}}" alt="Smart Integrate Logo" class="w-full h-full object-contain">
+                    </div>
+                    
+                    <!-- Badge -->
+                    <div class="mb-6">
+                        <span class="inline-block bg-orange-50 text-orange-600 text-sm font-semibold px-10 py-3 rounded-full tracking-[2px]">SMART SOLUTIONS SIMPLIFIED</span>
+                    </div>
+                    
+                    <!-- Title -->
+                    <h1 class="text-[80px] leading-[72px] font-bold logo-font text-zinc-900 tracking-[-4px] mb-4">
+                        PROPOSAL
+                    </h1>
+                    
+                    <!-- Divider -->
+                    <div class="h-2 w-32 bg-orange-500 mx-auto mb-10 rounded-full"></div>
+
+                    <!-- Client Section -->
+                    <div class="text-zinc-400 text-sm tracking-widest mb-3">PREPARED FOR</div>
+                    <div class="text-4xl font-semibold text-zinc-800 border-b-2 border-dashed border-orange-200 pb-5 px-4">
+                        {{CLIENT_NAME}}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Company Info - Fixed position near bottom, moved down 1cm -->
+            <div style="position: absolute; bottom: calc(70px + 10mm); left: 0; right: 0;" class="px-12">
+                <div class="border-t border-orange-100 pt-6 flex items-center justify-between text-xs text-zinc-500">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 flex items-center justify-center">
+                            <img src="Pictures/Logo/logo.png" alt="Smart Integrate Logo" class="w-full h-full object-contain">
+                        </div>
+                        <div>
+                            <div class="font-bold text-orange-600 text-xl logo-font tracking-tighter leading-tight">SMART INTEGRATE</div>
+                            <div class="text-[10px] leading-tight">PTY LTD | REG: 2019/321693/07 | VAT: 4640287563</div>
+                        </div>
+                    </div>
+                    <div class="text-right text-[10px] leading-snug">
+                        <div class="font-medium">www.smartintegrate.co.za</div>
+                        <div>info@smartintegrate.co.za</div>
+                        <div class="font-mono">010 141 5671</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 2: THANK YOU -->
+        <div class="page p-16 flex flex-col">
+            <div class="flex justify-between items-start mb-10">
+                <div class="inline-flex items-center gap-6">
+                    <div class="w-20 h-20 bg-orange-100 rounded-3xl flex items-center justify-center text-5xl shadow-inner">🙏</div>
+                    <div>
+                        <div class="text-orange-600 font-bold tracking-[3px] text-sm">THANK YOU</div>
+                        <h2 class="section-title text-6xl font-semibold text-zinc-900 leading-none">For trusting us with your business</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="prose prose-zinc max-w-none text-[13px] leading-relaxed space-y-3">
+                <p>Thank you for your interest in our products and services.</p>
+                <p>Our goal in every proposal is to strike a balance between cost and quality, providing you with dependable service, minimal downtime, and the possibility of substantial long-term savings. We are deeply dedicated to our services and believe in delivering exceptional value to our clients.</p>
+                <p class="font-semibold">To demonstrate this commitment, we offer all our services on a month-to-month basis, giving you the freedom to cancel at any time and transition to a new provider with your purchased or financed hardware. We avoid long-term contracts because we never want our clients to feel trapped. Instead, we strive to earn your business every day by providing the high-quality service you deserve. However, if this proposal does not fully meet your needs, we are more than willing to collaborate with you to make adjustments that align with all your business goals.</p>
+                <p>We believe that you will discover greater value and more efficient solutions in the upcoming pages.</p>
+                
+                <p class="mt-10 text-zinc-700">It's rare to encounter a team as passionate, enthusiastic, and dedicated to success and innovation as the individuals at Innovation Group. With over 18 years of experience, we stand out as a top provider of business solutions, striving to offer efficient and intelligent solutions that enhance your business operations. We take immense pride in our clients and are committed to ensuring they choose to stay with us because of the exceptional service we provide, not because of contractual obligations.</p>
+                
+                <p class="mt-6">To ensure instant and personalized service, we create a dedicated WhatsApp group for each new customer, including our directors, technical directors, and account managers. This allows you to communicate directly with our team, ensuring prompt attention to your requests. Additionally, you may reach us via email or phone for your convenience.</p>
+            </div>
+
+            <div class="mt-12 bg-orange-50 border border-orange-100 rounded-3xl p-8">
+                <div class="text-orange-600 font-bold tracking-widest text-sm mb-7 flex items-center">
+                    <div class="flex-1 h-px bg-orange-200"></div>
+                    <span class="px-8">HERE'S HOW WE GET THINGS DONE</span>
+                    <div class="flex-1 h-px bg-orange-200"></div>
+                </div>
+                <div class="grid grid-cols-5 gap-4 text-center">
+                    <div class="feature-card bg-white px-3 py-5 rounded-3xl shadow-sm min-h-[180px] flex flex-col items-center justify-start">
+                        <div class="text-4xl mb-3">📋</div>
+                        <div class="font-semibold text-sm text-zinc-900 mb-2">Application</div>
+                        <div class="text-[10.5px] text-zinc-500 leading-snug">We complete an application with you</div>
+                    </div>
+                    <div class="feature-card bg-white px-3 py-5 rounded-3xl shadow-sm min-h-[180px] flex flex-col items-center justify-start">
+                        <div class="text-4xl mb-3">✅</div>
+                        <div class="font-semibold text-sm text-zinc-900 mb-2">Approval</div>
+                        <div class="text-[10.5px] text-zinc-500 leading-snug">Once approved, you will receive a call from our operations manager</div>
+                    </div>
+                    <div class="feature-card bg-white px-3 py-5 rounded-3xl shadow-sm min-h-[180px] flex flex-col items-center justify-start">
+                        <div class="text-4xl mb-3">📄</div>
+                        <div class="font-semibold text-sm text-zinc-900 mb-2">Paperwork</div>
+                        <div class="text-[10.5px] text-zinc-500 leading-snug">We meet to sign porting documents and finalize agreement paperwork</div>
+                    </div>
+                    <div class="feature-card bg-white px-3 py-5 rounded-3xl shadow-sm min-h-[180px] flex flex-col items-center justify-start">
+                        <div class="text-4xl mb-3">🚀</div>
+                        <div class="font-semibold text-sm text-zinc-900 mb-2">Installation</div>
+                        <div class="text-[10.5px] text-zinc-500 leading-snug">We deploy our Solution and make sure its technically sound</div>
+                    </div>
+                    <div class="feature-card bg-white px-3 py-5 rounded-3xl shadow-sm min-h-[180px] flex flex-col items-center justify-start">
+                        <div class="text-4xl mb-3">🎉</div>
+                        <div class="font-semibold text-sm text-zinc-900 mb-2">Final Call</div>
+                        <div class="text-[10.5px] text-zinc-500 leading-snug">Once you are completely satisfied, you give us the go ahead and we enter our agreement</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-auto flex-shrink-0 pt-10 border-t border-orange-100 text-xs flex justify-between text-zinc-500">
+                <div>SMART INTEGRATE • Smart Solutions Simplified</div>
+            </div>
+        </div>
+
+        <!-- PAGE 3: NORMAL PROPOSAL -->
+        {{NORMAL_PROPOSAL_PAGE}}
+
+        <!-- PAGE 4: COMPARATIVE PROPOSAL -->
+        {{COMPARATIVE_PROPOSAL_PAGE}}
+
+        <!-- PAGE 5: CASH PROPOSAL -->
+        {{CASH_PROPOSAL_PAGE}}
+
+        <!-- FEATURE PAGES -->
+        {{FEATURE_PAGES}}
+
+    </div>
+
+    <!-- SAVE PDF BUTTON -->
+    <div class="no-print fixed bottom-8 right-8 bg-white border border-orange-200 shadow-2xl rounded-3xl p-6 flex items-center gap-4 z-50">
+        <button onclick="savePDF()" 
+                class="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold px-10 py-5 rounded-2xl flex items-center gap-3 transition-all">
+            <i class="fa-solid fa-download"></i>
+            SAVE PDF
+        </button>
+    </div>
+
+    <script>
+        function savePDF() {
+            // Hide the button before printing
+            document.querySelector('.no-print').style.display = 'none';
+            
+            // Set document title for filename
+            document.title = '{{PDF_FILENAME}}';
+            
+            // Trigger print dialog
+            window.print();
+            
+            // Show button again after print
+            setTimeout(() => {
+                document.querySelector('.no-print').style.display = 'flex';
+            }, 1000);
+        }
+        
+        console.log('%c🎉 The greatest proposal is ready! Print to PDF for stunning hardcopy results.', 'color:#f97316; font-family:monospace; font-size:14px');
+    </script>
+</body>
+</html>

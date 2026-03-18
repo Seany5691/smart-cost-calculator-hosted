@@ -6,8 +6,9 @@ import { useAuthStore } from '@/lib/store/auth-simple';
 import { useConfigStore } from '@/lib/store/config';
 import { getRolePrice } from '@/lib/pricing';
 import { useToast } from '@/components/ui/Toast/useToast';
-import ProposalModal, { ProposalData } from './ProposalModal';
+import ProposalModal, { ProposalData, HtmlProposalData } from './ProposalModal';
 import ProposalGenerator, { ProposalGeneratorRef } from './ProposalGenerator';
+import HtmlProposalGenerator, { HtmlProposalGeneratorRef } from './HtmlProposalGenerator';
 import PDFGenerator from './PDFGenerator';
 import {
   calculateInstallation,
@@ -59,6 +60,7 @@ export default function TotalCostsStep() {
   const [showSaveConfirmForProposal, setShowSaveConfirmForProposal] = useState(false);
   const [showSaveConfirmForPDF, setShowSaveConfirmForPDF] = useState(false);
   const proposalGeneratorRef = useRef<ProposalGeneratorRef>(null);
+  const htmlProposalGeneratorRef = useRef<HtmlProposalGeneratorRef>(null);
   const customGrossProfitRef = useRef(totalsData?.customGrossProfit);
 
   // Update ref when customGrossProfit changes
@@ -649,6 +651,14 @@ export default function TotalCostsStep() {
     }
   };
 
+  // Handle HTML proposal submission
+  const handleHtmlProposalSubmit = async (proposalData: HtmlProposalData) => {
+    if (htmlProposalGeneratorRef.current) {
+      await htmlProposalGeneratorRef.current.generateHtmlProposal(proposalData);
+      setIsProposalModalOpen(false);
+    }
+  };
+
   // Handle custom gross profit edit
   const handleEditGrossProfit = () => {
     setIsEditingGrossProfit(true);
@@ -1091,10 +1101,14 @@ export default function TotalCostsStep() {
         isOpen={isProposalModalOpen}
         onClose={() => setIsProposalModalOpen(false)}
         onSubmit={handleProposalSubmit}
+        onHtmlSubmit={handleHtmlProposalSubmit}
       />
       
       {/* Proposal Generator */}
       <ProposalGenerator ref={proposalGeneratorRef} />
+      
+      {/* HTML Proposal Generator */}
+      <HtmlProposalGenerator ref={htmlProposalGeneratorRef} />
     </div>
   );
 }

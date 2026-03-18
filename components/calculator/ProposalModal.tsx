@@ -9,6 +9,7 @@ interface ProposalModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (proposalData: ProposalData) => void;
+  onHtmlSubmit?: (proposalData: HtmlProposalData) => void;
 }
 
 export interface ProposalData {
@@ -20,7 +21,19 @@ export interface ProposalData {
   cashPrice?: number; // Optional: Only used for cash proposals
 }
 
-export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalModalProps) {
+export interface HtmlProposalData extends ProposalData {
+  clientLogo?: File;
+  selectedPages: {
+    telephones: boolean;
+    network: boolean;
+    printing: boolean;
+    cctv: boolean;
+    accessControl: boolean;
+  };
+  generationMethod: 'pdf' | 'html';
+}
+
+export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit }: ProposalModalProps) {
   const { dealDetails, totalsData } = useCalculatorStore();
   const modalRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -35,6 +48,18 @@ export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalMod
     specialistPhone: '',
     proposalType: 'normal',
     cashPrice: totalsData?.totalPayout || 0 // Initialize with Total Payout
+  });
+
+  // New HTML proposal fields
+  const [generationMethod, setGenerationMethod] = useState<'pdf' | 'html'>('html');
+  const [clientLogo, setClientLogo] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [selectedPages, setSelectedPages] = useState({
+    telephones: true,
+    network: true,
+    printing: false,
+    cctv: false,
+    accessControl: false
   });
 
   // Set mounted state on client side only
@@ -88,6 +113,27 @@ export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalMod
     }));
   };
 
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setClientLogo(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePageToggle = (page: keyof typeof selectedPages) => {
+    setSelectedPages(prev => ({
+      ...prev,
+      [page]: !prev[page]
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -114,7 +160,19 @@ export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalMod
       return;
     }
     
-    onSubmit(formData);
+    if (generationMethod === 'html' && onHtmlSubmit) {
+      // Submit HTML proposal data
+      const htmlProposalData: HtmlProposalData = {
+        ...formData,
+        clientLogo: clientLogo || undefined,
+        selectedPages,
+        generationMethod
+      };
+      onHtmlSubmit(htmlProposalData);
+    } else {
+      // Submit regular PDF proposal data
+      onSubmit(formData);
+    }
   };
 
   const handleClose = () => {
@@ -125,6 +183,16 @@ export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalMod
       specialistPhone: '',
       proposalType: 'normal',
       cashPrice: totalsData?.totalPayout || 0
+    });
+    setClientLogo(null);
+    setLogoPreview(null);
+    setGenerationMethod('html');
+    setSelectedPages({
+      telephones: true,
+      network: true,
+      printing: false,
+      cctv: false,
+      accessControl: false
     });
     onClose();
   };
@@ -161,6 +229,129 @@ export default function ProposalModal({ isOpen, onClose, onSubmit }: ProposalMod
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] sm:h-[calc(100vh-80px)] custom-scrollbar space-y-4">
+          {/* Generation Method Selection */}
+          <div className="space-y-3 pb-4 border-b border-purple-500/20">
+            <label className="text-white font-medium">
+              Generation Method <span className="text-red-400">*</span>
+            </label>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                <input
+                  type="radio"
+                  name="generationMethod"
+                  value="html"
+                  checked={generationMethod === 'html'}
+                  onChange={(e) => setGenerationMethod(e.target.value as 'pdf' | 'html')}
+                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2"
+                />
+                <span className="text-white font-medium">New HTML Template</span>
+              </label>
+              
+              <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                <input
+                  type="radio"
+                  name="generationMethod"
+                  value="pdf"
+                  checked={generationMethod === 'pdf'}
+                  onChange={(e) => setGenerationMethod(e.target.value as 'pdf' | 'html')}
+                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2"
+                />
+                <span className="text-white font-medium">Current PDF Method</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Logo Upload - Only show for HTML method */}
+          {generationMethod === 'html' && (
+            <div className="space-y-2">
+              <label htmlFor="clientLogo" className="text-white font-medium">
+                Client Logo (Optional)
+              </label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="file"
+                  id="clientLogo"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="clientLogo"
+                  className="px-4 py-2 bg-white/10 border border-purple-500/30 rounded-lg text-white cursor-pointer hover:bg-white/20 transition-colors"
+                >
+                  Choose Logo
+                </label>
+                {logoPreview && (
+                  <div className="w-16 h-16 border border-purple-500/30 rounded-lg overflow-hidden">
+                    <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain bg-white/10" />
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-purple-300/70">Upload a logo to display on the proposal cover page</p>
+            </div>
+          )}
+
+          {/* Page Selection - Only show for HTML method */}
+          {generationMethod === 'html' && (
+            <div className="space-y-3 pb-4 border-b border-purple-500/20">
+              <label className="text-white font-medium">
+                Include Pages
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.telephones}
+                    onChange={() => handlePageToggle('telephones')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">Telephones</span>
+                </label>
+                
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.network}
+                    onChange={() => handlePageToggle('network')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">Network Solutions</span>
+                </label>
+                
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.printing}
+                    onChange={() => handlePageToggle('printing')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">Printing Solutions</span>
+                </label>
+                
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.cctv}
+                    onChange={() => handlePageToggle('cctv')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">CCTV & Security</span>
+                </label>
+                
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.accessControl}
+                    onChange={() => handlePageToggle('accessControl')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">Access Control</span>
+                </label>
+              </div>
+              <p className="text-sm text-purple-300/70">Select which feature pages to include in the proposal</p>
+            </div>
+          )}
+
           {/* Proposal Type Selection */}
           <div className="space-y-3 pb-4 border-b border-purple-500/20">
             <label className="text-white font-medium">

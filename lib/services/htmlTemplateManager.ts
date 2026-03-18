@@ -151,12 +151,10 @@ export class HtmlTemplateManager {
                             <td class="py-2 px-12 text-xs"></td>
                             <td class="py-2 px-12 text-zinc-900 text-xs">TOTAL</td>
                             <td class="py-2 px-12 text-right text-zinc-900 text-xs">
-                                <div class="flex items-center justify-end gap-8">
-                                    <span class="font-mono">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</span>
-                                    <div class="text-right">
-                                        <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.term} Months</div>
-                                        <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.escalation}% Escalation</div>
-                                    </div>
+                                <div class="text-right">
+                                    <div class="font-mono">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</div>
+                                    <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.term} Months</div>
+                                    <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.escalation}% Escalation</div>
                                 </div>
                             </td>
                         </tr>
@@ -279,12 +277,10 @@ export class HtmlTemplateManager {
                             <td colspan="2" class="py-2 px-12 text-xs"></td>
                             <td class="py-2 px-12 text-right text-zinc-900 text-xs">TOTAL</td>
                             <td class="py-2 px-12 text-right text-zinc-900 text-xs">
-                                <div class="flex items-center justify-end gap-8">
-                                    <span class="font-mono">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</span>
-                                    <div class="text-right">
-                                        <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.term} Months</div>
-                                        <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.escalation}% Escalation</div>
-                                    </div>
+                                <div class="text-right">
+                                    <div class="font-mono">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</div>
+                                    <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.term} Months</div>
+                                    <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.escalation}% Escalation</div>
                                 </div>
                             </td>
                         </tr>

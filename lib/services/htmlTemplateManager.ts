@@ -30,7 +30,7 @@ export class HtmlTemplateManager {
     html = this.generateProposalPages(html, proposalData.proposalType, mappedData);
 
     // Filter feature pages based on selection
-    html = this.filterFeaturePages(html, proposalData.selectedPages);
+    html = this.filterFeaturePages(html, proposalData.selectedPages, mappedData);
 
     // Set PDF filename
     html = this.setPdfFilename(html, mappedData.customerName);
@@ -48,9 +48,7 @@ export class HtmlTemplateManager {
   ): string {
     return html
       .replace(/{{CLIENT_NAME}}/g, proposalData.customerName)
-      .replace(/{{PDF_FILENAME}}/g, HtmlProposalDataMapper.generatePdfFilename(proposalData.customerName))
-      .replace(/{{REP_EMAIL}}/g, mappedData.specialistEmail || 'info@smartintegrate.co.za')
-      .replace(/{{REP_PHONE}}/g, mappedData.specialistPhone || '082 123 4567');
+      .replace(/{{PDF_FILENAME}}/g, HtmlProposalDataMapper.generatePdfFilename(proposalData.customerName));
   }
 
   /**
@@ -153,9 +151,12 @@ export class HtmlTemplateManager {
                             <td class="py-2 px-12 text-xs"></td>
                             <td class="py-2 px-12 text-zinc-900 text-xs">TOTAL</td>
                             <td class="py-2 px-12 text-right text-zinc-900 text-xs">
-                                <div class="flex flex-col items-end">
+                                <div class="flex items-center justify-end gap-8">
                                     <span class="font-mono">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</span>
-                                    <span class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.term} Months • ${mappedData.dealDetails.escalation}% Escalation</span>
+                                    <div class="text-right">
+                                        <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.term} Months</div>
+                                        <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.escalation}% Escalation</div>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -278,9 +279,12 @@ export class HtmlTemplateManager {
                             <td colspan="2" class="py-2 px-12 text-xs"></td>
                             <td class="py-2 px-12 text-right text-zinc-900 text-xs">TOTAL</td>
                             <td class="py-2 px-12 text-right text-zinc-900 text-xs">
-                                <div class="flex flex-col items-end">
+                                <div class="flex items-center justify-end gap-8">
                                     <span class="font-mono">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</span>
-                                    <span class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.term} Months • ${mappedData.dealDetails.escalation}% Escalation</span>
+                                    <div class="text-right">
+                                        <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.term} Months</div>
+                                        <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.escalation}% Escalation</div>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -499,15 +503,15 @@ export class HtmlTemplateManager {
   /**
    * Filter feature pages based on user selection
    */
-  private static filterFeaturePages(html: string, selectedPages: any): string {
-    const featurePages = this.generateFeaturePages(selectedPages);
+  private static filterFeaturePages(html: string, selectedPages: any, mappedData?: any): string {
+    const featurePages = this.generateFeaturePages(selectedPages, mappedData);
     return html.replace('{{FEATURE_PAGES}}', featurePages);
   }
 
   /**
    * Generate feature pages based on selection
    */
-  private static generateFeaturePages(selectedPages: any): string {
+  private static generateFeaturePages(selectedPages: any, mappedData?: any): string {
     let pages = '';
 
     if (selectedPages.telephones) {
@@ -530,8 +534,8 @@ export class HtmlTemplateManager {
       pages += this.getAccessControlPage();
     }
 
-    // Always include the final pages
-    pages += this.getFinalPages();
+    // Always include the final pages with contact info
+    pages += this.getFinalPages(mappedData);
 
     return pages;
   }
@@ -904,7 +908,10 @@ export class HtmlTemplateManager {
     `;
   }
 
-  private static getFinalPages(): string {
+  private static getFinalPages(mappedData?: any): string {
+    const repEmail = mappedData?.specialistEmail || 'info@smartintegrate.co.za';
+    const repPhone = mappedData?.specialistPhone || '082 123 4567';
+    
     return `
         <!-- PAGE 13: SOLUTION BREAKDOWN -->
         <div class="page p-12 flex flex-col">
@@ -1082,7 +1089,7 @@ export class HtmlTemplateManager {
                     </div>
                     <div>
                         <i class="fa-solid fa-envelope text-4xl text-orange-500 mb-4"></i>
-                        <div class="font-medium text-xl">{{REP_EMAIL}}</div>
+                        <div class="font-medium text-xl">${repEmail}</div>
                     </div>
                     <div>
                         <i class="fa-solid fa-phone text-4xl text-orange-500 mb-4"></i>
@@ -1090,7 +1097,7 @@ export class HtmlTemplateManager {
                     </div>
                     <div>
                         <i class="fa-solid fa-mobile-screen-button text-4xl text-orange-500 mb-4"></i>
-                        <div class="font-medium text-xl">{{REP_PHONE}}</div>
+                        <div class="font-medium text-xl">${repPhone}</div>
                     </div>
                 </div>
             </div>

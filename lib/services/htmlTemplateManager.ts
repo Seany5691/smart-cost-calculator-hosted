@@ -152,10 +152,10 @@ export class HtmlTemplateManager {
                             <td class="py-2 px-12 text-zinc-900 text-xs">TOTAL</td>
                             <td class="py-2 px-12 text-right text-zinc-900 text-xs">
                                 <div class="flex items-center justify-end gap-8">
-                                    <div class="font-mono text-center">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</div>
+                                    <div class="font-mono text-center whitespace-nowrap">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</div>
                                     <div class="text-center">
-                                        <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.term} Months</div>
-                                        <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.escalation}% Escalation</div>
+                                        <div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">${mappedData.dealDetails.term} Months</div>
+                                        <div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">${mappedData.dealDetails.escalation}% Escalation</div>
                                     </div>
                                 </div>
                             </td>
@@ -280,10 +280,10 @@ export class HtmlTemplateManager {
                             <td class="py-2 px-12 text-right text-zinc-900 text-xs">TOTAL</td>
                             <td class="py-2 px-12 text-right text-zinc-900 text-xs">
                                 <div class="flex items-center justify-end gap-8">
-                                    <div class="font-mono text-center">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</div>
+                                    <div class="font-mono text-center whitespace-nowrap">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</div>
                                     <div class="text-center">
-                                        <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.term} Months</div>
-                                        <div class="text-[10px] font-normal text-zinc-600">${mappedData.dealDetails.escalation}% Escalation</div>
+                                        <div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">${mappedData.dealDetails.term} Months</div>
+                                        <div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">${mappedData.dealDetails.escalation}% Escalation</div>
                                     </div>
                                 </div>
                             </td>

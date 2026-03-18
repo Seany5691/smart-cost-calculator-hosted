@@ -143,14 +143,19 @@ export class HtmlTemplateManager {
                         ${hardwareRows}
                         <tr class="bg-orange-50 font-bold">
                             <td class="py-3 px-12 text-sm"></td>
-                            <td class="py-3 px-12 text-right text-zinc-900 text-sm">TOTAL</td>
+                            <td class="py-3 px-12 text-zinc-900 text-sm">
+                                <div class="flex items-center justify-between">
+                                    <span>TOTAL</span>
+                                    <div class="text-xs font-normal text-zinc-600 text-right">
+                                        <div>${mappedData.dealDetails.term} Months</div>
+                                        <div>${mappedData.dealDetails.escalation}% Escalation</div>
+                                    </div>
+                                </div>
+                            </td>
                             <td class="py-3 px-12 text-right font-mono text-zinc-900 text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</td>
                         </tr>
                     </tbody>
                 </table>
-                <div class="bg-orange-50 px-12 py-2 text-xs text-zinc-600 border border-orange-100 border-t-0">
-                    ${mappedData.dealDetails.term} Months • ${mappedData.dealDetails.escalation}% Escalation
-                </div>
             </div>
 
             <div class="mb-6">
@@ -388,10 +393,9 @@ export class HtmlTemplateManager {
   private static generateHardwareRows(hardwareItems: any[]): string {
     let rows = '';
     
-    // Fill up to 8 rows for hardware items (leaving space for total row)
-    for (let i = 0; i < 8; i++) {
-      const item = hardwareItems[i];
-      if (item) {
+    // Only generate rows for actual hardware items
+    hardwareItems.forEach(item => {
+      if (item && item.selectedQuantity > 0) {
         rows += `
           <tr>
             <td class="py-3 px-12 text-sm">${item.selectedQuantity}</td>
@@ -399,16 +403,8 @@ export class HtmlTemplateManager {
             <td class="py-3 px-12 text-right font-mono text-sm"></td>
           </tr>
         `;
-      } else {
-        rows += `
-          <tr>
-            <td class="py-3 px-12 text-sm"></td>
-            <td class="py-3 px-12 text-sm"></td>
-            <td class="py-3 px-12 text-right font-mono text-sm"></td>
-          </tr>
-        `;
       }
-    }
+    });
     
     return rows;
   }
@@ -419,10 +415,9 @@ export class HtmlTemplateManager {
   private static generateComparativeHardwareRows(hardwareItems: any[], dealDetails: any): string {
     let rows = '';
     
-    // Fill up to 7 rows for hardware items (leaving space for total row)
-    for (let i = 0; i < 7; i++) {
-      const item = hardwareItems[i];
-      if (item) {
+    // Only generate rows for actual hardware items
+    hardwareItems.forEach(item => {
+      if (item && item.selectedQuantity > 0) {
         rows += `
           <tr>
             <td class="py-2.5 px-12 text-sm">${item.selectedQuantity}</td>
@@ -431,17 +426,8 @@ export class HtmlTemplateManager {
             <td class="py-2.5 px-12 text-right font-mono text-sm"></td>
           </tr>
         `;
-      } else {
-        rows += `
-          <tr>
-            <td class="py-2.5 px-12 text-sm"></td>
-            <td class="py-2.5 px-12 text-sm"></td>
-            <td class="py-2.5 px-12 text-right font-mono text-sm"></td>
-            <td class="py-2.5 px-12 text-right font-mono text-sm"></td>
-          </tr>
-        `;
       }
-    }
+    });
     
     return rows;
   }
@@ -451,11 +437,10 @@ export class HtmlTemplateManager {
    */
   private static generateMonthlyServiceRows(connectivityItems: any[], licensingItems: any[]): string {
     let rows = '';
-    let itemCount = 0;
     
     // Add connectivity items
     connectivityItems.forEach(item => {
-      if (itemCount < 4) { // Leave space for total row
+      if (item && item.selectedQuantity > 0) {
         rows += `
           <tr>
             <td class="py-3 px-12 text-sm">${item.selectedQuantity}</td>
@@ -463,13 +448,12 @@ export class HtmlTemplateManager {
             <td class="py-3 px-12 text-right font-mono text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(item.selectedQuantity * (item.cost || 0))}</td>
           </tr>
         `;
-        itemCount++;
       }
     });
 
     // Add licensing items
     licensingItems.forEach(item => {
-      if (itemCount < 4) { // Leave space for total row
+      if (item && item.selectedQuantity > 0) {
         rows += `
           <tr>
             <td class="py-3 px-12 text-sm">${item.selectedQuantity}</td>
@@ -477,21 +461,8 @@ export class HtmlTemplateManager {
             <td class="py-3 px-12 text-right font-mono text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(item.selectedQuantity * (item.cost || 0))}</td>
           </tr>
         `;
-        itemCount++;
       }
     });
-
-    // Fill remaining rows to maintain table structure
-    while (itemCount < 4) {
-      rows += `
-        <tr>
-          <td class="py-3 px-12 text-sm"></td>
-          <td class="py-3 px-12 text-sm"></td>
-          <td class="py-3 px-12 text-right font-mono text-sm"></td>
-        </tr>
-      `;
-      itemCount++;
-    }
     
     return rows;
   }

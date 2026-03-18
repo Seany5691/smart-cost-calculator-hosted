@@ -145,6 +145,18 @@
                 padding-top: 1rem !important;
                 padding-bottom: 1rem !important;
             }
+            
+            /* Hide browser artifacts */
+            @page {
+                margin: 0;
+                size: A4;
+            }
+            
+            /* Ensure consistent font rendering */
+            .font-mono {
+                font-family: 'Inter', system-ui, sans-serif !important;
+                font-variant-numeric: tabular-nums;
+            }
         }
 
         .header-bar {
@@ -341,14 +353,37 @@
             // Set document title for filename
             document.title = '{{PDF_FILENAME}}';
             
+            // Set print-specific styles
+            const printStyles = document.createElement('style');
+            printStyles.textContent = `
+                @media print {
+                    @page {
+                        margin: 0;
+                        size: A4;
+                    }
+                    body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                }
+            `;
+            document.head.appendChild(printStyles);
+            
             // Trigger print dialog
             window.print();
             
-            // Show button again after print
+            // Clean up and show button again after print
             setTimeout(() => {
+                document.head.removeChild(printStyles);
                 document.querySelector('.no-print').style.display = 'flex';
             }, 1000);
         }
+        
+        // Hide browser UI elements when printing
+        window.addEventListener('beforeprint', function() {
+            document.body.style.margin = '0';
+            document.body.style.padding = '0';
+        });
         
         console.log('%c🎉 The greatest proposal is ready! Print to PDF for stunning hardcopy results.', 'color:#f97316; font-family:monospace; font-size:14px');
     </script>

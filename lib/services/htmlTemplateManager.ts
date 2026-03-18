@@ -55,7 +55,7 @@ export class HtmlTemplateManager {
    * Insert client logo or use default
    */
   private static async insertClientLogo(html: string, logoFile?: File): Promise<string> {
-    let logoSrc = 'Pictures/Logo/logo.png'; // Default logo
+    let clientLogoSrc = 'Pictures/Logo/logo.png'; // Default to Smart Integrate logo if no client logo
 
     if (logoFile) {
       try {
@@ -64,14 +64,14 @@ export class HtmlTemplateManager {
         const buffer = Buffer.from(arrayBuffer);
         const base64 = buffer.toString('base64');
         const mimeType = logoFile.type || 'image/png';
-        logoSrc = `data:${mimeType};base64,${base64}`;
+        clientLogoSrc = `data:${mimeType};base64,${base64}`;
       } catch (error) {
         console.error('Error processing logo:', error);
         // Keep default logo on error
       }
     }
 
-    return html.replace(/{{CLIENT_LOGO}}/g, logoSrc);
+    return html.replace(/{{CLIENT_LOGO_SECONDARY}}/g, clientLogoSrc);
   }
 
   /**
@@ -114,16 +114,16 @@ export class HtmlTemplateManager {
                 <table class="w-full border border-orange-100 text-sm">
                     <tbody class="divide-y divide-orange-100 text-zinc-700">
                         <tr>
-                            <td class="px-12 py-3 font-medium text-zinc-700">HARDWARE</td>
-                            <td class="px-12 py-3 text-right font-mono text-zinc-700">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</td>
+                            <td class="px-12 py-3 font-medium text-zinc-700 text-sm">HARDWARE</td>
+                            <td class="px-12 py-3 text-right font-mono text-zinc-700 text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</td>
                         </tr>
                         <tr>
-                            <td class="px-12 py-3 font-medium text-zinc-700">MONTHLY SERVICE</td>
-                            <td class="px-12 py-3 text-right font-mono text-zinc-700">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.monthlyServiceTotal)}</td>
+                            <td class="px-12 py-3 font-medium text-zinc-700 text-sm">MONTHLY SERVICE</td>
+                            <td class="px-12 py-3 text-right font-mono text-zinc-700 text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.monthlyServiceTotal)}</td>
                         </tr>
                         <tr class="bg-orange-50">
-                            <td class="px-12 py-3 font-bold text-zinc-900">TOTAL</td>
-                            <td class="px-12 py-3 text-right font-mono font-bold text-zinc-900">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.proposedNewTotalCost)}</td>
+                            <td class="px-12 py-3 font-bold text-zinc-900 text-sm">TOTAL</td>
+                            <td class="px-12 py-3 text-right font-mono font-bold text-zinc-900 text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.proposedNewTotalCost)}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -134,15 +134,23 @@ export class HtmlTemplateManager {
                 <table class="w-full border border-orange-100 text-sm">
                     <thead>
                         <tr class="bg-orange-50">
-                            <th class="text-left py-3 px-12 font-medium w-20">QTY</th>
-                            <th class="text-left py-3 px-12 font-medium">HARDWARE</th>
-                            <th class="text-right py-3 px-12 font-medium w-40">COST</th>
+                            <th class="text-left py-3 px-12 font-medium w-20 text-sm">QTY</th>
+                            <th class="text-left py-3 px-12 font-medium text-sm">HARDWARE</th>
+                            <th class="text-right py-3 px-12 font-medium w-40 text-sm">COST</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-orange-100 text-zinc-700">
                         ${hardwareRows}
+                        <tr class="bg-orange-50 font-bold">
+                            <td class="py-3 px-12 text-sm"></td>
+                            <td class="py-3 px-12 text-right text-zinc-900 text-sm">TOTAL</td>
+                            <td class="py-3 px-12 text-right font-mono text-zinc-900 text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</td>
+                        </tr>
                     </tbody>
                 </table>
+                <div class="bg-orange-50 px-12 py-2 text-xs text-zinc-600 border border-orange-100 border-t-0">
+                    ${mappedData.dealDetails.term} Months • ${mappedData.dealDetails.escalation}% Escalation
+                </div>
             </div>
 
             <div class="mb-6">
@@ -150,13 +158,18 @@ export class HtmlTemplateManager {
                 <table class="w-full border border-orange-100 text-sm">
                     <thead>
                         <tr class="bg-orange-50">
-                            <th class="text-left py-3 px-12 font-medium w-20">QTY</th>
-                            <th class="text-left py-3 px-12 font-medium">MONTHLY SERVICES</th>
-                            <th class="text-right py-3 px-12 font-medium w-40">COST</th>
+                            <th class="text-left py-3 px-12 font-medium w-20 text-sm">QTY</th>
+                            <th class="text-left py-3 px-12 font-medium text-sm">MONTHLY SERVICES</th>
+                            <th class="text-right py-3 px-12 font-medium w-40 text-sm">COST</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-orange-100 text-zinc-700">
                         ${monthlyServiceRows}
+                        <tr class="bg-orange-50 font-bold">
+                            <td class="py-3 px-12 text-sm"></td>
+                            <td class="py-3 px-12 text-right text-zinc-900 text-sm">TOTAL</td>
+                            <td class="py-3 px-12 text-right font-mono text-zinc-900 text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.monthlyServiceTotal)}</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -309,12 +322,12 @@ export class HtmlTemplateManager {
                 <table class="w-full border border-orange-100 text-sm">
                     <tbody class="divide-y divide-orange-100 text-zinc-700">
                         <tr>
-                            <td class="px-12 py-3 font-medium text-zinc-700">HARDWARE (CASH PRICE)</td>
-                            <td class="px-12 py-3 text-right font-mono text-zinc-700">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.totalPayout)}</td>
+                            <td class="px-12 py-3 font-medium text-zinc-700 text-sm">HARDWARE (CASH PRICE)</td>
+                            <td class="px-12 py-3 text-right font-mono text-zinc-700 text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.totalPayout)}</td>
                         </tr>
                         <tr>
-                            <td class="px-12 py-3 font-medium text-zinc-700">MONTHLY SERVICE</td>
-                            <td class="px-12 py-3 text-right font-mono text-zinc-700">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.monthlyServiceTotal)}</td>
+                            <td class="px-12 py-3 font-medium text-zinc-700 text-sm">MONTHLY SERVICE</td>
+                            <td class="px-12 py-3 text-right font-mono text-zinc-700 text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.monthlyServiceTotal)}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -325,13 +338,18 @@ export class HtmlTemplateManager {
                 <table class="w-full border border-orange-100 text-sm">
                     <thead>
                         <tr class="bg-orange-50">
-                            <th class="text-left py-3 px-12 font-medium w-20">QTY</th>
-                            <th class="text-left py-3 px-12 font-medium">HARDWARE</th>
-                            <th class="text-right py-3 px-12 font-medium w-40">COST</th>
+                            <th class="text-left py-3 px-12 font-medium w-20 text-sm">QTY</th>
+                            <th class="text-left py-3 px-12 font-medium text-sm">HARDWARE</th>
+                            <th class="text-right py-3 px-12 font-medium w-40 text-sm">COST</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-orange-100 text-zinc-700">
                         ${hardwareRows}
+                        <tr class="bg-orange-50 font-bold">
+                            <td class="py-3 px-12 text-sm"></td>
+                            <td class="py-3 px-12 text-right text-zinc-900 text-sm">TOTAL PAYOUT</td>
+                            <td class="py-3 px-12 text-right font-mono text-zinc-900 text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.totalPayout)}</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -341,13 +359,18 @@ export class HtmlTemplateManager {
                 <table class="w-full border border-orange-100 text-sm">
                     <thead>
                         <tr class="bg-orange-50">
-                            <th class="text-left py-3 px-12 font-medium w-20">QTY</th>
-                            <th class="text-left py-3 px-12 font-medium">MONTHLY SERVICES</th>
-                            <th class="text-right py-3 px-12 font-medium w-40">COST</th>
+                            <th class="text-left py-3 px-12 font-medium w-20 text-sm">QTY</th>
+                            <th class="text-left py-3 px-12 font-medium text-sm">MONTHLY SERVICES</th>
+                            <th class="text-right py-3 px-12 font-medium w-40 text-sm">COST</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-orange-100 text-zinc-700">
                         ${monthlyServiceRows}
+                        <tr class="bg-orange-50 font-bold">
+                            <td class="py-3 px-12 text-sm"></td>
+                            <td class="py-3 px-12 text-right text-zinc-900 text-sm">TOTAL</td>
+                            <td class="py-3 px-12 text-right font-mono text-zinc-900 text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.monthlyServiceTotal)}</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -360,60 +383,28 @@ export class HtmlTemplateManager {
   }
 
   /**
-   * Generate hardware table rows
+   * Generate hardware table rows (no individual prices, just items and quantities)
    */
   private static generateHardwareRows(hardwareItems: any[]): string {
     let rows = '';
     
-    // Fill up to 9 rows (matching PDF system)
-    for (let i = 0; i < 9; i++) {
-      const item = hardwareItems[i];
-      if (item) {
-        rows += `
-          <tr>
-            <td class="py-3 px-12">${item.selectedQuantity}</td>
-            <td class="py-3 px-12">${item.name}</td>
-            <td class="py-3 px-12 text-right font-mono">${HtmlProposalDataMapper.formatCurrencyWithR(item.selectedQuantity * (item.cost || 0))}</td>
-          </tr>
-        `;
-      } else {
-        rows += `
-          <tr>
-            <td class="py-3 px-12"></td>
-            <td class="py-3 px-12"></td>
-            <td class="py-3 px-12 text-right font-mono"></td>
-          </tr>
-        `;
-      }
-    }
-    
-    return rows;
-  }
-
-  /**
-   * Generate comparative hardware rows (with term column)
-   */
-  private static generateComparativeHardwareRows(hardwareItems: any[], dealDetails: any): string {
-    let rows = '';
-    
+    // Fill up to 8 rows for hardware items (leaving space for total row)
     for (let i = 0; i < 8; i++) {
       const item = hardwareItems[i];
       if (item) {
         rows += `
           <tr>
-            <td class="py-2.5 px-12">${item.selectedQuantity}</td>
-            <td class="py-2.5 px-12">${item.name}</td>
-            <td class="py-2.5 px-12 text-right font-mono">${HtmlProposalDataMapper.formatCurrencyWithR(item.selectedQuantity * (item.cost || 0))}</td>
-            <td class="py-2.5 px-12 text-right font-mono">${dealDetails.term} Months</td>
+            <td class="py-3 px-12 text-sm">${item.selectedQuantity}</td>
+            <td class="py-3 px-12 text-sm">${item.name}</td>
+            <td class="py-3 px-12 text-right font-mono text-sm"></td>
           </tr>
         `;
       } else {
         rows += `
           <tr>
-            <td class="py-2.5 px-12"></td>
-            <td class="py-2.5 px-12"></td>
-            <td class="py-2.5 px-12 text-right font-mono"></td>
-            <td class="py-2.5 px-12 text-right font-mono"></td>
+            <td class="py-3 px-12 text-sm"></td>
+            <td class="py-3 px-12 text-sm"></td>
+            <td class="py-3 px-12 text-right font-mono text-sm"></td>
           </tr>
         `;
       }
@@ -423,54 +414,83 @@ export class HtmlTemplateManager {
   }
 
   /**
-   * Generate monthly service rows (individual rows per item)
+   * Generate comparative hardware rows (with term column, no individual prices)
+   */
+  private static generateComparativeHardwareRows(hardwareItems: any[], dealDetails: any): string {
+    let rows = '';
+    
+    // Fill up to 7 rows for hardware items (leaving space for total row)
+    for (let i = 0; i < 7; i++) {
+      const item = hardwareItems[i];
+      if (item) {
+        rows += `
+          <tr>
+            <td class="py-2.5 px-12 text-sm">${item.selectedQuantity}</td>
+            <td class="py-2.5 px-12 text-sm">${item.name}</td>
+            <td class="py-2.5 px-12 text-right font-mono text-sm"></td>
+            <td class="py-2.5 px-12 text-right font-mono text-sm"></td>
+          </tr>
+        `;
+      } else {
+        rows += `
+          <tr>
+            <td class="py-2.5 px-12 text-sm"></td>
+            <td class="py-2.5 px-12 text-sm"></td>
+            <td class="py-2.5 px-12 text-right font-mono text-sm"></td>
+            <td class="py-2.5 px-12 text-right font-mono text-sm"></td>
+          </tr>
+        `;
+      }
+    }
+    
+    return rows;
+  }
+
+  /**
+   * Generate monthly service rows (individual rows per item, proper text sizing)
    */
   private static generateMonthlyServiceRows(connectivityItems: any[], licensingItems: any[]): string {
     let rows = '';
+    let itemCount = 0;
     
     // Add connectivity items
     connectivityItems.forEach(item => {
-      rows += `
-        <tr>
-          <td class="py-3 px-12">${item.selectedQuantity}</td>
-          <td class="py-3 px-12">${item.name}</td>
-          <td class="py-3 px-12 text-right font-mono">${HtmlProposalDataMapper.formatCurrencyWithR(item.selectedQuantity * (item.cost || 0))}</td>
-        </tr>
-      `;
+      if (itemCount < 4) { // Leave space for total row
+        rows += `
+          <tr>
+            <td class="py-3 px-12 text-sm">${item.selectedQuantity}</td>
+            <td class="py-3 px-12 text-sm">${item.name}</td>
+            <td class="py-3 px-12 text-right font-mono text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(item.selectedQuantity * (item.cost || 0))}</td>
+          </tr>
+        `;
+        itemCount++;
+      }
     });
 
     // Add licensing items
     licensingItems.forEach(item => {
-      rows += `
-        <tr>
-          <td class="py-3 px-12">${item.selectedQuantity}</td>
-          <td class="py-3 px-12">${item.name}</td>
-          <td class="py-3 px-12 text-right font-mono">${HtmlProposalDataMapper.formatCurrencyWithR(item.selectedQuantity * (item.cost || 0))}</td>
-        </tr>
-      `;
+      if (itemCount < 4) { // Leave space for total row
+        rows += `
+          <tr>
+            <td class="py-3 px-12 text-sm">${item.selectedQuantity}</td>
+            <td class="py-3 px-12 text-sm">${item.name}</td>
+            <td class="py-3 px-12 text-right font-mono text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(item.selectedQuantity * (item.cost || 0))}</td>
+          </tr>
+        `;
+        itemCount++;
+      }
     });
 
-    // Add standard call rates
-    rows += `
-      <tr>
-        <td class="py-3 px-12">1</td>
-        <td class="py-3 px-12">All Calls at a blended fixed rate of 59c per minute, on a per second billing basis</td>
-        <td class="py-3 px-12 text-right font-mono">Per Usage</td>
-      </tr>
-    `;
-
     // Fill remaining rows to maintain table structure
-    const totalRows = connectivityItems.length + licensingItems.length + 1;
-    const maxRows = 5;
-    
-    for (let i = totalRows; i < maxRows; i++) {
+    while (itemCount < 4) {
       rows += `
         <tr>
-          <td class="py-3 px-12"></td>
-          <td class="py-3 px-12"></td>
-          <td class="py-3 px-12 text-right font-mono"></td>
+          <td class="py-3 px-12 text-sm"></td>
+          <td class="py-3 px-12 text-sm"></td>
+          <td class="py-3 px-12 text-right font-mono text-sm"></td>
         </tr>
       `;
+      itemCount++;
     }
     
     return rows;
@@ -485,9 +505,9 @@ export class HtmlTemplateManager {
     for (let i = 0; i < 5; i++) {
       rows += `
         <tr>
-          <td class="py-2.5 px-12 font-mono">${HtmlProposalDataMapper.formatCurrencyWithR(projections.current[i])}</td>
-          <td class="py-2.5 px-12 text-center">${projections.years[i]}</td>
-          <td class="py-2.5 px-12 text-right font-mono">${HtmlProposalDataMapper.formatCurrencyWithR(projections.new[i])}</td>
+          <td class="py-2.5 px-12 font-mono text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(projections.current[i])}</td>
+          <td class="py-2.5 px-12 text-center text-sm">${projections.years[i]}</td>
+          <td class="py-2.5 px-12 text-right font-mono text-sm">${HtmlProposalDataMapper.formatCurrencyWithR(projections.new[i])}</td>
         </tr>
       `;
     }

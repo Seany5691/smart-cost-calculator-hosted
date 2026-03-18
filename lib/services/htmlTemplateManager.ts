@@ -401,7 +401,6 @@ export class HtmlTemplateManager {
           <tr>
             <td class="py-1.5 px-12 text-xs">${item.selectedQuantity}</td>
             <td class="py-1.5 px-12 text-xs">${item.name}</td>
-            <td class="py-1.5 px-12 text-right font-mono text-xs"></td>
           </tr>
         `;
       }
@@ -423,8 +422,6 @@ export class HtmlTemplateManager {
           <tr>
             <td class="py-1 px-12 text-xs">${item.selectedQuantity}</td>
             <td class="py-1 px-12 text-xs">${item.name}</td>
-            <td class="py-1 px-12 text-right font-mono text-xs"></td>
-            <td class="py-1 px-12 text-right font-mono text-xs"></td>
           </tr>
         `;
       }
@@ -446,7 +443,6 @@ export class HtmlTemplateManager {
           <tr>
             <td class="py-1.5 px-12 text-xs">${item.selectedQuantity}</td>
             <td class="py-1.5 px-12 text-xs">${item.name}</td>
-            <td class="py-1.5 px-12 text-right font-mono text-xs"></td>
           </tr>
         `;
       }
@@ -459,7 +455,6 @@ export class HtmlTemplateManager {
           <tr>
             <td class="py-1.5 px-12 text-xs">${item.selectedQuantity}</td>
             <td class="py-1.5 px-12 text-xs">${item.name}</td>
-            <td class="py-1.5 px-12 text-right font-mono text-xs"></td>
           </tr>
         `;
       }

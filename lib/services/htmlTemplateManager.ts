@@ -147,7 +147,7 @@ export class HtmlTemplateManager {
                     <tbody class="divide-y divide-orange-100 text-zinc-700">
                         ${hardwareRows}
                         <tr class="bg-orange-50 font-bold">
-                            <td class="py-2 px-12 text-xs"></td>
+                            <td class="py-2 px-12 text-zinc-900 text-xs">TOTAL</td>
                             <td class="py-2 px-12 text-right text-zinc-900 text-xs">
                                 <div class="flex items-center justify-end gap-8">
                                     <div class="font-mono text-center whitespace-nowrap">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</div>
@@ -174,7 +174,7 @@ export class HtmlTemplateManager {
                     <tbody class="divide-y divide-orange-100 text-zinc-700">
                         ${monthlyServiceRows}
                         <tr class="bg-orange-50 font-bold">
-                            <td class="py-2 px-12 text-xs"></td>
+                            <td class="py-2 px-12 text-zinc-900 text-xs">TOTAL</td>
                             <td class="py-2 px-12 text-right text-zinc-900 text-xs font-mono whitespace-nowrap">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.monthlyServiceTotal)}</td>
                         </tr>
                     </tbody>
@@ -270,7 +270,7 @@ export class HtmlTemplateManager {
                     <tbody class="divide-y divide-orange-100 text-zinc-700">
                         ${hardwareRows}
                         <tr class="bg-orange-50 font-bold">
-                            <td colspan="2" class="py-2 px-12 text-xs"></td>
+                            <td class="py-2 px-12 text-zinc-900 text-xs">TOTAL</td>
                             <td class="py-2 px-12 text-right text-zinc-900 text-xs">
                                 <div class="flex items-center justify-end gap-8">
                                     <div class="font-mono text-center whitespace-nowrap">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</div>
@@ -298,7 +298,7 @@ export class HtmlTemplateManager {
                     <tbody class="divide-y divide-orange-100 text-zinc-700">
                         ${monthlyServiceRows}
                         <tr class="bg-orange-50 font-bold">
-                            <td class="py-1.5 px-12 text-xs"></td>
+                            <td class="py-1.5 px-12 text-zinc-900 text-xs">TOTAL</td>
                             <td class="py-1.5 px-12 text-right text-zinc-900 text-xs font-mono whitespace-nowrap">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.monthlyServiceTotal)}</td>
                         </tr>
                     </tbody>
@@ -350,15 +350,13 @@ export class HtmlTemplateManager {
                         <tr class="bg-orange-50">
                             <th class="text-left py-2 px-12 font-medium w-20 text-xs">QTY</th>
                             <th class="text-left py-2 px-12 font-medium text-xs">HARDWARE</th>
-                            <th class="text-right py-2 px-12 font-medium w-40 text-xs">COST</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-orange-100 text-zinc-700">
                         ${hardwareRows}
                         <tr class="bg-orange-50 font-bold">
-                            <td class="py-2 px-12 text-xs"></td>
-                            <td class="py-2 px-12 text-right text-zinc-900 text-xs">TOTAL</td>
-                            <td class="py-2 px-12 text-right font-mono text-zinc-900 text-xs min-w-32 whitespace-nowrap">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.totalPayout)}</td>
+                            <td class="py-2 px-12 text-zinc-900 text-xs">TOTAL</td>
+                            <td class="py-2 px-12 text-right font-mono text-zinc-900 text-xs whitespace-nowrap">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.totalPayout)}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -371,15 +369,13 @@ export class HtmlTemplateManager {
                         <tr class="bg-orange-50">
                             <th class="text-left py-2 px-12 font-medium w-20 text-xs">QTY</th>
                             <th class="text-left py-2 px-12 font-medium text-xs">MONTHLY SERVICES</th>
-                            <th class="text-right py-2 px-12 font-medium w-40 text-xs">COST</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-orange-100 text-zinc-700">
                         ${monthlyServiceRows}
                         <tr class="bg-orange-50 font-bold">
-                            <td class="py-2 px-12 text-xs"></td>
-                            <td class="py-2 px-12 text-right text-zinc-900 text-xs">TOTAL</td>
-                            <td class="py-2 px-12 text-right font-mono text-zinc-900 text-xs">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.monthlyServiceTotal)}</td>
+                            <td class="py-2 px-12 text-zinc-900 text-xs">TOTAL</td>
+                            <td class="py-2 px-12 text-right font-mono text-zinc-900 text-xs whitespace-nowrap">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.monthlyServiceTotal)}</td>
                         </tr>
                     </tbody>
                 </table>

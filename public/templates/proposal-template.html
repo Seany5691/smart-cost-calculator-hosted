@@ -265,8 +265,8 @@
                     const clientLogoImg = clientLogoContainer.querySelector('img');
                     const mainContent = document.getElementById('main-content');
                     
-                    // Check if client logo exists and has a valid src
-                    const hasClientLogo = clientLogoImg && clientLogoImg.src && !clientLogoImg.src.includes('{{CLIENT_LOGO_SECONDARY}}');
+                    // Check if client logo img element exists (it gets removed if no logo)
+                    const hasClientLogo = clientLogoImg !== null;
                     
                     if (!hasClientLogo) {
                         // Hide the client logo container if no logo

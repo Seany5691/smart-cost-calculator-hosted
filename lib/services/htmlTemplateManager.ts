@@ -937,14 +937,14 @@ export class HtmlTemplateManager {
                     </div>
                     <div class="pl-3">
                         <div class="font-semibold text-xl mb-4 text-zinc-900">Enhanced Indoor Coverage</div>
-                        <p class="text-zinc-600 text-[13px] leading-relaxed">Our signal enhancement systems capture weak outdoor cellular signals and amplify them throughout your building, eliminating dead zones and ensuring reliable communication in areas where concrete, steel, or distance from towers typically blocks signals. The system provides consistent coverage across multiple floors and rooms, allowing your team to stay connected regardless of their location within the premises. Smart Integrate's technical team designs and installs the solution to maximize signal strength and coverage for your specific building layout and requirements.</p>
+                        <p class="text-zinc-600 text-[13px] leading-relaxed">Our signal enhancement systems capture weak outdoor cellular signals and amplify them throughout your building, eliminating dead zones caused by concrete, steel, or distance from towers. The system provides consistent coverage across multiple floors and rooms, ensuring your team stays connected regardless of location. Smart Integrate's technical team designs and installs the solution to maximize signal strength for your specific building requirements.</p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-8 items-center">
                     <div class="pr-3">
                         <div class="font-semibold text-xl mb-4 text-zinc-900">Intelligent Signal Management</div>
-                        <p class="text-zinc-600 text-[13px] leading-relaxed">The enhancement system features smart technology that automatically adjusts amplification levels based on incoming signal strength, preventing network interference while maximizing coverage throughout your workspace. This intelligent management ensures optimal performance without manual intervention, adapting to changing signal conditions and maintaining consistent connectivity. Smart Integrate configures the system to work seamlessly with your existing infrastructure, providing reliable signal enhancement that operates efficiently and maintains network compliance at all times.</p>
+                        <p class="text-zinc-600 text-[13px] leading-relaxed">The enhancement system features smart technology that automatically adjusts amplification levels based on incoming signal strength, preventing network interference while maximizing coverage. This intelligent management ensures optimal performance without manual intervention, adapting to changing conditions and maintaining consistent connectivity. Smart Integrate configures the system to work seamlessly with your infrastructure, providing reliable enhancement that operates efficiently.</p>
                     </div>
                     <div class="pl-3">
                         <img src="Pictures/Page 11/Image 2.png" alt="Intelligent Management" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
@@ -957,7 +957,7 @@ export class HtmlTemplateManager {
                     </div>
                     <div class="pl-3">
                         <div class="font-semibold text-xl mb-4 text-zinc-900">Multi-Network Compatibility</div>
-                        <p class="text-zinc-600 text-[13px] leading-relaxed">The signal enhancement solution works simultaneously with all major cellular networks and devices, supporting voice calls, data transmission, and messaging across different carriers without requiring separate systems. Your smartphones, tablets, and cellular devices will experience improved connectivity regardless of their network provider, ensuring comprehensive coverage for your entire team. Smart Integrate's technical team ensures the system is optimized for all network frequencies, providing universal signal improvement that enhances productivity and communication reliability across your business operations.</p>
+                        <p class="text-zinc-600 text-[13px] leading-relaxed">The signal enhancement solution works simultaneously with all major cellular networks, supporting voice calls, data transmission, and messaging across different carriers without requiring separate systems. Your devices will experience improved connectivity regardless of network provider, ensuring comprehensive coverage for your entire team. Smart Integrate optimizes the system for all network frequencies, providing universal signal improvement that enhances productivity and communication reliability.</p>
                     </div>
                 </div>
             </div>

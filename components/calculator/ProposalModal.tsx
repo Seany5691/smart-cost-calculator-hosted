@@ -127,6 +127,16 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
     }
   };
 
+  const handleLogoRemove = () => {
+    setClientLogo(null);
+    setLogoPreview(null);
+    // Clear the file input
+    const fileInput = document.getElementById('clientLogo') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
   const handlePageToggle = (page: keyof typeof selectedPages) => {
     setSelectedPages(prev => ({
       ...prev,
@@ -282,8 +292,18 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
                   Choose Logo
                 </label>
                 {logoPreview && (
-                  <div className="w-16 h-16 border border-purple-500/30 rounded-lg overflow-hidden">
-                    <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain bg-white/10" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 border border-purple-500/30 rounded-lg overflow-hidden">
+                      <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain bg-white/10" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleLogoRemove}
+                      className="px-3 py-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300 hover:bg-red-500/30 transition-colors text-sm"
+                      title="Remove logo"
+                    >
+                      Remove
+                    </button>
                   </div>
                 )}
               </div>

@@ -204,8 +204,8 @@
         <div class="page" style="position: relative;">
             <div class="header-bar w-full"></div>
             
-            <!-- Main Content Area - Centered -->
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; max-width: 900px;">
+            <!-- Main Content Area - Conditionally centered based on logo presence -->
+            <div id="main-content" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; max-width: 900px;">
                 <div class="text-center px-12">
                     <!-- Logo -->
                     <div class="inline-flex w-32 h-32 items-center justify-center mb-8">
@@ -231,9 +231,9 @@
                         {{CLIENT_NAME}}
                     </div>
                     
-                    <!-- Client Logo - positioned below client name -->
-                    <div class="inline-flex w-32 h-32 items-center justify-center">
-                        <img src="{{CLIENT_LOGO_SECONDARY}}" alt="Client Logo" class="w-full h-full object-contain">
+                    <!-- Client Logo - positioned below client name, forced to same size as Smart Integrate logo -->
+                    <div id="client-logo-container" class="inline-flex w-32 h-32 items-center justify-center">
+                        <img src="{{CLIENT_LOGO_SECONDARY}}" alt="Client Logo" class="w-full h-full object-cover bg-white/10 rounded-lg">
                     </div>
                 </div>
             </div>
@@ -257,6 +257,30 @@
                     </div>
                 </div>
             </div>
+
+            <!-- JavaScript for conditional centering -->
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const clientLogoContainer = document.getElementById('client-logo-container');
+                    const clientLogoImg = clientLogoContainer.querySelector('img');
+                    const mainContent = document.getElementById('main-content');
+                    
+                    // Check if client logo exists and has a valid src
+                    const hasClientLogo = clientLogoImg && clientLogoImg.src && !clientLogoImg.src.includes('{{CLIENT_LOGO_SECONDARY}}');
+                    
+                    if (!hasClientLogo) {
+                        // Hide the client logo container if no logo
+                        clientLogoContainer.style.display = 'none';
+                        // Adjust centering to exclude the logo space
+                        mainContent.style.transform = 'translate(-50%, -55%)';
+                    } else {
+                        // Show the client logo container
+                        clientLogoContainer.style.display = 'inline-flex';
+                        // Keep normal centering that includes the logo
+                        mainContent.style.transform = 'translate(-50%, -50%)';
+                    }
+                });
+            </script>
         </div>
 
         <!-- PAGE 2: THANK YOU -->

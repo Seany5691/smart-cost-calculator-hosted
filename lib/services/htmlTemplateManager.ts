@@ -541,6 +541,10 @@ export class HtmlTemplateManager {
       pages += this.getSignalEnhancementPage();
     }
 
+    if (selectedPages.computerSolutions) {
+      pages += this.getComputerSolutionsPage();
+    }
+
     // Always include the final pages with contact info
     pages += this.getFinalPages(mappedData);
 
@@ -958,6 +962,57 @@ export class HtmlTemplateManager {
                     <div class="pl-3">
                         <div class="font-semibold text-xl mb-4 text-zinc-900">Multi-Network Compatibility</div>
                         <p class="text-zinc-600 text-[13px] leading-relaxed">The signal enhancement solution works simultaneously with all major cellular networks, supporting voice calls, data transmission, and messaging across different carriers without requiring separate systems. Your devices will experience improved connectivity regardless of network provider, ensuring comprehensive coverage for your entire team. Smart Integrate optimizes the system for all network frequencies, providing universal signal improvement that enhances productivity and communication reliability.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-auto flex-shrink-0 pt-10 text-xs flex justify-between text-zinc-500 border-t border-orange-100">
+                <div>SMART INTEGRATE • Smart Solutions Simplified</div>
+            </div>
+        </div>
+    `;
+  }
+
+  private static getComputerSolutionsPage(): string {
+    return `
+        <!-- PAGE 14: COMPUTER SOLUTIONS -->
+        <div class="page p-12 flex flex-col">
+            <div class="flex items-center gap-8 mb-10">
+                <i class="fa-solid fa-desktop text-6xl text-orange-500"></i>
+                <div>
+                    <div class="uppercase text-orange-600 tracking-[4px] text-xs font-semibold">COMPUTER SOLUTIONS</div>
+                    <h2 class="section-title text-5xl font-semibold text-zinc-900">Computer Solutions</h2>
+                </div>
+            </div>
+
+            <div class="space-y-8">
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div class="pr-3">
+                        <img src="Pictures/Page 11/Image 1.png" alt="Laptop Solutions" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
+                    </div>
+                    <div class="pl-3">
+                        <div class="font-semibold text-xl mb-4 text-zinc-900">Laptops</div>
+                        <p class="text-zinc-600 text-[13px] leading-relaxed">Our laptop solutions provide your team with powerful, portable workstations that deliver desktop-level performance anywhere in your business. These lightweight systems feature long battery life, fast processors, and comprehensive connectivity options, enabling productivity whether in the office, meeting rooms, or remote locations. Smart Integrate configures each laptop with your specific software requirements and security protocols, ensuring seamless integration with your existing network infrastructure.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div class="pr-3">
+                        <div class="font-semibold text-xl mb-4 text-zinc-900">Mini PCs</div>
+                        <p class="text-zinc-600 text-[13px] leading-relaxed">Mini PC solutions maximize workspace efficiency by delivering full desktop functionality in space-saving designs that fit anywhere in your office environment. These powerful compact systems provide excellent performance for daily business tasks while consuming minimal power and generating less heat than traditional towers. Smart Integrate installs and configures these mini PCs to optimize your workspace layout while maintaining the computing power your business operations require.</p>
+                    </div>
+                    <div class="pl-3">
+                        <img src="Pictures/Page 11/Image 2.png" alt="Mini PC Solutions" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div class="pr-3">
+                        <img src="Pictures/Page 11/Image 3.png" alt="Desktop PC Solutions" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
+                    </div>
+                    <div class="pl-3">
+                        <div class="font-semibold text-xl mb-4 text-zinc-900">Desktop PCs</div>
+                        <p class="text-zinc-600 text-[13px] leading-relaxed">Desktop PC solutions deliver maximum processing power for demanding business applications, complex data analysis, and resource-intensive workflows. These robust systems feature expandable configurations, multiple monitor support, and enterprise-grade components designed for continuous operation and reliability. Smart Integrate designs and builds each desktop PC to meet your specific computational requirements, ensuring optimal performance for your most critical business processes.</p>
                     </div>
                 </div>
             </div>

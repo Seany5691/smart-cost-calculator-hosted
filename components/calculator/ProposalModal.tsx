@@ -30,6 +30,7 @@ export interface HtmlProposalData extends ProposalData {
     cctv: boolean;
     accessControl: boolean;
     signalEnhancement: boolean;
+    computerSolutions: boolean;
   };
   generationMethod: 'pdf' | 'html';
 }
@@ -61,7 +62,8 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
     printing: false,
     cctv: false,
     accessControl: false,
-    signalEnhancement: false
+    signalEnhancement: false,
+    computerSolutions: false
   });
 
   // Set mounted state on client side only
@@ -205,7 +207,8 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
       printing: false,
       cctv: false,
       accessControl: false,
-      signalEnhancement: false
+      signalEnhancement: false,
+      computerSolutions: false
     });
     onClose();
   };
@@ -379,6 +382,16 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
                     className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
                   />
                   <span className="text-white">Signal Enhancement</span>
+                </label>
+
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.computerSolutions}
+                    onChange={() => handlePageToggle('computerSolutions')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">Computer Solutions</span>
                 </label>
               </div>
               <p className="text-sm text-purple-300/70">Select which feature pages to include in the proposal</p>

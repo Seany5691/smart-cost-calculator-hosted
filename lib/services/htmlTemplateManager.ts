@@ -988,7 +988,7 @@ export class HtmlTemplateManager {
             <div class="space-y-8">
                 <div class="grid grid-cols-2 gap-8 items-center">
                     <div class="pr-3">
-                        <img src="Pictures/Page 11/Image 1.png" alt="Laptop Solutions" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
+                        <img src="Pictures/Page 12/Image 1.png" alt="Laptop Solutions" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
                     </div>
                     <div class="pl-3">
                         <div class="font-semibold text-xl mb-4 text-zinc-900">Laptops</div>
@@ -1002,13 +1002,13 @@ export class HtmlTemplateManager {
                         <p class="text-zinc-600 text-[13px] leading-relaxed">Mini PC solutions maximize workspace efficiency by delivering full desktop functionality in space-saving designs that fit anywhere in your office environment. These powerful compact systems provide excellent performance for daily business tasks while consuming minimal power and generating less heat than traditional towers. Smart Integrate installs and configures these mini PCs to optimize your workspace layout while maintaining the computing power your business operations require.</p>
                     </div>
                     <div class="pl-3">
-                        <img src="Pictures/Page 11/Image 2.png" alt="Mini PC Solutions" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
+                        <img src="Pictures/Page 12/Image 2.png" alt="Mini PC Solutions" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-8 items-center">
                     <div class="pr-3">
-                        <img src="Pictures/Page 11/Image 3.png" alt="Desktop PC Solutions" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
+                        <img src="Pictures/Page 12/Image 3.png" alt="Desktop PC Solutions" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
                     </div>
                     <div class="pl-3">
                         <div class="font-semibold text-xl mb-4 text-zinc-900">Desktop PCs</div>

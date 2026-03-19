@@ -537,6 +537,10 @@ export class HtmlTemplateManager {
       pages += this.getAccessControlPage();
     }
 
+    if (selectedPages.signalEnhancement) {
+      pages += this.getSignalEnhancementPage();
+    }
+
     // Always include the final pages with contact info
     pages += this.getFinalPages(mappedData);
 
@@ -900,6 +904,60 @@ export class HtmlTemplateManager {
                     <div class="pl-3">
                         <div class="font-semibold text-xl mb-4 text-zinc-900">Remote Access Control</div>
                         <p class="text-zinc-600 text-[13px] leading-relaxed">Smart Integrate's technical team can manage your access control system remotely, allowing us to add or remove users, adjust permissions, and monitor entry logs without visiting your site. You can also grant temporary access to visitors or contractors from anywhere using a secure app, ensuring flexibility for your business operations. This remote capability keeps your security system responsive and adaptable to your changing needs, with local support available when required.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-auto flex-shrink-0 pt-10 text-xs flex justify-between text-zinc-500 border-t border-orange-100">
+                <div>SMART INTEGRATE • Smart Solutions Simplified</div>
+            </div>
+        </div>
+    `;
+  }
+
+  /**
+   * Generate Signal Enhancement page (Page 13)
+   */
+  private static getSignalEnhancementPage(): string {
+    return `
+        <!-- PAGE 13: SIGNAL ENHANCEMENT -->
+        <div class="page p-12 flex flex-col">
+            <div class="flex items-center gap-8 mb-10">
+                <i class="fa-solid fa-signal text-6xl text-orange-500"></i>
+                <div>
+                    <div class="uppercase text-orange-600 tracking-[4px] text-xs font-semibold">SIGNAL ENHANCEMENT</div>
+                    <h2 class="section-title text-5xl font-semibold text-zinc-900">Signal Enhancement Solutions</h2>
+                </div>
+            </div>
+
+            <div class="space-y-8">
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div class="pr-3">
+                        <img src="Pictures/Page 11/Image 1.png" alt="Signal Enhancement System" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
+                    </div>
+                    <div class="pl-3">
+                        <div class="font-semibold text-xl mb-4 text-zinc-900">Enhanced Indoor Coverage</div>
+                        <p class="text-zinc-600 text-[13px] leading-relaxed">Our signal enhancement systems capture weak outdoor cellular signals and amplify them throughout your building, eliminating dead zones and ensuring reliable communication in areas where concrete, steel, or distance from towers typically blocks signals. The system provides consistent coverage across multiple floors and rooms, allowing your team to stay connected regardless of their location within the premises. Smart Integrate's technical team designs and installs the solution to maximize signal strength and coverage for your specific building layout and requirements.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div class="pr-3">
+                        <div class="font-semibold text-xl mb-4 text-zinc-900">Intelligent Signal Management</div>
+                        <p class="text-zinc-600 text-[13px] leading-relaxed">The enhancement system features smart technology that automatically adjusts amplification levels based on incoming signal strength, preventing network interference while maximizing coverage throughout your workspace. This intelligent management ensures optimal performance without manual intervention, adapting to changing signal conditions and maintaining consistent connectivity. Smart Integrate configures the system to work seamlessly with your existing infrastructure, providing reliable signal enhancement that operates efficiently and maintains network compliance at all times.</p>
+                    </div>
+                    <div class="pl-3">
+                        <img src="Pictures/Page 11/Image 2.png" alt="Intelligent Management" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-8 items-center">
+                    <div class="pr-3">
+                        <img src="Pictures/Page 11/Image 3.png" alt="Multi-Network Support" class="rounded-3xl shadow-2xl w-full h-auto object-contain max-h-[200px]">
+                    </div>
+                    <div class="pl-3">
+                        <div class="font-semibold text-xl mb-4 text-zinc-900">Multi-Network Compatibility</div>
+                        <p class="text-zinc-600 text-[13px] leading-relaxed">The signal enhancement solution works simultaneously with all major cellular networks and devices, supporting voice calls, data transmission, and messaging across different carriers without requiring separate systems. Your smartphones, tablets, and cellular devices will experience improved connectivity regardless of their network provider, ensuring comprehensive coverage for your entire team. Smart Integrate's technical team ensures the system is optimized for all network frequencies, providing universal signal improvement that enhances productivity and communication reliability across your business operations.</p>
                     </div>
                 </div>
             </div>

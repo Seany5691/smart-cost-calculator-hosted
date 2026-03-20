@@ -88,7 +88,7 @@ export async function GET() {
           try {
             acc[key] = error[key];
           } catch (e) {
-            acc[key] = `[Unable to serialize: ${e.message}]`;
+            acc[key] = `[Unable to serialize: ${e instanceof Error ? e.message : String(e)}]`;
           }
           return acc;
         }, {} as any)

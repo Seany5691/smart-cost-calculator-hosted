@@ -112,31 +112,65 @@ class BrowserManager {
    * Create a new browser instance with optimal settings
    */
   private async createBrowser(): Promise<Browser> {
-    const puppeteer = await import('puppeteer');
+    try {
+      console.log('[BrowserManager] Importing Puppeteer...');
+      const puppeteer = await import('puppeteer');
+      console.log('[BrowserManager] Puppeteer imported successfully');
 
-    const launchOptions: PuppeteerLaunchOptions = {
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--memory-pressure-off',
-        '--max_old_space_size=4096'
-      ],
-    };
+      const launchOptions: PuppeteerLaunchOptions = {
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu',
+          '--disable-web-security',
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--memory-pressure-off',
+          '--max_old_space_size=4096'
+        ],
+      };
 
-    // Use environment-specific executable if available
-    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+      // Use environment-specific executable if available
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        console.log('[BrowserManager] Using custom executable path:', process.env.PUPPETEER_EXECUTABLE_PATH);
+      }
+
+      console.log('[BrowserManager] Launch options:', JSON.stringify(launchOptions, null, 2));
+      console.log('[BrowserManager] Launching browser...');
+      
+      const browser = await puppeteer.default.launch(launchOptions);
+      console.log('[BrowserManager] Browser launched successfully');
+      
+      return browser;
+    } catch (error) {
+      console.error('[BrowserManager] Failed to create browser:', error);
+      
+      // Enhanced error logging
+      if (error instanceof Error) {
+        console.error('[BrowserManager] Error name:', error.name);
+        console.error('[BrowserManager] Error message:', error.message);
+        console.error('[BrowserManager] Error stack:', error.stack);
+      }
+      
+      // Log additional error properties
+      const errorProps = Object.getOwnPropertyNames(error);
+      console.error('[BrowserManager] Error properties:', errorProps);
+      
+      for (const prop of errorProps) {
+        try {
+          console.error(`[BrowserManager] Error.${prop}:`, (error as any)[prop]);
+        } catch (e) {
+          console.error(`[BrowserManager] Could not log Error.${prop}:`, e.message);
+        }
+      }
+      
+      throw error;
     }
-
-    return await puppeteer.default.launch(launchOptions);
   }
 
   /**

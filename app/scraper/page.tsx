@@ -240,15 +240,37 @@ export default function ScraperPage() {
   }, [setIndustries]);
 
   // Load most recent session from database on mount (CROSS-DEVICE SYNC)
+  // Only load if no active session exists to prevent overriding current scrapes
   useEffect(() => {
     const loadMostRecentSession = async () => {
       try {
+        // Don't load cached data if we have an active session or are currently scraping
+        if (status !== 'idle' || sessionId) {
+          console.log('[Scraper] Skipping cached session load - active session detected');
+          return;
+        }
+
         const authStorage = localStorage.getItem('auth-storage');
         if (!authStorage) return;
 
         const authData = JSON.parse(authStorage);
         const token = authData.token;
         if (!token) return;
+
+        // Check if there's an active scraping session first
+        const activeResponse = await fetch('/api/scraper/active-session', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (activeResponse.ok) {
+          const activeData = await activeResponse.json();
+          if (activeData.hasActiveSession) {
+            console.log('[Scraper] Active session detected, skipping cached session load');
+            return;
+          }
+        }
 
         // Fetch sessions from database
         const response = await fetch('/api/scraper/sessions', {
@@ -302,11 +324,11 @@ export default function ScraperPage() {
       }
     };
 
-    // Only load if authenticated and hydrated
-    if (isHydrated && isAuthenticated) {
+    // Only load if authenticated, hydrated, and no active session
+    if (isHydrated && isAuthenticated && status === 'idle' && !sessionId) {
       loadMostRecentSession();
     }
-  }, [isHydrated, isAuthenticated, addBusinesses, clearAll]);
+  }, [isHydrated, isAuthenticated, status, sessionId, addBusinesses, clearAll]);
 
   // Check for active scraping session (Resume Viewing)
   useEffect(() => {

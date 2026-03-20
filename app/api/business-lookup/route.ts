@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BusinessLookupScraper } from '@/lib/scraper/business-lookup-scraper';
 import { ProviderLookupService } from '@/lib/scraper/provider-lookup-service';
-import puppeteer from 'puppeteer';
+import { browserManager } from '@/lib/scraper/browser-manager';
 
 export async function POST(request: NextRequest) {
   let browser = null;
@@ -29,19 +29,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API /api/business-lookup] Looking up businesses for: ${businessQuery}`);
 
-    // Launch browser for business scraping
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-      ],
-    });
+    // Get browser from centralized manager
+    browser = await browserManager.getBrowser('business-lookup');
 
     const page = await browser.newPage();
 
@@ -96,9 +85,9 @@ export async function POST(request: NextRequest) {
       await providerLookup.cleanup();
     }
     
-    // Close business scraping browser
+    // Release browser back to manager
     if (browser) {
-      await browser.close();
+      await browserManager.releaseBrowser(browser);
     }
   }
 }

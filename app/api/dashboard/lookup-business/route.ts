@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/middleware';
 import { BusinessLookupScraper } from '@/lib/scraper/business-lookup-scraper';
 import { ProviderLookupService } from '@/lib/scraper/provider-lookup-service';
-import puppeteer from 'puppeteer';
+import { browserManager } from '@/lib/scraper/browser-manager';
 
 /**
  * POST /api/dashboard/lookup-business
@@ -43,19 +43,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API /api/dashboard/lookup-business] Looking up businesses for: ${searchQuery}`);
 
-    // Launch browser for business scraping
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-      ],
-    });
+    // Get browser from centralized manager
+    browser = await browserManager.getBrowser('dashboard-business-lookup');
 
     const page = await browser.newPage();
 
@@ -67,9 +56,11 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API /api/dashboard/lookup-business] Found ${businesses.length} businesses`);
 
-    // Close browser before provider lookup
-    await browser.close();
-    browser = null;
+    // Release browser back to manager before provider lookup
+    if (browser) {
+      await browserManager.releaseBrowser(browser);
+      browser = null;
+    }
 
     // Extract phone numbers for provider lookup
     const phoneNumbers = businesses
@@ -122,9 +113,9 @@ export async function POST(request: NextRequest) {
       await providerLookup.cleanup();
     }
     
-    // Close business scraping browser if still open
+    // Release browser back to manager if still open
     if (browser) {
-      await browser.close();
+      await browserManager.releaseBrowser(browser);
     }
   }
 }

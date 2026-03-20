@@ -16,6 +16,7 @@ import { EventEmitter } from 'events';
 import { ScrapedBusiness, ScrapeConfig } from './types';
 import { IndustryScraper } from './industry-scraper';
 import { ErrorLogger } from './error-logger';
+import { browserManager } from './browser-manager';
 
 export class BrowserWorker {
   private workerId: number;
@@ -220,25 +221,8 @@ export class BrowserWorker {
     try {
       console.log(`[Worker ${this.workerId}] Initializing browser...`);
 
-      const puppeteer = await import('puppeteer');
-
-      // Optimal browser configuration for serverless environments
-      const launchOptions = {
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu',
-          '--disable-web-security',
-          '--disable-features=IsolateOrigins,site-per-process',
-        ],
-      };
-
-      this.browser = await puppeteer.default.launch(launchOptions);
+      // Use centralized browser manager to prevent conflicts
+      this.browser = await browserManager.getBrowser(`scraper-worker-${this.workerId}`);
 
       console.log(`[Worker ${this.workerId}] Browser initialized successfully`);
 
@@ -252,8 +236,15 @@ export class BrowserWorker {
         operation: 'initBrowser',
       });
 
+      // Better error serialization for debugging
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : typeof error === 'object' && error !== null
+          ? JSON.stringify(error, Object.getOwnPropertyNames(error))
+          : String(error);
+      
       throw new Error(
-        `Worker ${this.workerId}: Failed to initialize browser - ${error instanceof Error ? error.message : String(error)}`
+        `Worker ${this.workerId}: Failed to initialize browser - ${errorMessage}`
       );
     }
   }
@@ -265,7 +256,7 @@ export class BrowserWorker {
   async cleanup(): Promise<void> {
     if (this.browser) {
       try {
-        console.log(`[Worker ${this.workerId}] Closing browser...`);
+        console.log(`[Worker ${this.workerId}] Cleaning up browser...`);
         
         // Close all active pages first
         for (const page of this.activePages) {
@@ -277,15 +268,16 @@ export class BrowserWorker {
         }
         this.activePages.clear();
         
-        await this.browser.close();
+        // Release browser back to manager instead of closing directly
+        await browserManager.releaseBrowser(this.browser);
         this.browser = null;
-        console.log(`[Worker ${this.workerId}] Browser closed successfully`);
+        console.log(`[Worker ${this.workerId}] Browser released successfully`);
       } catch (error) {
         this.errorLogger.logBrowserError(error, {
           workerId: this.workerId,
           operation: 'cleanup',
         });
-        console.error(`[Worker ${this.workerId}] Error closing browser:`, error);
+        console.error(`[Worker ${this.workerId}] Error cleaning up browser:`, error);
       }
     }
   }

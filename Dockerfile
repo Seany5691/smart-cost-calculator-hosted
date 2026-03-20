@@ -38,7 +38,9 @@ RUN apk add --no-cache \
     freetype \
     harfbuzz \
     ca-certificates \
-    ttf-freefont
+    ttf-freefont \
+    dbus \
+    xvfb
 
 # Tell Puppeteer to use the installed Chromium
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
@@ -59,6 +61,9 @@ COPY --from=builder /app/run-scraper-migrations.sh ./run-scraper-migrations.sh
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
+
+# Create a larger /tmp/shm directory for Chromium
+RUN mkdir -p /tmp/shm && chmod 1777 /tmp/shm
 
 USER nextjs
 

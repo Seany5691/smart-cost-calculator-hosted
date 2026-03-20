@@ -130,7 +130,41 @@ class BrowserManager {
           '--disable-web-security',
           '--disable-features=IsolateOrigins,site-per-process',
           '--memory-pressure-off',
-          '--max_old_space_size=4096'
+          '--max_old_space_size=4096',
+          // Additional flags for container environments
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-features=TranslateUI',
+          '--disable-ipc-flooding-protection',
+          '--disable-extensions',
+          '--disable-default-apps',
+          '--disable-sync',
+          '--disable-translate',
+          '--hide-scrollbars',
+          '--mute-audio',
+          '--no-default-browser-check',
+          '--no-pings',
+          '--single-process',
+          '--disable-background-networking',
+          '--disable-background-timer-throttling',
+          '--disable-client-side-phishing-detection',
+          '--disable-default-apps',
+          '--disable-hang-monitor',
+          '--disable-popup-blocking',
+          '--disable-prompt-on-repost',
+          '--disable-sync',
+          '--disable-web-resources',
+          '--metrics-recording-only',
+          '--no-first-run',
+          '--safebrowsing-disable-auto-update',
+          '--enable-automation',
+          '--password-store=basic',
+          '--use-mock-keychain',
+          // Use custom temp directory for shared memory
+          '--temp-profile',
+          '--data-path=/tmp/chrome-data',
+          '--disk-cache-dir=/tmp/chrome-cache'
         ],
       };
 
@@ -143,8 +177,22 @@ class BrowserManager {
       console.log('[BrowserManager] Launch options:', JSON.stringify(launchOptions, null, 2));
       console.log('[BrowserManager] Launching browser...');
       
-      const browser = await puppeteer.default.launch(launchOptions);
+      // Add timeout and retry logic for container environments
+      const browser = await Promise.race([
+        puppeteer.default.launch(launchOptions),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Browser launch timeout after 30 seconds')), 30000)
+        )
+      ]) as Browser;
+      
       console.log('[BrowserManager] Browser launched successfully');
+      
+      // Test the browser connection
+      console.log('[BrowserManager] Testing browser connection...');
+      const testPage = await browser.newPage();
+      await testPage.goto('data:text/html,<h1>Test</h1>', { waitUntil: 'domcontentloaded', timeout: 10000 });
+      await testPage.close();
+      console.log('[BrowserManager] Browser connection test successful');
       
       return browser;
     } catch (error) {

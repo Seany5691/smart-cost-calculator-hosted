@@ -165,7 +165,7 @@ class BrowserManager {
         try {
           console.error(`[BrowserManager] Error.${prop}:`, (error as any)[prop]);
         } catch (e) {
-          console.error(`[BrowserManager] Could not log Error.${prop}:`, e.message);
+          console.error(`[BrowserManager] Could not log Error.${prop}:`, e instanceof Error ? e.message : String(e));
         }
       }
       

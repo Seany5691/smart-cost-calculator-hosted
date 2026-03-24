@@ -1,0 +1,64 @@
+/*!
+ * Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com
+ * License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License)
+ * Copyright 2023 Fonticons, Inc.
+ * 
+ * LOCAL VERSION - Font paths updated to use local files
+ */
+
+/* Update font-face rules to use local paths */
+@font-face{
+  font-family:"Font Awesome 6 Free";
+  font-style:normal;
+  font-weight:400;
+  font-display:block;
+  src:url(./fa-regular-400.woff2) format("woff2")
+}
+
+@font-face{
+  font-family:"Font Awesome 6 Free";
+  font-style:normal;
+  font-weight:900;
+  font-display:block;
+  src:url(./fa-solid-900.woff2) format("woff2")
+}
+
+@font-face{
+  font-family:"Font Awesome 6 Brands";
+  font-style:normal;
+  font-weight:400;
+  font-display:block;
+  src:url(./fa-brands-400.woff2) format("woff2")
+}
+
+/* All the Font Awesome CSS classes */
+.fa{font-family:var(--fa-style-family,"Font Awesome 6 Free");font-weight:var(--fa-style,900)}.fa,.fa-brands,.fa-classic,.fa-regular,.fa-sharp,.fa-solid,.fab,.far,.fas{-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;display:var(--fa-display,inline-block);font-style:normal;font-variant:normal;line-height:1;text-rendering:auto}.fa-classic,.fa-regular,.fa-solid,.far,.fas{font-family:"Font Awesome 6 Free"}.fa-brands,.fab{font-family:"Font Awesome 6 Brands"}.fa-1x{font-size:1em}.fa-2x{font-size:2em}.fa-3x{font-size:3em}.fa-4x{font-size:4em}.fa-5x{font-size:5em}.fa-6x{font-size:6em}.fa-7x{font-size:7em}.fa-8x{font-size:8em}.fa-9x{font-size:9em}.fa-10x{font-size:10em}
+
+/* Icon definitions - phone-volume */
+.fa-phone-volume:before,.fa-volume-control-phone:before{content:"\f2a0"}
+
+/* Icon definitions - cloud-arrow-up */
+.fa-cloud-arrow-up:before,.fa-cloud-upload-alt:before,.fa-cloud-upload:before{content:"\f0ee"}
+
+/* Icon definitions - gem */
+.fa-gem:before{content:"\f3a5"}
+
+/* Icon definitions - wifi */
+.fa-wifi-3:before,.fa-wifi-strong:before,.fa-wifi:before{content:"\f1eb"}
+
+/* Icon definitions - print */
+.fa-print:before{content:"\f02f"}
+
+/* Icon definitions - shield-halved */
+.fa-shield-alt:before,.fa-shield-halved:before{content:"\f3ed"}
+
+/* Icon definitions - fingerprint */
+.fa-fingerprint:before{content:"\f577"}
+
+/* Icon definitions - signal */
+.fa-signal-5:before,.fa-signal-perfect:before,.fa-signal:before{content:"\f012"}
+
+/* Icon definitions - desktop */
+.fa-desktop-alt:before,.fa-desktop:before{content:"\f390"}
+
+/* Add all other icon definitions as needed */

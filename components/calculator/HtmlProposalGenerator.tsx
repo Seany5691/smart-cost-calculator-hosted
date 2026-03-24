@@ -48,38 +48,64 @@ const HtmlProposalGenerator = forwardRef<HtmlProposalGeneratorRef, HtmlProposalG
         // Process the HTML template
         const processedHtml = await HtmlTemplateManager.processTemplate(proposalData, calculatorData);
 
-        // Create a new window/tab with the processed HTML
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-          newWindow.document.write(processedHtml);
-          newWindow.document.close();
-          
-          // Focus the new window
-          newWindow.focus();
-          
-          showToast(
-            'HTML Proposal Generated',
-            'Your proposal has been opened in a new tab. Click "SAVE PDF" to download.',
-            'success'
-          );
-        } else {
-          throw new Error('Unable to open new window. Please check your popup blocker settings.');
-        }
-
         // Check if this proposal should be attached to a lead
         const leadId = localStorage.getItem('proposal-lead-id');
         const leadName = localStorage.getItem('proposal-lead-name');
         
+        // Generate filename
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const customerName = proposalData.customerName.replace(/[^a-z0-9]/gi, '_');
+        const fileName = `proposal-${customerName}-${timestamp}.pdf`;
+
+        // Send to server for PDF generation
+        const response = await fetch('/api/calculator/html-to-pdf', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            html: processedHtml,
+            leadId: leadId || null,
+            leadName: leadName || null,
+            fileName,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.details || errorData.error || 'Failed to generate PDF');
+        }
+
+        const result = await response.json();
+
+        // Download the PDF
+        const link = document.createElement('a');
+        link.href = result.pdfUrl;
+        link.download = result.fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Open PDF in new tab
+        window.open(result.pdfUrl, '_blank');
+
+        // Show success message
         if (leadId && leadName) {
           showToast(
-            'Proposal Generated',
-            `Proposal opened in new tab. Note: Auto-attachment to ${leadName} is only available for PDF proposals.`,
+            'Proposal Generated & Attached',
+            `PDF generated, downloaded, and attached to ${leadName}!`,
             'success'
           );
           
           // Clear the lead ID from localStorage
           localStorage.removeItem('proposal-lead-id');
           localStorage.removeItem('proposal-lead-name');
+        } else {
+          showToast(
+            'Proposal Generated',
+            'PDF generated and downloaded successfully!',
+            'success'
+          );
         }
 
         if (onGenerate) {
@@ -140,15 +166,20 @@ const HtmlProposalGenerator = forwardRef<HtmlProposalGeneratorRef, HtmlProposalG
       {isGenerating && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center">
           <div 
-            className="p-6 flex items-center space-x-3 rounded-xl bg-gradient-to-br from-slate-900/95 to-purple-900/95 border border-purple-500/30 shadow-2xl"
+            className="p-6 flex flex-col items-center space-y-3 rounded-xl bg-gradient-to-br from-slate-900/95 to-purple-900/95 border border-purple-500/30 shadow-2xl max-w-md"
             style={{
               backdropFilter: 'blur(50px) saturate(180%)',
               WebkitBackdropFilter: 'blur(50px) saturate(180%)',
               boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
             }}
           >
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-400"></div>
-            <span className="text-white font-medium">Generating HTML Proposal...</span>
+            <div className="flex items-center space-x-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-400"></div>
+              <span className="text-white font-medium">Generating PDF Proposal...</span>
+            </div>
+            <p className="text-purple-200 text-sm text-center">
+              Our server is converting your HTML to a professional PDF. This may take a few moments...
+            </p>
           </div>
         </div>
       )}

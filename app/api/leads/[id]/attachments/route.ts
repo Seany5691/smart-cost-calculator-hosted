@@ -19,7 +19,7 @@ const pool = new Pool({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request);
@@ -27,6 +27,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const params = await context.params;
     const leadId = params.id;
 
     const result = await pool.query(
@@ -62,7 +63,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await verifyAuth(request);
@@ -70,6 +71,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const params = await context.params;
     const leadId = params.id;
     const userId = authResult.user.userId;
 
@@ -117,7 +119,7 @@ export async function POST(
     const result = await pool.query(
       `INSERT INTO attachments (
         lead_id,
-        uploaded_by,
+        user_id,
         file_name,
         storage_path,
         file_size,

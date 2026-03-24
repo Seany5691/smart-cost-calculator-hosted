@@ -58,8 +58,20 @@ export async function POST(request: NextRequest) {
       timeout: 30000,
     });
 
-    // Wait a bit for any dynamic content to render
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait for images to load
+    console.log('[HTML-to-PDF] Waiting for images to load...');
+    await page.evaluate(() => {
+      return Promise.all(
+        Array.from(document.images)
+          .filter(img => !img.complete)
+          .map(img => new Promise(resolve => {
+            img.onload = img.onerror = resolve;
+          }))
+      );
+    });
+
+    // Wait a bit more for any dynamic content to render
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     console.log('[HTML-to-PDF] Generating PDF...');
     // Generate PDF with optimal settings

@@ -1160,6 +1160,20 @@ export class HtmlTemplateManager {
                     </div>
                 </div>
 
+                <!-- Lekwa Security Services -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Lekwa Security Services</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Mr. Mashigo, Owner • Lephalale</div>
+                            <div class="text-[10px] text-orange-600 font-mono">014 004 0336</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Dr. Bham Sasolburg -->
                 <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
                     <div class="flex items-start gap-3">

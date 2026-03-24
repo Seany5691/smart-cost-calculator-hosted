@@ -709,7 +709,7 @@ export class HtmlTemplateManager {
                     </div>
 
                     <!-- Integration Icons -->
-                    <div class="grid grid-cols-4 gap-4 mt-6">
+                    <div class="grid grid-cols-4 gap-3 mt-6">
                         <div class="bg-white border border-orange-200 p-4 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                             <img src="Pictures/Page 7/Image 3.png" alt="SMS & WhatsApp" class="w-full h-auto object-contain">
                         </div>
@@ -726,7 +726,7 @@ export class HtmlTemplateManager {
                 </div>
 
                 <!-- Key Benefits -->
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-3 gap-3">
                     <div class="text-center p-5 bg-white border border-orange-100 rounded-2xl">
                         <i class="fa-solid fa-clock text-3xl text-orange-500 mb-3"></i>
                         <div class="font-semibold text-sm text-zinc-900">24/7 Monitoring</div>
@@ -1147,241 +1147,241 @@ export class HtmlTemplateManager {
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-5">
+            <div class="grid grid-cols-2 gap-3">
                 <!-- Sparkling Auto Care Centre -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Sparkling Auto Care Centre Potchefstroom</div>
-                            <div class="text-xs text-zinc-600 mb-1">Paul, Owner • Potchefstroom</div>
-                            <div class="text-xs text-orange-600 font-mono">018 293 3973</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Sparkling Auto Care Centre Potchefstroom</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Paul, Owner • Potchefstroom</div>
+                            <div class="text-[10px] text-orange-600 font-mono">018 293 3973</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Bethal Apteek -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Bethal Apteek - Local Choice Pharmacy</div>
-                            <div class="text-xs text-zinc-600 mb-1">Theresa, Owner • Bethal</div>
-                            <div class="text-xs text-orange-600 font-mono">017 547 3444</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Bethal Apteek - Local Choice Pharmacy</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Theresa, Owner • Bethal</div>
+                            <div class="text-[10px] text-orange-600 font-mono">017 547 3444</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Dr. Bham Sasolburg -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Dr. Bham Sasolburg Dental Studio</div>
-                            <div class="text-xs text-zinc-600 mb-1">Dr. Bham, Owner • Sasolburg</div>
-                            <div class="text-xs text-orange-600 font-mono">016 976 0436</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Dr. Bham Sasolburg Dental Studio</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Dr. Bham, Owner • Sasolburg</div>
+                            <div class="text-[10px] text-orange-600 font-mono">016 976 0436</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Domitor Drukkers -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Domitor Drukkers</div>
-                            <div class="text-xs text-zinc-600 mb-1">Sonte, Office Manager • Lephalale</div>
-                            <div class="text-xs text-orange-600 font-mono">014 763 5388</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Domitor Drukkers</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Sonte, Office Manager • Lephalale</div>
+                            <div class="text-[10px] text-orange-600 font-mono">014 763 5388</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Elisiras Propshaft -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Elisiras Propshaft</div>
-                            <div class="text-xs text-zinc-600 mb-1">Lynette, Office Manager • Lephalale</div>
-                            <div class="text-xs text-orange-600 font-mono">014 763 5320</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Elisiras Propshaft</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Lynette, Office Manager • Lephalale</div>
+                            <div class="text-[10px] text-orange-600 font-mono">014 763 5320</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Kransberg Electrical -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Kransberg Electrical</div>
-                            <div class="text-xs text-zinc-600 mb-1">Duncan, Owner • Lephalale</div>
-                            <div class="text-xs text-orange-600 font-mono">014 763 2486</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Kransberg Electrical</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Duncan, Owner • Lephalale</div>
+                            <div class="text-[10px] text-orange-600 font-mono">014 763 2486</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Fun Vos General Trading -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Fun Vos General Trading</div>
-                            <div class="text-xs text-zinc-600 mb-1">Desiree, Owner • Middelburg</div>
-                            <div class="text-xs text-orange-600 font-mono">013 246 1538</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Fun Vos General Trading</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Desiree, Owner • Middelburg</div>
+                            <div class="text-[10px] text-orange-600 font-mono">013 246 1538</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Deka Apteek -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Deka Apteek</div>
-                            <div class="text-xs text-zinc-600 mb-1">Billy De Klerk, Owner • Stilfontein</div>
-                            <div class="text-xs text-orange-600 font-mono">018 484 1821</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Deka Apteek</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Billy De Klerk, Owner • Stilfontein</div>
+                            <div class="text-[10px] text-orange-600 font-mono">018 484 1821</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Dr. W S Lunda -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Dr. W S Lunda, Family Medicine</div>
-                            <div class="text-xs text-zinc-600 mb-1">Seleste, Office Manager • Vereeniging</div>
-                            <div class="text-xs text-orange-600 font-mono">016 422 3911</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Dr. W S Lunda, Family Medicine</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Seleste, Office Manager • Vereeniging</div>
+                            <div class="text-[10px] text-orange-600 font-mono">016 422 3911</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Latitia Investments -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Latitia Investments</div>
-                            <div class="text-xs text-zinc-600 mb-1">Chantal, Office Manager • Sandton</div>
-                            <div class="text-xs text-orange-600 font-mono">011 020 8230</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Latitia Investments</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Chantal, Office Manager • Sandton</div>
+                            <div class="text-[10px] text-orange-600 font-mono">011 020 8230</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- PA Venter Optometrists -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">PA Venter Optometrists</div>
-                            <div class="text-xs text-zinc-600 mb-1">Mrs. Venter, Owner's Wife • Springs</div>
-                            <div class="text-xs text-orange-600 font-mono">083 457 8861</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">PA Venter Optometrists</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Mrs. Venter, Owner's Wife • Springs</div>
+                            <div class="text-[10px] text-orange-600 font-mono">083 457 8861</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Malmesbury Panelbeaters -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Malmesbury Panelbeaters</div>
-                            <div class="text-xs text-zinc-600 mb-1">Renata, Owner • Malmesbury</div>
-                            <div class="text-xs text-orange-600 font-mono">022 482 3655</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Malmesbury Panelbeaters</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Renata, Owner • Malmesbury</div>
+                            <div class="text-[10px] text-orange-600 font-mono">022 482 3655</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Pam Golding Garden Route -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Pam Golding Garden Route</div>
-                            <div class="text-xs text-zinc-600 mb-1">Le Roux, Owner • Garden Route</div>
-                            <div class="text-xs text-orange-600 font-mono">082 569 2002</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Pam Golding Garden Route</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Le Roux, Owner • Garden Route</div>
+                            <div class="text-[10px] text-orange-600 font-mono">082 569 2002</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Mr Suit Hire -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Mr Suit Hire</div>
-                            <div class="text-xs text-zinc-600 mb-1">Keith, Office Manager • Cape Town</div>
-                            <div class="text-xs text-orange-600 font-mono">083 265 9601</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Mr Suit Hire</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Keith, Office Manager • Cape Town</div>
+                            <div class="text-[10px] text-orange-600 font-mono">083 265 9601</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Tychoset Engineering -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Tychoset Engineering</div>
-                            <div class="text-xs text-zinc-600 mb-1">Jessica, Office Manager • Lydenburg</div>
-                            <div class="text-xs text-orange-600 font-mono">087 711 2772</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Tychoset Engineering</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Jessica, Office Manager • Lydenburg</div>
+                            <div class="text-[10px] text-orange-600 font-mono">087 711 2772</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Optimum Healthcare Institute -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Optimum Healthcare Institute</div>
-                            <div class="text-xs text-zinc-600 mb-1">Antonia, Practice Manager • Sandton</div>
-                            <div class="text-xs text-orange-600 font-mono">010 157 9639</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Optimum Healthcare Institute</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Antonia, Practice Manager • Sandton</div>
+                            <div class="text-[10px] text-orange-600 font-mono">010 157 9639</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Dr. SBH Zungu -->
-                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-3 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-lg text-orange-600"></i>
                         </div>
                         <div class="flex-1">
-                            <div class="font-bold text-zinc-900 mb-1 text-sm">Dr. SBH Zungu</div>
-                            <div class="text-xs text-zinc-600 mb-1">Andele, Practice Manager • Eshowe</div>
-                            <div class="text-xs text-orange-600 font-mono">035 474 4468</div>
+                            <div class="font-bold text-zinc-900 mb-0.5 text-xs leading-tight">Dr. SBH Zungu</div>
+                            <div class="text-[10px] text-zinc-600 mb-0.5">Andele, Practice Manager • Eshowe</div>
+                            <div class="text-[10px] text-orange-600 font-mono">035 474 4468</div>
                         </div>
                     </div>
                 </div>

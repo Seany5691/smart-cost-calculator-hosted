@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, forwardRef, useImperativeHandle } from 'react';
+import { useState, forwardRef, useImperativeHandle, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useCalculatorStore } from '@/lib/store/calculator';
 import { HtmlProposalData } from './ProposalModal';
 import { HtmlTemplateManager } from '@/lib/services/htmlTemplateManager';
@@ -16,12 +17,19 @@ export interface HtmlProposalGeneratorRef {
 const HtmlProposalGenerator = forwardRef<HtmlProposalGeneratorRef, HtmlProposalGeneratorProps>(({ onGenerate }, ref) => {
   const { sectionsData, dealDetails, totalsData, settlementDetails } = useCalculatorStore();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [toast, setToast] = useState<{ show: boolean; title: string; message: string; type: 'success' | 'error' }>({ 
     show: false, 
     title: '', 
     message: '', 
     type: 'success' 
   });
+
+  // Set mounted state on client side only
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   const showToast = (title: string, message: string, type: 'success' | 'error') => {
     setToast({ show: true, title, message, type });
@@ -124,12 +132,15 @@ const HtmlProposalGenerator = forwardRef<HtmlProposalGeneratorRef, HtmlProposalG
     }
   }), [sectionsData, dealDetails, totalsData, settlementDetails, onGenerate]);
 
+  // Don't render portals until mounted (prevents SSR hydration issues)
+  if (!mounted) return null;
+
   return (
     <>
-      {/* Toast notification */}
-      {toast.show && (
+      {/* Toast notification - rendered at document.body level */}
+      {toast.show && createPortal(
         <div 
-          className={`fixed top-4 right-4 p-4 rounded-lg shadow-2xl z-[9999] max-w-sm animate-slide-up ${
+          className={`fixed top-4 right-4 p-4 rounded-lg shadow-2xl z-[99999] max-w-sm animate-slide-up ${
             toast.type === 'error' 
               ? 'border border-red-500/30 bg-gradient-to-br from-slate-900/95 to-red-900/95' 
               : 'border border-purple-500/30 bg-gradient-to-br from-slate-900/95 to-purple-900/95'
@@ -159,12 +170,13 @@ const HtmlProposalGenerator = forwardRef<HtmlProposalGeneratorRef, HtmlProposalG
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       
-      {/* Loading overlay */}
-      {isGenerating && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99999] flex items-center justify-center">
+      {/* Loading overlay - rendered at document.body level to appear above modal */}
+      {isGenerating && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[999999] flex items-center justify-center">
           <div 
             className="p-6 flex flex-col items-center space-y-3 rounded-xl bg-gradient-to-br from-slate-900/95 to-purple-900/95 border border-purple-500/30 shadow-2xl max-w-md"
             style={{
@@ -181,7 +193,8 @@ const HtmlProposalGenerator = forwardRef<HtmlProposalGeneratorRef, HtmlProposalG
               Our server is converting your HTML to a professional PDF. This may take a few moments...
             </p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
     const finalFileName = fileName || `proposal-${timestamp}.pdf`;
 
-    // Save PDF to uploads directory
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'pdfs');
+    // Save PDF to uploads directory (same location as attachments)
+    const uploadsDir = join(process.cwd(), 'uploads', 'pdfs');
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true });
     }
@@ -92,7 +92,8 @@ export async function POST(request: NextRequest) {
     await writeFile(filePath, pdfBuffer);
     console.log('[HTML-to-PDF] PDF saved to:', filePath);
 
-    const publicPath = `/uploads/pdfs/${finalFileName}`;
+    // Use API route for file serving (works with standalone builds)
+    const publicPath = `/api/uploads/pdfs/${finalFileName}`;
     const fileSize = pdfBuffer.length;
 
     // If leadId is provided, attach the PDF to the lead
@@ -100,7 +101,8 @@ export async function POST(request: NextRequest) {
     if (leadId) {
       console.log('[HTML-to-PDF] Attaching PDF to lead...');
       
-      const storagePath = `uploads/pdfs/${finalFileName}`;
+      // Store relative path (just the filename, directory is implied)
+      const storagePath = finalFileName;
       
       const attachmentResult = await pool.query(
         `INSERT INTO attachments (

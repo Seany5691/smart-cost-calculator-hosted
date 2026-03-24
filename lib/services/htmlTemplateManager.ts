@@ -1037,28 +1037,110 @@ export class HtmlTemplateManager {
     return `
         <!-- PAGE 13: SOLUTION BREAKDOWN -->
         <div class="page p-12 flex flex-col">
-            <h2 class="section-title text-5xl font-semibold text-zinc-900 mb-10">Full Solution Breakdown</h2>
+            <div class="mb-10">
+                <h2 class="section-title text-5xl font-semibold text-zinc-900 mb-2">Full Solution Breakdown</h2>
+                <p class="text-sm text-zinc-500 italic">Tailored specifically for {{CUSTOMER_NAME}}</p>
+            </div>
             
-            <div class="columns-2 gap-12 text-[15.2px] text-zinc-700 leading-relaxed">
-                <ul class="space-y-7">
-                    <li class="flex gap-5"><span class="text-orange-500 text-3xl leading-none">•</span> Smart Integrate provides the Smart Hosted Cloud PBX, a cloud-based phone system for clear calls, video meetings, team messaging, and call center features, with no equipment needed in your office.</li>
-                    <li class="flex gap-5"><span class="text-orange-500 text-3xl leading-none">•</span> We will settle and cancel all your current agreements, ensuring a smooth transition to our solution with no hassle.</li>
-                    <li class="flex gap-5"><span class="text-orange-500 text-3xl leading-none">•</span> There is no installation charge or upfront fees, making it easy and cost-effective to start using your new phone system.</li>
-                    <li class="flex gap-5"><span class="text-orange-500 text-3xl leading-none">•</span> Your reception will receive high-capacity phones with large color screens and multiple buttons, perfect for managing busy call volumes seamlessly.</li>
-                    <li class="flex gap-5"><span class="text-orange-500 text-3xl leading-none">•</span> For staff, you can choose cordless phones with clear displays, allowing mobility while handling calls professionally.</li>
-                    <li class="flex gap-5"><span class="text-orange-500 text-3xl leading-none">•</span> Alternatively, choose desk phones with color screens and simple controls, ideal for staff needing reliable call features at their workstations.</li>
-                </ul>
-                <ul class="space-y-7 mt-7">
-                    <li class="flex gap-5"><span class="text-orange-500 text-3xl leading-none">•</span> Your web-based dashboard shows call activity, like answered or missed calls, in easy charts customized by Smart Integrate for your needs.</li>
-                    <li class="flex gap-5"><span class="text-orange-500 text-3xl leading-none">•</span> The mobile and desktop apps let you make calls, join meetings, or send messages from anywhere, with activity tracked on your dashboard.</li>
-                    <li class="flex gap-5"><span class="text-orange-500 text-3xl leading-none">•</span> Smart Integrate's technical team supports your system remotely through the Smart Hosted Cloud PBX platform, quickly fixing issues to keep your phones running perfectly.</li>
-                    <li class="flex gap-5"><span class="text-orange-500 text-3xl leading-none">•</span> If your main internet fails, the mobile app lets you use any internet for calls, and if that's unavailable, calls forward to your mobile number.</li>
-                    <li class="flex gap-5"><span class="text-orange-500 text-3xl leading-none">•</span> Our cloud-managed router allows Smart Integrate to monitor and adjust your network remotely, ensuring your phone system stays connected.</li>
-                    <li class="flex gap-5"><span class="text-orange-500 text-3xl leading-none">•</span> Printing &amp; CCTV solutions fully integrated and remotely managed by our team.</li>
-                </ul>
+            <div class="grid grid-cols-2 gap-6 flex-1">
+                <!-- Your Telephony Solution -->
+                <div class="bg-gradient-to-br from-orange-50/30 to-white border border-orange-100/50 rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-5 pb-3 border-b border-orange-100">
+                        <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-phone text-orange-600 text-sm"></i>
+                        </div>
+                        <h3 class="font-semibold text-lg text-zinc-900">Your Telephony Solution</h3>
+                    </div>
+                    <ul class="space-y-3 text-[13px] text-zinc-700 leading-relaxed">
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Smart Hosted Cloud PBX system for clear calls, video meetings, team messaging, and call center features</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>High-capacity reception phones with large color screens and multiple buttons for busy call volumes</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Choice of cordless phones for mobility or desk phones for fixed workstations</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Management & Monitoring -->
+                <div class="bg-gradient-to-br from-orange-50/30 to-white border border-orange-100/50 rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-5 pb-3 border-b border-orange-100">
+                        <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-chart-line text-orange-600 text-sm"></i>
+                        </div>
+                        <h3 class="font-semibold text-lg text-zinc-900">Management & Monitoring</h3>
+                    </div>
+                    <ul class="space-y-3 text-[13px] text-zinc-700 leading-relaxed">
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Web-based dashboard showing call activity in easy charts customized for your needs</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Mobile and desktop apps for calls, meetings, and messages from anywhere</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Remote technical support from Smart Integrate's team to keep your system running perfectly</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Network & Connectivity -->
+                <div class="bg-gradient-to-br from-orange-50/30 to-white border border-orange-100/50 rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-5 pb-3 border-b border-orange-100">
+                        <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-network-wired text-orange-600 text-sm"></i>
+                        </div>
+                        <h3 class="font-semibold text-lg text-zinc-900">Network & Connectivity</h3>
+                    </div>
+                    <ul class="space-y-3 text-[13px] text-zinc-700 leading-relaxed">
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Cloud-managed router for remote monitoring and network adjustments</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Automatic failover protection - calls forward to mobile if internet fails</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Continuous network monitoring to ensure your phone system stays connected</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- What's Included -->
+                <div class="bg-gradient-to-br from-orange-50/30 to-white border border-orange-100/50 rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center gap-3 mb-5 pb-3 border-b border-orange-100">
+                        <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-star text-orange-600 text-sm"></i>
+                        </div>
+                        <h3 class="font-semibold text-lg text-zinc-900">What's Included</h3>
+                    </div>
+                    <ul class="space-y-3 text-[13px] text-zinc-700 leading-relaxed">
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>No installation charges or upfront fees - easy and cost-effective to start</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>We settle and cancel all your current agreements for a smooth transition</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Printing, CCTV, Access Control, Signal Enhancement & Computer Solutions integration available</span>
+                        </li>
+                    </ul>
+                </div>
             </div>
 
-            <div class="mt-auto flex-shrink-0 pt-12 text-xs flex justify-between text-zinc-500 border-t border-orange-100">
+            <div class="mt-auto flex-shrink-0 pt-10 text-xs flex justify-between text-zinc-500 border-t border-orange-100">
                 <div>SMART INTEGRATE • Smart Solutions Simplified</div>
             </div>
         </div>

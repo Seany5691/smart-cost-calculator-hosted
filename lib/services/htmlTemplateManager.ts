@@ -1039,10 +1039,10 @@ export class HtmlTemplateManager {
         <div class="page p-12 flex flex-col">
             <div class="mb-10">
                 <h2 class="section-title text-5xl font-semibold text-zinc-900 mb-2">Full Solution Breakdown</h2>
-                <p class="text-sm text-zinc-500 italic">Tailored specifically for {{CUSTOMER_NAME}}</p>
+                <p class="text-sm text-zinc-500 italic">Tailored specifically for {{CLIENT_NAME}}</p>
             </div>
             
-            <div class="grid grid-cols-2 gap-6 flex-1">
+            <div class="grid grid-cols-2 gap-6">
                 <!-- Your Telephony Solution -->
                 <div class="bg-gradient-to-br from-orange-50/30 to-white border border-orange-100/50 rounded-2xl p-6 shadow-sm">
                     <div class="flex items-center gap-3 mb-5 pb-3 border-b border-orange-100">
@@ -1054,15 +1054,19 @@ export class HtmlTemplateManager {
                     <ul class="space-y-3 text-[13px] text-zinc-700 leading-relaxed">
                         <li class="flex gap-3">
                             <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
-                            <span>Smart Hosted Cloud PBX system for clear calls, video meetings, team messaging, and call center features</span>
+                            <span>Smart Hosted Cloud PBX system for clear calls, video meetings, team messaging, and call center features with no equipment needed in your office</span>
                         </li>
                         <li class="flex gap-3">
                             <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
-                            <span>High-capacity reception phones with large color screens and multiple buttons for busy call volumes</span>
+                            <span>High-capacity reception phones with large color screens and multiple buttons, perfect for managing busy call volumes seamlessly</span>
                         </li>
                         <li class="flex gap-3">
                             <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
-                            <span>Choice of cordless phones for mobility or desk phones for fixed workstations</span>
+                            <span>Choice of cordless phones for mobility or desk phones for fixed workstations, all configured to work perfectly with your system</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Professional auto attendant that greets callers and routes them to the right person or department automatically</span>
                         </li>
                     </ul>
                 </div>
@@ -1078,15 +1082,19 @@ export class HtmlTemplateManager {
                     <ul class="space-y-3 text-[13px] text-zinc-700 leading-relaxed">
                         <li class="flex gap-3">
                             <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
-                            <span>Web-based dashboard showing call activity in easy charts customized for your needs</span>
+                            <span>Web-based dashboard showing real-time call activity in easy-to-read charts, customized specifically for your business needs</span>
                         </li>
                         <li class="flex gap-3">
                             <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
-                            <span>Mobile and desktop apps for calls, meetings, and messages from anywhere</span>
+                            <span>Mobile and desktop apps allowing your team to make calls, join meetings, and send messages from anywhere with internet access</span>
                         </li>
                         <li class="flex gap-3">
                             <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
-                            <span>Remote technical support from Smart Integrate's team to keep your system running perfectly</span>
+                            <span>Remote technical support from Smart Integrate's expert team, quickly resolving issues to keep your phones running perfectly</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Voicemail messages sent directly to your email as audio files, ensuring you never miss important communications</span>
                         </li>
                     </ul>
                 </div>
@@ -1102,15 +1110,19 @@ export class HtmlTemplateManager {
                     <ul class="space-y-3 text-[13px] text-zinc-700 leading-relaxed">
                         <li class="flex gap-3">
                             <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
-                            <span>Cloud-managed router for remote monitoring and network adjustments</span>
+                            <span>Cloud-managed router allowing our technical team to monitor and adjust your network remotely without on-site visits</span>
                         </li>
                         <li class="flex gap-3">
                             <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
-                            <span>Automatic failover protection - calls forward to mobile if internet fails</span>
+                            <span>Automatic failover protection ensuring calls forward to mobile numbers if your main internet connection fails</span>
                         </li>
                         <li class="flex gap-3">
                             <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
-                            <span>Continuous network monitoring to ensure your phone system stays connected</span>
+                            <span>Continuous network monitoring to ensure your phone system and other devices stay connected without interruption</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Seamless integration with business tools like Salesforce, Microsoft 365, SMS, WhatsApp, and Facebook Messenger</span>
                         </li>
                     </ul>
                 </div>
@@ -1126,15 +1138,19 @@ export class HtmlTemplateManager {
                     <ul class="space-y-3 text-[13px] text-zinc-700 leading-relaxed">
                         <li class="flex gap-3">
                             <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
-                            <span>No installation charges or upfront fees - easy and cost-effective to start</span>
+                            <span>No installation charges or upfront fees, making it easy and cost-effective to start using your new phone system</span>
                         </li>
                         <li class="flex gap-3">
                             <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
-                            <span>We settle and cancel all your current agreements for a smooth transition</span>
+                            <span>We settle and cancel all your current agreements, ensuring a smooth transition to our solution with no hassle</span>
                         </li>
                         <li class="flex gap-3">
                             <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
                             <span>Printing, CCTV, Access Control, Signal Enhancement & Computer Solutions integration available</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <i class="fa-solid fa-circle-check text-orange-500 text-sm mt-0.5 flex-shrink-0"></i>
+                            <span>Full system configuration and customization by Smart Integrate to match your specific business requirements</span>
                         </li>
                     </ul>
                 </div>

@@ -63,8 +63,34 @@ export async function POST(request: NextRequest) {
     console.log('[HTML-to-PDF] Setting HTML content...');
     // Load the HTML content with absolute URLs
     await page.setContent(htmlWithAbsoluteUrls, {
-      waitUntil: ['networkidle0', 'load'],
-      timeout: 30000,
+      waitUntil: ['networkidle0', 'load', 'domcontentloaded'],
+      timeout: 60000, // Increased timeout for external resources
+    });
+
+    // Wait for Tailwind CSS to load and process
+    console.log('[HTML-to-PDF] Waiting for Tailwind CSS to load...');
+    await page.waitForFunction(() => {
+      // Check if Tailwind has processed the page
+      const element = document.querySelector('.page');
+      if (!element) return false;
+      const styles = window.getComputedStyle(element);
+      // Check if Tailwind classes are applied (width should be set)
+      return styles.width !== '' && styles.width !== 'auto';
+    }, { timeout: 10000 }).catch(() => {
+      console.log('[HTML-to-PDF] Tailwind check timed out, continuing anyway');
+    });
+
+    // Wait for Font Awesome icons to load
+    console.log('[HTML-to-PDF] Waiting for Font Awesome to load...');
+    await page.waitForFunction(() => {
+      const icons = document.querySelectorAll('.fa, .fas, .far, .fab');
+      if (icons.length === 0) return true; // No icons, continue
+      // Check if at least one icon has loaded
+      const firstIcon = icons[0] as HTMLElement;
+      const styles = window.getComputedStyle(firstIcon);
+      return styles.fontFamily.includes('Font Awesome');
+    }, { timeout: 10000 }).catch(() => {
+      console.log('[HTML-to-PDF] Font Awesome check timed out, continuing anyway');
     });
 
     // Wait for images to load
@@ -79,8 +105,9 @@ export async function POST(request: NextRequest) {
       );
     });
 
-    // Wait a bit more for any dynamic content to render
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Extra wait for fonts and dynamic content to fully render
+    console.log('[HTML-to-PDF] Waiting for fonts and final rendering...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     console.log('[HTML-to-PDF] Generating PDF...');
     // Generate PDF with optimal settings

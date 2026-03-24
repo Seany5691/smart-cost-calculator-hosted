@@ -37,6 +37,15 @@ export async function POST(request: NextRequest) {
     console.log('[HTML-to-PDF] Lead ID:', leadId);
     console.log('[HTML-to-PDF] File name:', fileName);
 
+    // Convert relative image paths to absolute URLs for the production domain
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://deals.smartintegrate.co.za';
+    const htmlWithAbsoluteUrls = html.replace(
+      /src="Pictures\//g,
+      `src="${baseUrl}/Pictures/`
+    );
+
+    console.log('[HTML-to-PDF] Converted relative image paths to absolute URLs');
+
     // Get browser instance from the manager (reuses existing scraper setup)
     console.log('[HTML-to-PDF] Getting browser instance...');
     browser = await browserManager.getBrowser('pdf-generation');
@@ -52,8 +61,8 @@ export async function POST(request: NextRequest) {
     });
 
     console.log('[HTML-to-PDF] Setting HTML content...');
-    // Load the HTML content
-    await page.setContent(html, {
+    // Load the HTML content with absolute URLs
+    await page.setContent(htmlWithAbsoluteUrls, {
       waitUntil: ['networkidle0', 'load'],
       timeout: 30000,
     });

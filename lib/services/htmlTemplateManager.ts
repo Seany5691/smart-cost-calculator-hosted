@@ -666,44 +666,81 @@ export class HtmlTemplateManager {
                 </div>
             </div>
 
-            <div class="space-y-10 flex-1">
-                <div class="grid grid-cols-2 gap-12">
-                    <div>
-                        <div class="flex items-start gap-5 mb-5">
-                            <div class="text-5xl flex-shrink-0"><i class="fa-solid fa-envelope text-orange-500"></i></div>
-                            <div class="font-semibold text-2xl text-zinc-900 leading-tight pt-2">Voicemail Delivered to You</div>
+            <div class="space-y-8 flex-1">
+                <!-- Feature Cards Grid -->
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Voicemail Card -->
+                    <div class="feature-card bg-white border border-orange-100 rounded-3xl p-8 shadow-sm">
+                        <div class="flex items-start gap-6 mb-4">
+                            <div class="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-envelope text-3xl text-orange-600"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-xl text-zinc-900 mb-2">Voicemail to Email</div>
+                                <p class="text-zinc-600 text-[13px] leading-relaxed">Missed calls go to voicemail and are sent directly to your email as audio files. Your dashboard tracks waiting messages, ensuring you never miss important communications.</p>
+                            </div>
                         </div>
-                        <p class="text-zinc-600 text-[13px] leading-relaxed pl-[68px]">If a call is missed, it goes to voicemail, which we can send directly to your email as an audio file for easy listening. Your dashboard shows how many voicemails are waiting, so you can stay on top of messages. Smart Integrate ensures this feature works perfectly, so you never miss important communications, even during busy times.</p>
                     </div>
 
-                    <div>
-                        <div class="font-semibold text-2xl mb-6 text-zinc-900">Additional Features</div>
-                        <p class="text-zinc-600 text-[13px] leading-relaxed">Your Smart Hosted Cloud PBX system can also support messaging via SMS, WhatsApp, or Facebook, connect with business tools like Salesforce or Microsoft 365, create custom call routing, and receive automatic updates. While not needed now, Smart Integrate can add these features later as your business grows, ensuring your phone system stays ready for your future needs.</p>
+                    <!-- Security Card -->
+                    <div class="feature-card bg-white border border-orange-100 rounded-3xl p-8 shadow-sm">
+                        <div class="flex items-start gap-6 mb-4">
+                            <div class="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-shield-halved text-3xl text-orange-600"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-xl text-zinc-900 mb-2">Secure & Reliable</div>
+                                <p class="text-zinc-600 text-[13px] leading-relaxed">Your calls are encrypted and monitored 24/7. Dashboard alerts notify you of any issues, while Smart Integrate ensures continuous, dependable communication.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-12">
-                    <div>
-                        <div class="flex items-start gap-5 mb-5">
-                            <div class="text-5xl flex-shrink-0"><i class="fa-solid fa-lock text-orange-500"></i></div>
-                            <div class="font-semibold text-2xl text-zinc-900 leading-tight pt-2">Secure and Dependable</div>
+                <!-- Integration Section -->
+                <div class="bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200 rounded-3xl p-8">
+                    <div class="flex items-start gap-6 mb-6">
+                        <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <i class="fa-solid fa-puzzle-piece text-3xl text-orange-600"></i>
                         </div>
-                        <p class="text-zinc-600 text-[13px] leading-relaxed pl-[68px]">Your calls are kept private and secure, with alerts on your dashboard if any issues arise. Smart Integrate monitors everything to ensure your system is always reliable, so you can communicate with confidence. This dependable setup means your business stays connected with customers and team members without any worries.</p>
+                        <div>
+                            <div class="font-semibold text-2xl text-zinc-900 mb-3">Powerful Integrations</div>
+                            <p class="text-zinc-700 text-[13px] leading-relaxed">Your Smart Hosted Cloud PBX seamlessly connects with business tools like Salesforce, Microsoft 365, SMS, WhatsApp, and Facebook Messenger. Custom call routing and automatic updates ensure your system grows with your business needs.</p>
+                        </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-white border border-orange-100 p-3 rounded-3xl overflow-hidden">
+                    <!-- Integration Icons -->
+                    <div class="grid grid-cols-4 gap-4 mt-6">
+                        <div class="bg-white border border-orange-200 p-4 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                             <img src="Pictures/Page 7/Image 3.png" alt="SMS & WhatsApp" class="w-full h-auto object-contain">
                         </div>
-                        <div class="bg-white border border-orange-100 p-3 rounded-3xl overflow-hidden">
+                        <div class="bg-white border border-orange-200 p-4 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                             <img src="Pictures/Page 7/Image 2.png" alt="Salesforce" class="w-full h-auto object-contain">
                         </div>
-                        <div class="bg-white border border-orange-100 p-3 rounded-3xl overflow-hidden">
+                        <div class="bg-white border border-orange-200 p-4 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                             <img src="Pictures/Page 7/Image 1.png" alt="Microsoft 365" class="w-full h-auto object-contain">
                         </div>
-                        <div class="bg-white border border-orange-100 p-3 rounded-3xl overflow-hidden">
+                        <div class="bg-white border border-orange-200 p-4 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                             <img src="Pictures/Page 7/Image 4.png" alt="Custom Routing" class="w-full h-auto object-contain">
                         </div>
+                    </div>
+                </div>
+
+                <!-- Key Benefits -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="text-center p-5 bg-white border border-orange-100 rounded-2xl">
+                        <i class="fa-solid fa-clock text-3xl text-orange-500 mb-3"></i>
+                        <div class="font-semibold text-sm text-zinc-900">24/7 Monitoring</div>
+                        <div class="text-xs text-zinc-500 mt-1">Always watching</div>
+                    </div>
+                    <div class="text-center p-5 bg-white border border-orange-100 rounded-2xl">
+                        <i class="fa-solid fa-arrows-rotate text-3xl text-orange-500 mb-3"></i>
+                        <div class="font-semibold text-sm text-zinc-900">Auto Updates</div>
+                        <div class="text-xs text-zinc-500 mt-1">Latest features</div>
+                    </div>
+                    <div class="text-center p-5 bg-white border border-orange-100 rounded-2xl">
+                        <i class="fa-solid fa-headset text-3xl text-orange-500 mb-3"></i>
+                        <div class="font-semibold text-sm text-zinc-900">Expert Support</div>
+                        <div class="text-xs text-zinc-500 mt-1">We're here to help</div>
                     </div>
                 </div>
             </div>
@@ -1110,76 +1147,243 @@ export class HtmlTemplateManager {
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Domitor Drukkers, Lephalale</div>
-                    <div class="text-sm text-zinc-600 mb-1">Sonte, Office Manager</div>
-                    <div class="text-xs text-orange-600 font-mono">014 763 5388</div>
+            <div class="grid grid-cols-2 gap-5">
+                <!-- Sparkling Auto Care Centre -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Sparkling Auto Care Centre Potchefstroom</div>
+                            <div class="text-xs text-zinc-600 mb-1">Paul, Owner • Potchefstroom</div>
+                            <div class="text-xs text-orange-600 font-mono">018 293 3973</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Elisiras Propshaft, Lephalale</div>
-                    <div class="text-sm text-zinc-600 mb-1">Lynette, Office Manager</div>
-                    <div class="text-xs text-orange-600 font-mono">014 763 5320</div>
+
+                <!-- Bethal Apteek -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Bethal Apteek - Local Choice Pharmacy</div>
+                            <div class="text-xs text-zinc-600 mb-1">Theresa, Owner • Bethal</div>
+                            <div class="text-xs text-orange-600 font-mono">017 547 3444</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Kransberg Electrical</div>
-                    <div class="text-sm text-zinc-600 mb-1">Duncan, Owner</div>
-                    <div class="text-xs text-orange-600 font-mono">014 763 2486</div>
+
+                <!-- Dr. Bham Sasolburg -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Dr. Bham Sasolburg Dental Studio</div>
+                            <div class="text-xs text-zinc-600 mb-1">Dr. Bham, Owner • Sasolburg</div>
+                            <div class="text-xs text-orange-600 font-mono">016 976 0436</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Dr. Bham Sasolburg Dental Studio</div>
-                    <div class="text-sm text-zinc-600 mb-1">Dr. Bham, Owner</div>
-                    <div class="text-xs text-orange-600 font-mono">072 645 6546 / 016 976 0436</div>
+
+                <!-- Domitor Drukkers -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Domitor Drukkers</div>
+                            <div class="text-xs text-zinc-600 mb-1">Sonte, Office Manager • Lephalale</div>
+                            <div class="text-xs text-orange-600 font-mono">014 763 5388</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Dr. W S Lunda, Family Medicine, Vereeniging</div>
-                    <div class="text-sm text-zinc-600 mb-1">Seleste</div>
-                    <div class="text-xs text-orange-600 font-mono">016 422 3911</div>
+
+                <!-- Elisiras Propshaft -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Elisiras Propshaft</div>
+                            <div class="text-xs text-zinc-600 mb-1">Lynette, Office Manager • Lephalale</div>
+                            <div class="text-xs text-orange-600 font-mono">014 763 5320</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Latitia Investments, Sandton</div>
-                    <div class="text-sm text-zinc-600 mb-1">Chantal</div>
-                    <div class="text-xs text-orange-600 font-mono">011 020 8230</div>
+
+                <!-- Kransberg Electrical -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Kransberg Electrical</div>
+                            <div class="text-xs text-zinc-600 mb-1">Duncan, Owner • Lephalale</div>
+                            <div class="text-xs text-orange-600 font-mono">014 763 2486</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">PA Venter Optometrists, 2 Branches</div>
-                    <div class="text-sm text-zinc-600 mb-1">Mrs. Venter, Owner's Wife</div>
-                    <div class="text-xs text-orange-600 font-mono">083 457 8861</div>
+
+                <!-- Fun Vos General Trading -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Fun Vos General Trading</div>
+                            <div class="text-xs text-zinc-600 mb-1">Desiree, Owner • Middelburg</div>
+                            <div class="text-xs text-orange-600 font-mono">013 246 1538</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Malmesbury Panelbeaters</div>
-                    <div class="text-sm text-zinc-600 mb-1">Renata, Owner</div>
-                    <div class="text-xs text-orange-600 font-mono">022 482 3655</div>
+
+                <!-- Deka Apteek -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Deka Apteek</div>
+                            <div class="text-xs text-zinc-600 mb-1">Billy De Klerk, Owner • Stilfontein</div>
+                            <div class="text-xs text-orange-600 font-mono">018 484 1821</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Pam Golding Garden Route, 8 Branches</div>
-                    <div class="text-sm text-zinc-600 mb-1">Le Roux, Owner</div>
-                    <div class="text-xs text-orange-600 font-mono">082 569 2002</div>
+
+                <!-- Dr. W S Lunda -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Dr. W S Lunda, Family Medicine</div>
+                            <div class="text-xs text-zinc-600 mb-1">Seleste, Office Manager • Vereeniging</div>
+                            <div class="text-xs text-orange-600 font-mono">016 422 3911</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Mr Suit Hire, Cape Town, 4 Branches</div>
-                    <div class="text-sm text-zinc-600 mb-1">Keith</div>
-                    <div class="text-xs text-orange-600 font-mono">083 265 9601</div>
+
+                <!-- Latitia Investments -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Latitia Investments</div>
+                            <div class="text-xs text-zinc-600 mb-1">Chantal, Office Manager • Sandton</div>
+                            <div class="text-xs text-orange-600 font-mono">011 020 8230</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Tychoset Engineering, Lydenburg</div>
-                    <div class="text-sm text-zinc-600 mb-1">Jessica</div>
-                    <div class="text-xs text-orange-600 font-mono">087 711 2772</div>
+
+                <!-- PA Venter Optometrists -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">PA Venter Optometrists</div>
+                            <div class="text-xs text-zinc-600 mb-1">Mrs. Venter, Owner's Wife • Springs</div>
+                            <div class="text-xs text-orange-600 font-mono">083 457 8861</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Optimum Healthcare Institute, Sandton, 2 Branches</div>
-                    <div class="text-sm text-zinc-600 mb-1">Antonia, Practice Manager</div>
-                    <div class="text-xs text-orange-600 font-mono">010 157 9639</div>
+
+                <!-- Malmesbury Panelbeaters -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Malmesbury Panelbeaters</div>
+                            <div class="text-xs text-zinc-600 mb-1">Renata, Owner • Malmesbury</div>
+                            <div class="text-xs text-orange-600 font-mono">022 482 3655</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Bethal Apteek - Local Choice Pharmacy, Bethal</div>
-                    <div class="text-sm text-zinc-600 mb-1">Theresa, Owner</div>
-                    <div class="text-xs text-orange-600 font-mono">017 547 3444</div>
+
+                <!-- Pam Golding Garden Route -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Pam Golding Garden Route</div>
+                            <div class="text-xs text-zinc-600 mb-1">Le Roux, Owner • Garden Route</div>
+                            <div class="text-xs text-orange-600 font-mono">082 569 2002</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white border border-orange-100 rounded-3xl p-4 hover:shadow-lg transition-shadow">
-                    <div class="font-semibold text-zinc-900 mb-2">Dr. SBH Zungu, Eshowe</div>
-                    <div class="text-sm text-zinc-600 mb-1">Andele, Practice Manager</div>
-                    <div class="text-xs text-orange-600 font-mono">035 474 4468</div>
+
+                <!-- Mr Suit Hire -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Mr Suit Hire</div>
+                            <div class="text-xs text-zinc-600 mb-1">Keith, Office Manager • Cape Town</div>
+                            <div class="text-xs text-orange-600 font-mono">083 265 9601</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tychoset Engineering -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Tychoset Engineering</div>
+                            <div class="text-xs text-zinc-600 mb-1">Jessica, Office Manager • Lydenburg</div>
+                            <div class="text-xs text-orange-600 font-mono">087 711 2772</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Optimum Healthcare Institute -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Optimum Healthcare Institute</div>
+                            <div class="text-xs text-zinc-600 mb-1">Antonia, Practice Manager • Sandton</div>
+                            <div class="text-xs text-orange-600 font-mono">010 157 9639</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dr. SBH Zungu -->
+                <div class="feature-card bg-white border border-orange-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-building text-xl text-orange-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-bold text-zinc-900 mb-1 text-sm">Dr. SBH Zungu</div>
+                            <div class="text-xs text-zinc-600 mb-1">Andele, Practice Manager • Eshowe</div>
+                            <div class="text-xs text-orange-600 font-mono">035 474 4468</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

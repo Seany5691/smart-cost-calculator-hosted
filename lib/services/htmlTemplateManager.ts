@@ -666,86 +666,55 @@ export class HtmlTemplateManager {
                 </div>
             </div>
 
-            <div class="space-y-8 flex-1">
-                <!-- Feature Cards Grid -->
-                <div class="grid grid-cols-2 gap-6">
-                    <!-- Voicemail Card -->
-                    <div class="feature-card bg-white border border-orange-100 rounded-3xl p-8 shadow-sm">
-                        <div class="flex items-start gap-6 mb-4">
-                            <div class="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                                <i class="fa-solid fa-envelope text-3xl text-orange-600"></i>
-                            </div>
-                            <div>
-                                <div class="font-semibold text-xl text-zinc-900 mb-2">Voicemail to Email</div>
-                                <p class="text-zinc-600 text-[13px] leading-relaxed">Missed calls go to voicemail and are sent directly to your email as audio files. Your dashboard tracks waiting messages, ensuring you never miss important communications.</p>
-                            </div>
-                        </div>
+            <div class="grid grid-cols-3 gap-3 mb-8">
+                <div class="feature-card bg-white border border-orange-100 rounded-3xl overflow-hidden shadow">
+                    <div class="aspect-[4/3] overflow-hidden bg-orange-100 flex items-center justify-center">
+                        <i class="fa-solid fa-envelope text-7xl text-orange-600"></i>
                     </div>
-
-                    <!-- Security Card -->
-                    <div class="feature-card bg-white border border-orange-100 rounded-3xl p-8 shadow-sm">
-                        <div class="flex items-start gap-6 mb-4">
-                            <div class="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                                <i class="fa-solid fa-shield-halved text-3xl text-orange-600"></i>
-                            </div>
-                            <div>
-                                <div class="font-semibold text-xl text-zinc-900 mb-2">Secure & Reliable</div>
-                                <p class="text-zinc-600 text-[13px] leading-relaxed">Your calls are encrypted and monitored 24/7. Dashboard alerts notify you of any issues, while Smart Integrate ensures continuous, dependable communication.</p>
-                            </div>
-                        </div>
+                    <div class="px-5 py-7">
+                        <div class="font-semibold text-xl mb-4 text-zinc-900">Voicemail to Email</div>
+                        <p class="text-zinc-600 text-[13px] leading-relaxed">Missed calls go to voicemail and are sent directly to your email as audio files. Your dashboard tracks waiting messages, ensuring you never miss important communications from clients or partners.</p>
                     </div>
                 </div>
 
-                <!-- Integration Section -->
-                <div class="bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-200 rounded-3xl p-8">
-                    <div class="flex items-start gap-6 mb-6">
-                        <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm">
-                            <i class="fa-solid fa-puzzle-piece text-3xl text-orange-600"></i>
-                        </div>
-                        <div>
-                            <div class="font-semibold text-2xl text-zinc-900 mb-3">Powerful Integrations</div>
-                            <p class="text-zinc-700 text-[13px] leading-relaxed">Your Smart Hosted Cloud PBX seamlessly connects with business tools like Salesforce, Microsoft 365, SMS, WhatsApp, and Facebook Messenger. Custom call routing and automatic updates ensure your system grows with your business needs.</p>
-                        </div>
+                <div class="feature-card bg-white border border-orange-100 rounded-3xl overflow-hidden shadow">
+                    <div class="aspect-[4/3] overflow-hidden bg-orange-100 flex items-center justify-center">
+                        <i class="fa-solid fa-shield-halved text-7xl text-orange-600"></i>
                     </div>
-
-                    <!-- Integration Icons -->
-                    <div class="grid grid-cols-4 gap-3 mt-6">
-                        <div class="bg-white border border-orange-200 p-4 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                            <img src="Pictures/Page 7/Image 3.png" alt="SMS & WhatsApp" class="w-full h-auto object-contain">
-                        </div>
-                        <div class="bg-white border border-orange-200 p-4 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                            <img src="Pictures/Page 7/Image 2.png" alt="Salesforce" class="w-full h-auto object-contain">
-                        </div>
-                        <div class="bg-white border border-orange-200 p-4 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                            <img src="Pictures/Page 7/Image 1.png" alt="Microsoft 365" class="w-full h-auto object-contain">
-                        </div>
-                        <div class="bg-white border border-orange-200 p-4 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                            <img src="Pictures/Page 7/Image 4.png" alt="Custom Routing" class="w-full h-auto object-contain">
-                        </div>
+                    <div class="px-5 py-7">
+                        <div class="font-semibold text-xl mb-4 text-zinc-900">Secure & Reliable</div>
+                        <p class="text-zinc-600 text-[13px] leading-relaxed">Your calls are encrypted and monitored 24/7. Dashboard alerts notify you of any issues, while Smart Integrate ensures continuous, dependable communication for your business operations.</p>
                     </div>
                 </div>
 
-                <!-- Key Benefits -->
-                <div class="grid grid-cols-3 gap-3">
-                    <div class="text-center p-5 bg-white border border-orange-100 rounded-2xl">
-                        <i class="fa-solid fa-clock text-3xl text-orange-500 mb-3"></i>
-                        <div class="font-semibold text-sm text-zinc-900">24/7 Monitoring</div>
-                        <div class="text-xs text-zinc-500 mt-1">Always watching</div>
+                <div class="feature-card bg-white border border-orange-100 rounded-3xl overflow-hidden shadow">
+                    <div class="aspect-[4/3] overflow-hidden bg-orange-100 flex items-center justify-center">
+                        <i class="fa-solid fa-puzzle-piece text-7xl text-orange-600"></i>
                     </div>
-                    <div class="text-center p-5 bg-white border border-orange-100 rounded-2xl">
-                        <i class="fa-solid fa-arrows-rotate text-3xl text-orange-500 mb-3"></i>
-                        <div class="font-semibold text-sm text-zinc-900">Auto Updates</div>
-                        <div class="text-xs text-zinc-500 mt-1">Latest features</div>
-                    </div>
-                    <div class="text-center p-5 bg-white border border-orange-100 rounded-2xl">
-                        <i class="fa-solid fa-headset text-3xl text-orange-500 mb-3"></i>
-                        <div class="font-semibold text-sm text-zinc-900">Expert Support</div>
-                        <div class="text-xs text-zinc-500 mt-1">We're here to help</div>
+                    <div class="px-5 py-7">
+                        <div class="font-semibold text-xl mb-4 text-zinc-900">Powerful Integrations</div>
+                        <p class="text-zinc-600 text-[13px] leading-relaxed">Your Smart Hosted Cloud PBX seamlessly connects with business tools like Salesforce, Microsoft 365, SMS, WhatsApp, and Facebook Messenger. Custom call routing ensures your system grows with your business.</p>
                     </div>
                 </div>
             </div>
 
-            <div class="mt-auto flex-shrink-0 pt-10 text-xs flex justify-between text-zinc-500 border-t border-orange-100">
+            <!-- Integration Images Row -->
+            <div class="grid grid-cols-4 gap-3">
+                <div class="bg-white border border-orange-100 p-4 rounded-2xl overflow-hidden shadow-sm">
+                    <img src="Pictures/Page 7/Image 3.png" alt="SMS & WhatsApp" class="w-full h-auto object-contain">
+                </div>
+                <div class="bg-white border border-orange-100 p-4 rounded-2xl overflow-hidden shadow-sm">
+                    <img src="Pictures/Page 7/Image 2.png" alt="Salesforce" class="w-full h-auto object-contain">
+                </div>
+                <div class="bg-white border border-orange-100 p-4 rounded-2xl overflow-hidden shadow-sm">
+                    <img src="Pictures/Page 7/Image 1.png" alt="Microsoft 365" class="w-full h-auto object-contain">
+                </div>
+                <div class="bg-white border border-orange-100 p-4 rounded-2xl overflow-hidden shadow-sm">
+                    <img src="Pictures/Page 7/Image 4.png" alt="Custom Routing" class="w-full h-auto object-contain">
+                </div>
+            </div>
+
+            <div class="mt-auto flex-shrink-0 pt-12 text-xs flex justify-between text-zinc-500 border-t border-orange-100">
                 <div>SMART INTEGRATE • Smart Solutions Simplified</div>
             </div>
         </div>

@@ -1099,6 +1099,21 @@ export class HtmlTemplateManager {
                     <div class="font-semibold text-xl text-zinc-900">DEDICATED SERVICE</div>
                     <div class="text-xs text-zinc-500 mt-2">When you need it!</div>
                 </div>
+                <div class="feature-card text-center p-9 border border-orange-100 rounded-3xl hover:border-orange-300 bg-white">
+                    <i class="fa-solid fa-arrows-rotate text-6xl text-orange-500 mb-7"></i>
+                    <div class="font-semibold text-xl text-zinc-900">FAILOVER</div>
+                    <div class="text-xs text-zinc-500 mt-2">Redundancy & reliability</div>
+                </div>
+                <div class="feature-card text-center p-9 border border-orange-100 rounded-3xl hover:border-orange-300 bg-white">
+                    <i class="fa-solid fa-wifi text-6xl text-orange-500 mb-7"></i>
+                    <div class="font-semibold text-xl text-zinc-900">MANAGED WIFI</div>
+                    <div class="text-xs text-zinc-500 mt-2">Enterprise wireless solutions</div>
+                </div>
+                <div class="feature-card text-center p-9 border border-orange-100 rounded-3xl hover:border-orange-300 bg-white">
+                    <i class="fa-solid fa-diagram-project text-6xl text-orange-500 mb-7"></i>
+                    <div class="font-semibold text-xl text-zinc-900">MULTI-SITE</div>
+                    <div class="text-xs text-zinc-500 mt-2">Connect multiple locations</div>
+                </div>
             </div>
 
             <div class="mt-auto flex-shrink-0 pt-12 text-xs flex justify-between text-zinc-500 border-t border-orange-100">

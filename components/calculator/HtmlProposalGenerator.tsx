@@ -164,7 +164,7 @@ const HtmlProposalGenerator = forwardRef<HtmlProposalGeneratorRef, HtmlProposalG
       
       {/* Loading overlay */}
       {isGenerating && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99999] flex items-center justify-center">
           <div 
             className="p-6 flex flex-col items-center space-y-3 rounded-xl bg-gradient-to-br from-slate-900/95 to-purple-900/95 border border-purple-500/30 shadow-2xl max-w-md"
             style={{

@@ -670,7 +670,7 @@ export class HtmlTemplateManager {
                 <div class="grid grid-cols-2 gap-12">
                     <div>
                         <div class="flex items-start gap-5 mb-5">
-                            <div class="text-5xl flex-shrink-0">📧</div>
+                            <div class="text-5xl flex-shrink-0"><i class="fa-solid fa-envelope text-orange-500"></i></div>
                             <div class="font-semibold text-2xl text-zinc-900 leading-tight pt-2">Voicemail Delivered to You</div>
                         </div>
                         <p class="text-zinc-600 text-[13px] leading-relaxed pl-[68px]">If a call is missed, it goes to voicemail, which we can send directly to your email as an audio file for easy listening. Your dashboard shows how many voicemails are waiting, so you can stay on top of messages. Smart Integrate ensures this feature works perfectly, so you never miss important communications, even during busy times.</p>
@@ -685,7 +685,7 @@ export class HtmlTemplateManager {
                 <div class="grid grid-cols-2 gap-12">
                     <div>
                         <div class="flex items-start gap-5 mb-5">
-                            <div class="text-5xl flex-shrink-0">🔒</div>
+                            <div class="text-5xl flex-shrink-0"><i class="fa-solid fa-lock text-orange-500"></i></div>
                             <div class="font-semibold text-2xl text-zinc-900 leading-tight pt-2">Secure and Dependable</div>
                         </div>
                         <p class="text-zinc-600 text-[13px] leading-relaxed pl-[68px]">Your calls are kept private and secure, with alerts on your dashboard if any issues arise. Smart Integrate monitors everything to ensure your system is always reliable, so you can communicate with confidence. This dependable setup means your business stays connected with customers and team members without any worries.</p>

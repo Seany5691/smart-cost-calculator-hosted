@@ -86,15 +86,7 @@ const HtmlProposalGenerator = forwardRef<HtmlProposalGeneratorRef, HtmlProposalG
 
         const result = await response.json();
 
-        // Download the PDF
-        const link = document.createElement('a');
-        link.href = result.pdfUrl;
-        link.download = result.fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // Open PDF in new tab
+        // Open PDF in new tab (don't download, just open)
         window.open(result.pdfUrl, '_blank');
 
         // Show success message

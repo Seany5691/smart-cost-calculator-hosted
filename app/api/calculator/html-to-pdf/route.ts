@@ -79,20 +79,20 @@ export async function POST(request: NextRequest) {
       const styles = window.getComputedStyle(element);
       // Check if Tailwind classes are applied (width should be set)
       return styles.width !== '' && styles.width !== 'auto';
-    }, { timeout: 30000 }).catch(() => {
+    }, { timeout: 5000 }).catch(() => {
       console.log('[HTML-to-PDF] Tailwind check timed out, continuing anyway');
     });
 
     // Wait for Font Awesome icons to load
     console.log('[HTML-to-PDF] Waiting for Font Awesome to load...');
     await page.waitForFunction(() => {
-      const icons = document.querySelectorAll('.fa, .fas, .far, .fab');
+      const icons = document.querySelectorAll('.fa, .fa-solid, .far, .fab');
       if (icons.length === 0) return true; // No icons, continue
       // Check if at least one icon has loaded
       const firstIcon = icons[0] as HTMLElement;
       const styles = window.getComputedStyle(firstIcon);
       return styles.fontFamily.includes('Font Awesome');
-    }, { timeout: 30000 }).catch(() => {
+    }, { timeout: 5000 }).catch(() => {
       console.log('[HTML-to-PDF] Font Awesome check timed out, continuing anyway');
     });
 
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       const testElement = document.body;
       const styles = window.getComputedStyle(testElement);
       return styles.fontFamily.includes('Inter');
-    }, { timeout: 30000 }).catch(() => {
+    }, { timeout: 5000 }).catch(() => {
       console.log('[HTML-to-PDF] Google Fonts check timed out, continuing anyway');
     });
 
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 
     // Extra wait for fonts and dynamic content to fully render
     console.log('[HTML-to-PDF] Waiting for fonts and final rendering...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     console.log('[HTML-to-PDF] Generating PDF...');
     // Generate PDF with optimal settings

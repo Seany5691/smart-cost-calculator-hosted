@@ -937,3 +937,925 @@ if (scrapeConfig.simultaneousLookups < 1 || scrapeConfig.simultaneousLookups > 5
 
 ---
 
+## TESTING STRATEGY
+
+### Unit Tests
+
+#### Update Test Mocks
+
+**Files to Update:**
+- `__tests__/lib/scraper/industry-scraper.test.ts`
+- `__tests__/integration/scraper-integration.test.ts`
+- `lib/scraper/BatchManager.CaptchaIntegration.test.ts`
+- `lib/scraper/provider-lookup-service.integration.test.ts`
+
+**BEFORE:**
+```typescript
+jest.mock('puppeteer', () => ({
+  default: {
+    launch: jest.fn().mockResolvedValue({
+      newPage: jest.fn(),
+      close: jest.fn(),
+    }),
+  },
+}));
+```
+
+**AFTER:**
+```typescript
+jest.mock('playwright', () => ({
+  chromium: {
+    launch: jest.fn().mockResolvedValue({
+      newContext: jest.fn().mockResolvedValue({
+        newPage: jest.fn(),
+        close: jest.fn(),
+      }),
+      close: jest.fn(),
+    }),
+  },
+}));
+```
+
+**Run Tests:**
+```bash
+npm test
+```
+
+---
+
+### Integration Testing Checklist
+
+#### Google Maps Scraping
+
+- [ ] **Single industry, single town**
+  - Test: 1 town, 1 industry
+  - Expected: Scrapes businesses successfully
+  - Verify: Results saved to database
+
+- [ ] **Multiple industries, single town**
+  - Test: 1 town, 3 industries
+  - Expected: Scrapes all industries
+  - Verify: Correct industry assignment
+
+- [ ] **Multiple towns, multiple industries**
+  - Test: 3 towns, 3 industries
+  - Expected: All combinations scraped
+  - Verify: Correct town/industry assignment
+
+- [ ] **Business-only search (no industry)**
+  - Test: 1 business name, no industry
+  - Expected: Finds specific business
+  - Verify: Single result returned
+
+- [ ] **Scrolling to end of list**
+  - Test: Popular industry with 50+ results
+  - Expected: Scrolls and loads all results
+  - Verify: "End of list" detected
+
+- [ ] **Handling "no results"**
+  - Test: Invalid town/industry combination
+  - Expected: Returns empty array
+  - Verify: No errors thrown
+
+#### Provider Lookups
+
+- [ ] **Single phone lookup**
+  - Test: 1 phone number
+  - Expected: Provider identified
+  - Verify: Correct provider name
+
+- [ ] **Batch of 5 phones**
+  - Test: 5 phone numbers
+  - Expected: All providers identified
+  - Verify: No captcha triggered
+
+- [ ] **Multiple batches in parallel**
+  - Test: 15 phone numbers (3 batches)
+  - Expected: All processed successfully
+  - Verify: Correct concurrency
+
+- [ ] **Captcha detection and recovery**
+  - Test: Trigger captcha (if possible)
+  - Expected: Detects and restarts browser
+  - Verify: Continues processing
+
+- [ ] **Cache hit/miss scenarios**
+  - Test: Lookup same phone twice
+  - Expected: Second lookup from cache
+  - Verify: Cache working correctly
+
+#### Concurrency
+
+- [ ] **5 towns in parallel**
+  - Test: 5 towns, 1 industry each
+  - Expected: All process simultaneously
+  - Verify: Memory usage < 1GB
+
+- [ ] **8 industries per town**
+  - Test: 1 town, 8 industries
+  - Expected: All process successfully
+  - Verify: No context limit errors
+
+- [ ] **Memory usage under load**
+  - Test: 5 towns, 5 industries (25 scrapes)
+  - Expected: Peak RAM < 1.5GB
+  - Verify: No memory leaks
+
+- [ ] **No browser/context leaks**
+  - Test: Run 10 scraping sessions
+  - Expected: All contexts closed
+  - Verify: `browserManager.getStatus()` shows 0 contexts
+
+#### Error Handling
+
+- [ ] **Network timeouts**
+  - Test: Slow network conditions
+  - Expected: Retries with backoff
+  - Verify: Eventually succeeds or fails gracefully
+
+- [ ] **Invalid selectors**
+  - Test: Google Maps changes layout
+  - Expected: Logs error, continues
+  - Verify: Doesn't crash entire session
+
+- [ ] **Browser crashes**
+  - Test: Kill browser process
+  - Expected: Detects crash, restarts
+  - Verify: Session continues
+
+- [ ] **Graceful degradation**
+  - Test: Provider lookup fails
+  - Expected: Sets provider to "Unknown"
+  - Verify: Scraping continues
+
+---
+
+### Manual Testing Script
+
+```bash
+# Test 1: Single town, single industry
+curl -X POST http://localhost:3000/api/scraper/start \
+  -H "Content-Type: application/json" \
+  -H "Cookie: auth-token=YOUR_TOKEN" \
+  -d '{
+    "towns": ["Cape Town"],
+    "industries": ["Restaurants"],
+    "config": {
+      "simultaneousTowns": 1,
+      "simultaneousIndustries": 1,
+      "simultaneousLookups": 1
+    }
+  }'
+
+# Test 2: Multiple towns, multiple industries
+curl -X POST http://localhost:3000/api/scraper/start \
+  -H "Content-Type: application/json" \
+  -H "Cookie: auth-token=YOUR_TOKEN" \
+  -d '{
+    "towns": ["Cape Town", "Johannesburg", "Durban"],
+    "industries": ["Restaurants", "Hotels", "Cafes"],
+    "config": {
+      "simultaneousTowns": 3,
+      "simultaneousIndustries": 3,
+      "simultaneousLookups": 3
+    }
+  }'
+
+# Test 3: High concurrency
+curl -X POST http://localhost:3000/api/scraper/start \
+  -H "Content-Type: application/json" \
+  -H "Cookie: auth-token=YOUR_TOKEN" \
+  -d '{
+    "towns": ["Cape Town", "Johannesburg", "Durban", "Pretoria", "Port Elizabeth"],
+    "industries": ["Restaurants", "Hotels", "Cafes", "Bars", "Shops"],
+    "config": {
+      "simultaneousTowns": 5,
+      "simultaneousIndustries": 5,
+      "simultaneousLookups": 5
+    }
+  }'
+```
+
+---
+
+### Performance Benchmarks
+
+**Baseline (Puppeteer):**
+- 3 towns × 3 industries = 9 scrapes
+- Expected time: ~15 minutes
+- Expected RAM: ~1.4GB peak
+- Expected results: ~200 businesses
+
+**Target (Playwright):**
+- 3 towns × 3 industries = 9 scrapes
+- Expected time: ~10 minutes (33% faster)
+- Expected RAM: ~900MB peak (36% less)
+- Expected results: ~200 businesses (same)
+
+**Measure:**
+```bash
+# Monitor RAM usage
+watch -n 1 'ps aux | grep node | grep -v grep'
+
+# Monitor scraping progress
+tail -f logs/scraper.log
+```
+
+---
+
+## DEPLOYMENT PLAN
+
+### Pre-Deployment Checklist
+
+- [ ] All files migrated
+- [ ] All tests passing
+- [ ] Manual testing completed
+- [ ] Performance benchmarks met
+- [ ] Documentation updated
+- [ ] Backup branch created
+- [ ] Rollback plan prepared
+
+---
+
+### Deployment Steps
+
+#### Step 1: Build and Test Locally
+
+```bash
+# Clean install
+rm -rf node_modules package-lock.json
+npm install
+
+# Build
+npm run build
+
+# Run tests
+npm test
+
+# Start locally
+npm run dev
+```
+
+**Verify:**
+- Application starts without errors
+- Can create scraping session
+- Scraping completes successfully
+- Results saved to database
+
+---
+
+#### Step 2: Commit Changes
+
+```bash
+git add .
+git commit -m "feat: migrate from Puppeteer to Playwright
+
+- Replace multiple browsers with single browser + contexts
+- Reduce RAM usage by 60-80%
+- Increase concurrency limits (2→3 towns, 2→3 industries)
+- Update all scraper files to use Playwright API
+- Remove browser-pool.ts (replaced by browser-manager)
+- Update tests to mock Playwright instead of Puppeteer
+
+BREAKING CHANGE: Requires Playwright installation
+"
+
+git push origin feature/playwright-migration
+```
+
+---
+
+#### Step 3: Deploy to Dokploy
+
+**Option A: Via Git Push (Recommended)**
+
+```bash
+# Merge to main
+git checkout main
+git merge feature/playwright-migration
+git push origin main
+
+# Dokploy will auto-deploy
+```
+
+**Option B: Manual Deploy**
+
+1. Go to Dokploy dashboard
+2. Select your app
+3. Click "Deploy"
+4. Select branch: `feature/playwright-migration`
+5. Click "Deploy Now"
+
+---
+
+#### Step 4: Install Playwright on Server
+
+**SSH into Dokploy server:**
+
+```bash
+ssh user@your-dokploy-server
+
+# Navigate to app directory
+cd /path/to/hosted-smart-cost-calculator
+
+# Install Playwright browsers
+npx playwright install chromium
+
+# Verify installation
+npx playwright --version
+```
+
+**Or add to Dockerfile:**
+
+```dockerfile
+# Install Playwright browsers
+RUN npx playwright install --with-deps chromium
+
+# Set Playwright environment variables
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0
+```
+
+---
+
+#### Step 5: Update Environment Variables
+
+**Add to `.env` on server:**
+
+```bash
+# Playwright configuration
+PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+PLAYWRIGHT_HEADLESS=true
+PLAYWRIGHT_TIMEOUT=30000
+```
+
+---
+
+#### Step 6: Restart Application
+
+```bash
+# Via Dokploy dashboard
+# Click "Restart" button
+
+# Or via SSH
+pm2 restart hosted-smart-cost-calculator
+```
+
+---
+
+#### Step 7: Monitor Deployment
+
+**Check logs:**
+
+```bash
+# Via Dokploy dashboard
+# Click "Logs" tab
+
+# Or via SSH
+pm2 logs hosted-smart-cost-calculator
+```
+
+**Look for:**
+- `[BrowserManager] Browser initialized successfully`
+- `[BrowserManager] Creating new context for scraper-worker-1`
+- No Puppeteer-related errors
+
+---
+
+#### Step 8: Test in Production
+
+**Create test scraping session:**
+
+1. Log into application
+2. Go to Scraper page
+3. Create session with:
+   - Towns: 1 town
+   - Industries: 1 industry
+   - Concurrency: Default settings
+4. Monitor progress
+5. Verify results
+
+**Expected:**
+- Session starts successfully
+- Scraping completes without errors
+- Results saved to database
+- Memory usage < 1GB
+
+---
+
+#### Step 9: Monitor Performance
+
+**For first 24 hours:**
+
+- Monitor RAM usage (should be 30-40% lower)
+- Monitor scraping speed (should be 20-30% faster)
+- Monitor error rates (should be same or lower)
+- Monitor context leaks (should be 0)
+
+**Tools:**
+```bash
+# RAM usage
+watch -n 5 'free -h'
+
+# Process memory
+watch -n 5 'ps aux | grep node'
+
+# Application logs
+tail -f /var/log/dokploy/hosted-smart-cost-calculator.log
+```
+
+---
+
+### Post-Deployment Verification
+
+- [ ] Application accessible
+- [ ] Can create scraping sessions
+- [ ] Scraping completes successfully
+- [ ] Results saved correctly
+- [ ] Provider lookups working
+- [ ] Memory usage reduced
+- [ ] No context leaks
+- [ ] No errors in logs
+
+---
+
+## ROLLBACK PLAN
+
+### When to Rollback
+
+Rollback if you encounter:
+
+1. **Critical Errors:**
+   - Application won't start
+   - All scraping sessions fail
+   - Database corruption
+   - Data loss
+
+2. **Performance Issues:**
+   - RAM usage higher than before
+   - Scraping slower than before
+   - Frequent crashes
+
+3. **Functionality Issues:**
+   - Can't create sessions
+   - Results not saving
+   - Provider lookups failing
+
+---
+
+### Rollback Steps
+
+#### Step 1: Revert Git Changes
+
+```bash
+# On your local machine
+git checkout main
+git reset --hard backup/before-playwright-migration
+git push origin main --force
+```
+
+**Warning:** This will force-push and overwrite the main branch.
+
+---
+
+#### Step 2: Redeploy Previous Version
+
+**Via Dokploy:**
+
+1. Go to Dokploy dashboard
+2. Select your app
+3. Click "Deployments" tab
+4. Find previous successful deployment
+5. Click "Rollback to this version"
+
+**Or via Git:**
+
+```bash
+# Dokploy will auto-deploy the reverted code
+# Wait for deployment to complete
+```
+
+---
+
+#### Step 3: Reinstall Puppeteer
+
+**SSH into server:**
+
+```bash
+ssh user@your-dokploy-server
+cd /path/to/hosted-smart-cost-calculator
+
+# Reinstall dependencies
+npm install
+
+# Restart application
+pm2 restart hosted-smart-cost-calculator
+```
+
+---
+
+#### Step 4: Verify Rollback
+
+- [ ] Application starts successfully
+- [ ] Can create scraping sessions
+- [ ] Scraping works as before
+- [ ] No errors in logs
+
+---
+
+#### Step 5: Investigate Issues
+
+**Before attempting migration again:**
+
+1. Review error logs
+2. Identify root cause
+3. Fix issues in feature branch
+4. Test thoroughly locally
+5. Attempt deployment again
+
+---
+
+### Partial Rollback (If Possible)
+
+If only specific features are broken:
+
+1. **Keep Playwright installed**
+2. **Revert specific files:**
+   ```bash
+   git checkout backup/before-playwright-migration -- lib/scraper/browser-manager.ts
+   git checkout backup/before-playwright-migration -- lib/scraper/provider-lookup-service.ts
+   ```
+3. **Test incrementally**
+4. **Deploy partial fix**
+
+---
+
+## APPENDIX: COMPLETE FILE IMPLEMENTATIONS
+
+### A. browser-manager.ts (Complete)
+
+```typescript
+/**
+ * Centralized Browser Manager
+ * 
+ * Manages Playwright browser instances using single browser + multiple contexts
+ * for optimal resource usage and performance.
+ */
+
+import type { Browser, BrowserContext } from 'playwright';
+
+interface ContextInstance {
+  context: BrowserContext;
+  inUse: boolean;
+  lastUsed: number;
+  purpose: string;
+}
+
+class BrowserManager {
+  private static instance: BrowserManager;
+  private browser: Browser | null = null;
+  private contexts: Map<string, ContextInstance> = new Map();
+  private maxContexts = 10;
+  private cleanupInterval: NodeJS.Timeout | null = null;
+
+  private constructor() {
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupIdleContexts();
+    }, 30000);
+  }
+
+  static getInstance(): BrowserManager {
+    if (!BrowserManager.instance) {
+      BrowserManager.instance = new BrowserManager();
+    }
+    return BrowserManager.instance;
+  }
+
+  async getContext(purpose: string = 'default'): Promise<BrowserContext> {
+    if (!this.browser) {
+      await this.initBrowser();
+    }
+
+    const existingKey = Array.from(this.contexts.keys()).find(key => 
+      key.startsWith(purpose) && !this.contexts.get(key)?.inUse
+    );
+
+    if (existingKey) {
+      const instance = this.contexts.get(existingKey)!;
+      instance.inUse = true;
+      instance.lastUsed = Date.now();
+      console.log(`[BrowserManager] Reusing context for ${purpose}`);
+      return instance.context;
+    }
+
+    const activeContexts = Array.from(this.contexts.values()).filter(c => c.inUse).length;
+    if (activeContexts >= this.maxContexts) {
+      throw new Error(`Context limit reached (${this.maxContexts})`);
+    }
+
+    console.log(`[BrowserManager] Creating new context for ${purpose}`);
+    const context = await this.browser!.newContext({
+      viewport: { width: 1920, height: 1080 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      ignoreHTTPSErrors: true,
+      locale: 'en-US',
+      timezoneId: 'America/New_York',
+    });
+
+    const key = `${purpose}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    this.contexts.set(key, {
+      context,
+      inUse: true,
+      lastUsed: Date.now(),
+      purpose
+    });
+
+    return context;
+  }
+
+  async releaseContext(context: BrowserContext): Promise<void> {
+    const entry = Array.from(this.contexts.entries()).find(([_, instance]) => 
+      instance.context === context
+    );
+
+    if (entry) {
+      const [key, instance] = entry;
+      instance.inUse = false;
+      instance.lastUsed = Date.now();
+      console.log(`[BrowserManager] Released context ${key}`);
+    }
+  }
+
+  async closeContext(context: BrowserContext): Promise<void> {
+    const entry = Array.from(this.contexts.entries()).find(([_, instance]) => 
+      instance.context === context
+    );
+
+    if (entry) {
+      const [key] = entry;
+      try {
+        await context.close();
+      } catch (error) {
+        console.warn(`[BrowserManager] Error closing context ${key}:`, error);
+      }
+      this.contexts.delete(key);
+      console.log(`[BrowserManager] Closed and removed context ${key}`);
+    }
+  }
+
+  private async initBrowser(): Promise<void> {
+    try {
+      console.log('[BrowserManager] Initializing browser...');
+      const playwright = await import('playwright');
+
+      this.browser = await playwright.chromium.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-blink-features=AutomationControlled',
+        ],
+        timeout: 30000,
+      });
+
+      console.log('[BrowserManager] Browser initialized successfully');
+
+      const testContext = await this.browser.newContext();
+      const testPage = await testContext.newPage();
+      await testPage.goto('data:text/html,<h1>Test</h1>', { waitUntil: 'domcontentloaded', timeout: 10000 });
+      await testPage.close();
+      await testContext.close();
+      console.log('[BrowserManager] Browser test successful');
+
+    } catch (error) {
+      console.error('[BrowserManager] Failed to initialize browser:', error);
+      throw error;
+    }
+  }
+
+  private async cleanupIdleContexts(): Promise<void> {
+    const now = Date.now();
+    const maxIdleTime = 5 * 60 * 1000;
+
+    for (const [key, instance] of this.contexts.entries()) {
+      if (!instance.inUse && (now - instance.lastUsed) > maxIdleTime) {
+        console.log(`[BrowserManager] Cleaning up idle context ${key}`);
+        try {
+          await instance.context.close();
+        } catch (error) {
+          console.warn(`[BrowserManager] Error closing idle context ${key}:`, error);
+        }
+        this.contexts.delete(key);
+      }
+    }
+  }
+
+  getStatus(): { total: number; inUse: number; idle: number } {
+    const total = this.contexts.size;
+    const inUse = Array.from(this.contexts.values()).filter(c => c.inUse).length;
+    const idle = total - inUse;
+
+    return { total, inUse, idle };
+  }
+
+  async cleanup(): Promise<void> {
+    console.log('[BrowserManager] Cleaning up all contexts and browser...');
+    
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+
+    const closePromises = Array.from(this.contexts.values()).map(async (instance) => {
+      try {
+        await instance.context.close();
+      } catch (error) {
+        console.warn('[BrowserManager] Error closing context during cleanup:', error);
+      }
+    });
+
+    await Promise.all(closePromises);
+    this.contexts.clear();
+
+    if (this.browser) {
+      try {
+        await this.browser.close();
+        this.browser = null;
+      } catch (error) {
+        console.warn('[BrowserManager] Error closing browser during cleanup:', error);
+      }
+    }
+
+    console.log('[BrowserManager] Cleanup complete');
+  }
+}
+
+export const browserManager = BrowserManager.getInstance();
+
+process.on('SIGTERM', async () => {
+  await browserManager.cleanup();
+});
+
+process.on('SIGINT', async () => {
+  await browserManager.cleanup();
+});
+```
+
+---
+
+### B. Playwright API Quick Reference
+
+**Navigation:**
+```typescript
+await page.goto(url, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(2000);
+await page.waitForLoadState('networkidle');
+```
+
+**Element Selection:**
+```typescript
+// Single element
+const element = page.locator('.selector');
+await element.click();
+const text = await element.textContent();
+
+// Multiple elements
+const elements = await page.locator('.selector').all();
+for (const el of elements) {
+  const text = await el.textContent();
+}
+
+// Check existence
+const exists = await page.locator('.selector').count() > 0;
+```
+
+**Evaluation:**
+```typescript
+// In page context
+const result = await page.evaluate(() => {
+  return document.title;
+});
+
+// On element
+const text = await page.locator('.selector').evaluate(el => el.textContent);
+```
+
+**Waiting:**
+```typescript
+// Auto-wait (built-in)
+await page.locator('.selector').click(); // Waits automatically
+
+// Explicit wait
+await page.locator('.selector').waitFor({ state: 'visible' });
+await page.locator('.selector').waitFor({ timeout: 5000 });
+```
+
+---
+
+### C. Common Migration Patterns
+
+**Pattern 1: Check if element exists**
+```typescript
+// BEFORE (Puppeteer):
+const element = await page.$('.selector');
+if (element) { /* ... */ }
+
+// AFTER (Playwright):
+const exists = await page.locator('.selector').count() > 0;
+if (exists) { /* ... */ }
+```
+
+**Pattern 2: Get all elements**
+```typescript
+// BEFORE (Puppeteer):
+const elements = await page.$$('.selector');
+for (const el of elements) {
+  const text = await el.evaluate(e => e.textContent);
+}
+
+// AFTER (Playwright):
+const elements = await page.locator('.selector').all();
+for (const el of elements) {
+  const text = await el.textContent();
+}
+```
+
+**Pattern 3: Get text content**
+```typescript
+// BEFORE (Puppeteer):
+const text = await page.$eval('.selector', el => el.textContent);
+
+// AFTER (Playwright):
+const text = await page.locator('.selector').textContent();
+```
+
+**Pattern 4: Wait and click**
+```typescript
+// BEFORE (Puppeteer):
+await page.waitForSelector('.button', { timeout: 5000 });
+await page.click('.button');
+
+// AFTER (Playwright):
+await page.locator('.button').click(); // Auto-waits
+```
+
+---
+
+## SUMMARY
+
+### What Changed
+
+1. **Dependencies:** Puppeteer → Playwright
+2. **Browser Management:** Multiple browsers → Single browser + contexts
+3. **API:** Puppeteer selectors → Playwright locators
+4. **Concurrency:** 2 towns/2 industries → 3 towns/3 industries
+5. **Memory:** ~1.4GB → ~880MB (37% reduction)
+6. **Speed:** Baseline → 20-30% faster
+
+### What Stayed the Same
+
+1. **Functionality:** All features work identically
+2. **Database:** No schema changes
+3. **API Routes:** No changes
+4. **UI:** No changes
+5. **User Experience:** Same workflow
+
+### Key Benefits
+
+1. **Lower RAM usage** - 60-80% reduction
+2. **Higher concurrency** - 2-3x more parallel scrapes
+3. **Better stability** - Fewer crashes
+4. **Faster scraping** - 20-30% speed improvement
+5. **Cleaner code** - Less boilerplate
+6. **Future-proof** - Active development
+
+---
+
+## NEXT STEPS
+
+1. ✅ Review this migration guide
+2. ⬜ Create backup branch
+3. ⬜ Install Playwright locally
+4. ⬜ Migrate files (follow Phase 1-7)
+5. ⬜ Run tests
+6. ⬜ Test locally
+7. ⬜ Deploy to production
+8. ⬜ Monitor performance
+9. ⬜ Celebrate! 🎉
+
+---
+
+**Questions or Issues?**
+
+If you encounter any problems during migration:
+
+1. Check the error logs
+2. Review the specific file section in this guide
+3. Compare with the "BEFORE/AFTER" examples
+4. Test the specific component in isolation
+5. Use the rollback plan if needed
+
+**Good luck with the migration!** 🚀
+

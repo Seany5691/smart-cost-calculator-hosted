@@ -32,6 +32,9 @@ export class HtmlTemplateManager {
     // Filter feature pages based on selection
     html = this.filterFeaturePages(html, proposalData.selectedPages, mappedData);
 
+    // Replace placeholders again after feature pages are inserted
+    html = this.replaceBasicPlaceholders(html, proposalData, mappedData);
+
     // Set PDF filename
     html = this.setPdfFilename(html, mappedData.customerName);
 

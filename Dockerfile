@@ -31,7 +31,7 @@ WORKDIR /app
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Install Playwright system dependencies
+# Install Chromium and system dependencies for both Playwright and Puppeteer
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -39,10 +39,10 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
-    nodejs \
-    npm
+    dbus \
+    xvfb
 
-# Create non-root user first
+# Create non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
@@ -55,14 +55,20 @@ COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/run-scraper-migrations.js ./run-scraper-migrations.js
 COPY --from=builder /app/run-scraper-migrations.sh ./run-scraper-migrations.sh
 
+# Copy node_modules to get playwright and puppeteer binaries
+COPY --from=deps /app/node_modules ./node_modules
+
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
 
-# Switch to nextjs user to install Playwright browsers
+# Switch to nextjs user to install browsers
 USER nextjs
 
-# Install Playwright browsers as nextjs user
-RUN npx playwright@1.48.0 install chromium
+# Install Playwright browsers for scraping
+RUN npx playwright install chromium
+
+# Install Puppeteer browsers for PDF generation
+RUN npx puppeteer browsers install chrome
 
 # Create a larger /tmp/shm directory for Chromium (switch back to root temporarily)
 USER root

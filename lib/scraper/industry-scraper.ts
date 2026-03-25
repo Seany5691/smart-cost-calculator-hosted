@@ -218,7 +218,7 @@ export class IndustryScraper {
       }
 
       // Get all W4Efsd info elements
-      const infoElements = await cardElement.$$('.W4Efsd');
+      const infoElements = await cardElement.locator('.W4Efsd').all();
 
       let phone = '';
       let address = '';

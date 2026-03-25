@@ -11,6 +11,9 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 
+# Install Playwright browsers (must be done after npm ci)
+RUN npx playwright install --with-deps chromium
+
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
@@ -31,7 +34,7 @@ WORKDIR /app
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Install Chromium and dependencies for Puppeteer
+# Install Chromium and dependencies for Playwright
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -42,9 +45,9 @@ RUN apk add --no-cache \
     dbus \
     xvfb
 
-# Tell Puppeteer to use the installed Chromium
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+# Tell Playwright to use the installed Chromium
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
@@ -59,8 +62,12 @@ COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/run-scraper-migrations.js ./run-scraper-migrations.js
 COPY --from=builder /app/run-scraper-migrations.sh ./run-scraper-migrations.sh
 
+# Copy Playwright browsers from deps stage
+COPY --from=deps /root/.cache/ms-playwright /home/nextjs/.cache/ms-playwright
+
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
+RUN chown -R nextjs:nodejs /home/nextjs/.cache
 
 # Create a larger /tmp/shm directory for Chromium
 RUN mkdir -p /tmp/shm && chmod 1777 /tmp/shm

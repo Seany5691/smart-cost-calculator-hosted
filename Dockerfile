@@ -46,7 +46,7 @@ RUN apk add --no-cache \
     xvfb
 
 # Tell Playwright to use the installed Chromium
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PLAYWRIGHT_BROWSERS_PATH=/home/nextjs/.cache/ms-playwright
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 # Create non-root user

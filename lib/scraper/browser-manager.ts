@@ -146,8 +146,15 @@ class BrowserManager {
       const playwright = await import('playwright');
       console.log('[BrowserManager] Playwright imported successfully');
 
-      const { getBrowserLaunchOptions } = await import('./browserConfig');
+      const { getBrowserLaunchOptions, getChromiumPath } = await import('./browserConfig');
       const launchOptions = getBrowserLaunchOptions(true);
+      
+      // CRITICAL: Use system Chromium if available (Docker/Alpine Linux)
+      const executablePath = getChromiumPath();
+      if (executablePath) {
+        console.log(`[BrowserManager] Using system Chromium at: ${executablePath}`);
+        launchOptions.executablePath = executablePath;
+      }
 
       console.log('[BrowserManager] Launch options:', JSON.stringify(launchOptions, null, 2));
       console.log('[BrowserManager] Launching browser...');

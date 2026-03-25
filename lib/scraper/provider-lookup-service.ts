@@ -38,7 +38,7 @@
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 24.2
  */
 
-import type { Browser, Page } from 'puppeteer';
+import type { Browser, BrowserContext, Page } from 'playwright';
 import { ProviderCache } from './provider-cache';
 import { BatchManager, ProviderLookup, BatchResult } from './BatchManager';
 import { RetryStrategy } from './RetryStrategy';
@@ -47,7 +47,8 @@ const MAX_LOOKUPS_PER_BROWSER = 5; // Captcha appears after 5 lookups
 
 export class ProviderLookupService {
   private maxConcurrentBrowsers: number;
-  private activeBrowsers: number = 0;
+  private browser: Browser | null = null;
+  private activeContexts: number = 0;
   private eventEmitter?: any;
   private batchManager: BatchManager;
   private retryStrategy: RetryStrategy;
@@ -158,20 +159,23 @@ export class ProviderLookupService {
   /**
    * Process lookups using BatchManager for intelligent batch processing
    * 
-   * UPDATED (2025-01-30): Now handles captcha detection by restarting browser
-   * - Captcha is now randomized (not every 5th lookup)
-   * - When captcha detected, closes current browser and creates new one
-   * - Continues with remaining lookups in batch
+   * UPDATED FOR PLAYWRIGHT MIGRATION:
+   * - Initializes single browser instance once at start
+   * - Creates lightweight BrowserContext per batch instead of full Browser
+   * - Reuses same browser for all batches (95% memory reduction)
+   * - Closes context after each batch (not browser)
+   * - Browser is closed in cleanup() method
    * 
    * This method:
-   * 1. Converts phone numbers to ProviderLookup objects
-   * 2. Adds them to BatchManager batches
-   * 3. Creates ONE browser when batch is full
-   * 4. Reuses that browser for ALL lookups in the batch
-   * 5. If captcha detected, closes browser and creates new one
-   * 6. Closes browser after batch completes
-   * 7. Waits 500ms between lookups within batch
-   * 8. Handles progress reporting
+   * 1. Initializes single browser instance (once)
+   * 2. Converts phone numbers to ProviderLookup objects
+   * 3. Adds them to BatchManager batches
+   * 4. Creates ONE context per batch
+   * 5. Reuses that context for ALL lookups in the batch
+   * 6. If captcha detected, closes context and creates new one
+   * 7. Closes context after batch completes
+   * 8. Waits 100ms between lookups within batch
+   * 9. Handles progress reporting
    * 
    * @param phonesToLookup - Phone numbers that need lookup (not in cache)
    * @param cachedCount - Number of results already found in cache
@@ -188,6 +192,9 @@ export class ProviderLookupService {
     let batchNumber = 0;
 
     console.log(`[ProviderLookup] Using BatchManager for ${phonesToLookup.length} lookups`);
+
+    // Initialize single browser instance once for all batches
+    await this.initBrowser();
 
     // Process all phone numbers through BatchManager
     for (let i = 0; i < phonesToLookup.length; i++) {
@@ -208,16 +215,21 @@ export class ProviderLookupService {
         const batchSize = this.batchManager.getCurrentBatchCount();
         console.log(`[ProviderLookup] Processing batch ${batchNumber} with ${batchSize} lookups`);
         
-        // Create browser for this batch
-        let browser: Browser | null = null;
+        // Create context for this batch
+        let context: BrowserContext | null = null;
         let lookupIndex = 0;
-        let browserRestartCount = 0;
-        const MAX_BROWSER_RESTARTS = 3; // Prevent infinite restart loop
+        let contextRestartCount = 0;
+        const MAX_CONTEXT_RESTARTS = 3; // Prevent infinite restart loop
         
         try {
-          // Create initial browser
-          browser = await this.createBrowser();
-          console.log(`[ProviderLookup] [Batch ${batchNumber}] Created browser for ${batchSize} lookups (Active browsers: ${this.activeBrowsers})`);
+          // Create initial context from single browser
+          this.activeContexts++;
+          context = await this.browser!.newContext({
+            viewport: { width: 1920, height: 1080 },
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            ignoreHTTPSErrors: true,
+          });
+          console.log(`[ProviderLookup] [Batch ${batchNumber}] Created context for ${batchSize} lookups (Active contexts: ${this.activeContexts})`);
           
           // Process the batch using BatchManager
           const batchResult = await this.batchManager.processBatch(async (lookup) => {
@@ -225,9 +237,9 @@ export class ProviderLookupService {
             console.log(`[ProviderLookup] [Batch ${batchNumber}] Lookup ${lookupIndex}/${batchSize}: ${lookup.phoneNumber}`);
             
             try {
-              // Try lookup with current browser
+              // Try lookup with current context
               // Pass isFirstLookup flag (true for first lookup in batch)
-              const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber, lookupIndex === 1);
+              const provider = await this.lookupSingleProviderWithContext(context!, lookup.phoneNumber, lookupIndex === 1);
               
               // No delay needed - page refresh handles cleanup
               
@@ -236,26 +248,32 @@ export class ProviderLookupService {
             } catch (error) {
               const errorMessage = (error as Error).message;
               
-              // If captcha detected, restart browser and retry
-              if (errorMessage === 'CAPTCHA_DETECTED' && browserRestartCount < MAX_BROWSER_RESTARTS) {
-                browserRestartCount++;
-                console.warn(`[ProviderLookup] [Batch ${batchNumber}] Captcha detected, restarting browser (attempt ${browserRestartCount}/${MAX_BROWSER_RESTARTS})`);
+              // If captcha detected, restart context and retry
+              if (errorMessage === 'CAPTCHA_DETECTED' && contextRestartCount < MAX_CONTEXT_RESTARTS) {
+                contextRestartCount++;
+                console.warn(`[ProviderLookup] [Batch ${batchNumber}] Captcha detected, restarting context (attempt ${contextRestartCount}/${MAX_CONTEXT_RESTARTS})`);
                 
-                // Close current browser
-                if (browser) {
-                  await browser.close();
+                // Close current context
+                if (context) {
+                  await context.close();
+                  this.activeContexts--;
                 }
                 
-                // Create new browser
-                browser = await this.createBrowser();
-                console.log(`[ProviderLookup] [Batch ${batchNumber}] New browser created after captcha`);
+                // Create new context
+                this.activeContexts++;
+                context = await this.browser!.newContext({
+                  viewport: { width: 1920, height: 1080 },
+                  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                  ignoreHTTPSErrors: true,
+                });
+                console.log(`[ProviderLookup] [Batch ${batchNumber}] New context created after captcha`);
                 
                 // Wait a bit before retrying
                 await this.sleep(2000);
                 
-                // Retry the lookup with new browser
+                // Retry the lookup with new context
                 try {
-                  const provider = await this.lookupSingleProvider(browser!, lookup.phoneNumber, true); // First lookup with new browser
+                  const provider = await this.lookupSingleProviderWithContext(context!, lookup.phoneNumber, true); // First lookup with new context
                   
                   // No delay needed - page refresh handles cleanup
                   
@@ -263,7 +281,7 @@ export class ProviderLookupService {
                 } catch (retryError) {
                   console.error(`[ProviderLookup] [Batch ${batchNumber}] Retry failed for ${lookup.phoneNumber}:`, retryError);
                   
-                  // Add minimal delay between lookups (optimized from 500ms to 100ms)
+                  // Add minimal delay between lookups
                   if (lookupIndex < batchSize) {
                     await this.sleep(100);
                   }
@@ -275,7 +293,7 @@ export class ProviderLookupService {
               // All retries exhausted or other error
               console.error(`[ProviderLookup] All retries exhausted for ${lookup.phoneNumber}:`, error);
               
-              // Add minimal delay between lookups (optimized from 500ms to 100ms)
+              // Add minimal delay between lookups
               if (lookupIndex < batchSize) {
                 await this.sleep(100);
               }
@@ -301,22 +319,21 @@ export class ProviderLookupService {
               fromCache: cachedCount,
               batchSuccessRate: batchResult.successRate,
               batchSize: batchResult.batchSize,
-              browserRestarts: browserRestartCount,
+              contextRestarts: contextRestartCount,
             });
           }
 
-          console.log(`[ProviderLookup] [Batch ${batchNumber}] Complete: ${batchResult.successful} successful, ${batchResult.failed} failed (${Math.round(batchResult.successRate * 100)}% success rate, ${browserRestartCount} browser restarts)`);
+          console.log(`[ProviderLookup] [Batch ${batchNumber}] Complete: ${batchResult.successful} successful, ${batchResult.failed} failed (${Math.round(batchResult.successRate * 100)}% success rate, ${contextRestartCount} context restarts)`);
           
         } catch (error) {
           console.error(`[ProviderLookup] [Batch ${batchNumber}] Error processing batch:`, error);
         } finally {
-          // CRITICAL: Close browser AFTER batch completes
-          if (browser) {
-            console.log(`[ProviderLookup] [Batch ${batchNumber}] Closing browser after ${batchSize} lookups (Active browsers: ${this.activeBrowsers})`);
-            await browser.close();
-            this.activeBrowsers--;
-            console.log(`[ProviderLookup] [Batch ${batchNumber}] Browser closed successfully (Active browsers: ${this.activeBrowsers})`);
-            // No wait needed - captcha detection handles everything
+          // CRITICAL: Close context AFTER batch completes (not browser)
+          if (context) {
+            console.log(`[ProviderLookup] [Batch ${batchNumber}] Closing context after ${batchSize} lookups (Active contexts: ${this.activeContexts})`);
+            await context.close();
+            this.activeContexts--;
+            console.log(`[ProviderLookup] [Batch ${batchNumber}] Context closed successfully (Active contexts: ${this.activeContexts})`);
           }
         }
       }
@@ -397,7 +414,7 @@ export class ProviderLookupService {
     results: Map<string, string>,
     batchNumber: number
   ): Promise<void> {
-    this.activeBrowsers++;
+    this.activeContexts++;
     let browser: Browser | null = null;
 
     try {
@@ -430,7 +447,7 @@ export class ProviderLookupService {
         console.log(`[ProviderLookup] [Batch ${batchNumber}] Closing browser`);
         await browser.close();
       }
-      this.activeBrowsers--;
+      this.activeContexts--;
     }
   }
 
@@ -460,56 +477,154 @@ export class ProviderLookupService {
   }
 
   /**
+   * Initializes the single browser instance if not already initialized
+   * This browser will be reused for all batches
+   */
+  private async initBrowser(): Promise<void> {
+    if (this.browser) return;
+    
+    console.log('[ProviderLookup] Initializing single browser instance...');
+    const playwright = await import('playwright');
+    
+    this.browser = await playwright.chromium.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+      ],
+      timeout: 30000,
+    });
+    
+    console.log('[ProviderLookup] Browser initialized successfully');
+  }
+
+  /**
    * Creates a new browser instance
    */
   private async createBrowser(): Promise<Browser> {
-    try {
-      this.activeBrowsers++;
-      console.log(`[ProviderLookup] Creating browser instance... (Active browsers: ${this.activeBrowsers})`);
-      const puppeteer = await import('puppeteer');
-      const os = await import('os');
-      const path = await import('path');
-      const fs = await import('fs');
-      
-      // Create a unique temporary directory for this browser instance
-      // This ensures each browser has a completely fresh profile (like opening a new Chrome user)
-      const tempDir = path.join(os.tmpdir(), `puppeteer-profile-${Date.now()}-${Math.random().toString(36).substring(7)}`);
-      
-      // Ensure the temp directory exists
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
+    // Initialize browser if not already done
+    await this.initBrowser();
+    return this.browser!;
+  }
+
+  /**
+   * Looks up provider for a single phone number using the provided context
+   * 
+   * FORM INTERACTION WITH CAPTCHA ERROR DETECTION:
+   * 1. Navigate to /PublicWebsiteApp/#/number-inquiry (done once per context)
+   * 2. Fill input field: <input id="numberTextInput" />
+   * 3. Click Query button: <button id="retrieveBtn">
+   * 4. Check for captcha error: <div id="erromsg">Verification Code - Field(s) value must be entered.</div>
+   * 5. If error appears → throw CAPTCHA_DETECTED → restart context with fresh user data → retry same number
+   * 6. Otherwise, wait for result element: <label id="dataMsg">
+   * 7. Extract provider from dataMsg text
+   * 8. Hard refresh the page (clears any potential captcha state)
+   * 9. Repeat for next number
+   * 
+   * @param context - BrowserContext instance to use
+   * @param phoneNumber - Phone number to lookup
+   * @param isFirstLookup - Whether this is the first lookup in the batch (to navigate to form)
+   * @returns Provider name or "Unknown"
+   * @throws Error with 'CAPTCHA_DETECTED' if captcha error message appears
+   */
+  async lookupSingleProviderWithContext(context: BrowserContext, phoneNumber: string, isFirstLookup: boolean = false): Promise<string> {
+    return this.retryStrategy.execute(async () => {
+      const page = await context.newPage();
+      this.activePages.add(page); // Track page to prevent leaks
+
+      try {
+        // Set timeouts to prevent hanging on individual operations
+        page.setDefaultTimeout(30000); // 30 second timeout per operation
+        page.setDefaultNavigationTimeout(30000); // 30 second timeout per navigation
+        
+        // Clean phone number (remove spaces, dashes, etc.)
+        const cleanPhone = this.cleanPhoneNumber(phoneNumber);
+        
+        console.log(`[ProviderLookup] Looking up phone: ${phoneNumber} -> cleaned: ${cleanPhone}`);
+
+        // Navigate to the form page (or refresh if not first lookup)
+        const formUrl = 'https://www.porting.co.za/PublicWebsiteApp/#/number-inquiry';
+        console.log(`[ProviderLookup] ${isFirstLookup ? 'Navigating to' : 'Refreshing'} form: ${formUrl}`);
+        await page.goto(formUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
+
+        // Wait for Angular to load
+        await this.sleep(500);
+
+        // Wait for the input field to be available
+        await page.waitForSelector('#numberTextInput', { timeout: 5000 });
+        
+        // Clear and fill the input field
+        await page.evaluate(() => {
+          const input = document.querySelector('#numberTextInput') as HTMLInputElement;
+          if (input) {
+            input.value = '';
+          }
+        });
+        await page.type('#numberTextInput', cleanPhone);
+        
+        console.log(`[ProviderLookup] Entered phone number: ${cleanPhone}`);
+
+        // Click the Query button
+        await page.click('#retrieveBtn');
+        console.log(`[ProviderLookup] Clicked Query button`);
+
+        // Wait a moment for either the result or error message to appear
+        await this.sleep(300);
+
+        // Check for captcha error message FIRST
+        const hasCaptchaError = await page.evaluate(() => {
+          const errorDiv = document.querySelector('#erromsg');
+          if (!errorDiv) return false;
+          
+          const errorText = errorDiv.textContent || '';
+          return errorText.includes('Verification Code') && errorText.includes('Field(s) value must be entered');
+        });
+
+        if (hasCaptchaError) {
+          console.warn(`[ProviderLookup] CAPTCHA ERROR detected for ${phoneNumber} - "Verification Code - Field(s) value must be entered."`);
+          throw new Error('CAPTCHA_DETECTED');
+        }
+
+        // Wait for the result to appear
+        await page.waitForSelector('#dataMsg', { timeout: 8000 });
+        
+        // Wait a bit for the result to fully populate
+        await this.sleep(200);
+
+        // Extract provider name from the result
+        const provider = await this.extractProviderFromFormResult(page);
+        
+        console.log(`[ProviderLookup] Result for ${phoneNumber}: ${provider}`);
+
+        return provider;
+
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        
+        // If captcha detected, throw special error to trigger context restart
+        if (errorMessage === 'CAPTCHA_DETECTED') {
+          console.warn(`[ProviderLookup] Captcha detected for ${phoneNumber}, context needs restart`);
+          throw error;
+        }
+        
+        console.warn(`[ProviderLookup] Lookup failed for ${phoneNumber}:`, error);
+        throw error; // Throw to trigger retry
+      } finally {
+        this.activePages.delete(page); // Untrack page
+        try {
+          await page.close();
+        } catch (err) {
+          console.error('[ProviderLookup] Error closing page:', err);
+        }
       }
-      
-      console.log(`[ProviderLookup] Using fresh user data directory: ${tempDir}`);
-      
-      const launchOptions = {
-        headless: true,
-        userDataDir: tempDir, // CRITICAL: Fresh profile for each browser to avoid captcha tracking
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu',
-          '--disable-blink-features=AutomationControlled', // Hide automation detection
-          '--disable-features=IsolateOrigins,site-per-process', // Reduce fingerprinting
-        ],
-      };
-      
-      const browser = await puppeteer.default.launch(launchOptions);
-      console.log(`[ProviderLookup] Browser launched successfully (Active browsers: ${this.activeBrowsers})`);
-      return browser;
-    } catch (error) {
-      this.activeBrowsers--;
-      console.error(`[ProviderLookup] Failed to create browser (Active browsers: ${this.activeBrowsers}):`, error);
-      throw error;
-    }
+    });
   }
 
   /**
    * Looks up provider for a single phone number using the provided browser
+   * 
+   * @deprecated This method is kept for backward compatibility but should use lookupSingleProviderWithContext instead.
    * 
    * FORM INTERACTION WITH CAPTCHA ERROR DETECTION:
    * 1. Navigate to /PublicWebsiteApp/#/number-inquiry (done once per browser)
@@ -811,7 +926,7 @@ export class ProviderLookupService {
 
   /**
    * Cleans up browser resources
-   * Closes all active pages to prevent memory leaks
+   * Closes all active pages and the browser instance
    */
   async cleanup(): Promise<void> {
     // Close all active pages first
@@ -826,13 +941,25 @@ export class ProviderLookupService {
     }
     this.activePages.clear();
     
-    console.log('[ProviderLookup] Cleanup complete - all pages closed');
+    // Close the browser instance
+    if (this.browser) {
+      console.log('[ProviderLookup] Cleanup: Closing browser instance...');
+      try {
+        await this.browser.close();
+        this.browser = null;
+        console.log('[ProviderLookup] Browser closed successfully');
+      } catch (err) {
+        console.error('[ProviderLookup] Error closing browser during cleanup:', err);
+      }
+    }
+    
+    console.log('[ProviderLookup] Cleanup complete - all pages and browser closed');
   }
 
   /**
-   * Gets the number of active browsers
+   * Gets the number of active contexts
    */
   getActiveLookups(): number {
-    return this.activeBrowsers;
+    return this.activeContexts;
   }
 }

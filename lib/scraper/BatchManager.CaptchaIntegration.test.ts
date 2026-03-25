@@ -9,7 +9,7 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { BatchManager, ProviderLookup } from './BatchManager';
 import { CaptchaDetector, CaptchaAction, type CaptchaResponseContext } from './CaptchaDetector';
-import type { Page } from 'puppeteer';
+import type { Page } from 'playwright';
 
 describe('BatchManager - CaptchaDetector Integration', () => {
   let batchManager: BatchManager;

@@ -7,11 +7,11 @@
 
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { ProviderLookupService } from './provider-lookup-service';
-import type { Browser, Page } from 'puppeteer';
+import type { Browser, Page } from 'playwright';
 
-// Mock puppeteer
-jest.mock('puppeteer', () => ({
-  default: {
+// Mock playwright
+jest.mock('playwright', () => ({
+  chromium: {
     launch: jest.fn(),
   },
 }));
@@ -43,15 +43,21 @@ describe('ProviderLookupService Integration with BatchManager', () => {
       close: jest.fn(async () => {}),
     };
 
-    // Create mock browser
-    mockBrowser = {
+    // Create mock context
+    const mockContext = {
       newPage: jest.fn(async () => mockPage),
       close: jest.fn(async () => {}),
     };
 
-    // Mock puppeteer.launch
-    const puppeteer = require('puppeteer');
-    puppeteer.default.launch.mockResolvedValue(mockBrowser);
+    // Create mock browser
+    mockBrowser = {
+      newContext: jest.fn(async () => mockContext),
+      close: jest.fn(async () => {}),
+    };
+
+    // Mock playwright.chromium.launch
+    const playwright = require('playwright');
+    playwright.chromium.launch.mockResolvedValue(mockBrowser);
 
     // Create service instance
     service = new ProviderLookupService({

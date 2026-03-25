@@ -15,7 +15,7 @@ import fc from 'fast-check';
 import { pool } from '@/lib/db';
 import { batchLookupProviders } from '@/lib/scraper/provider-lookup';
 
-// Mock the provider lookup to avoid actual Puppeteer calls in tests
+// Mock the provider lookup to avoid actual Playwright calls in tests
 jest.mock('@/lib/scraper/provider-lookup', () => ({
   batchLookupProviders: jest.fn(),
   convertToProviderInfo: jest.fn(),

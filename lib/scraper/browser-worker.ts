@@ -11,7 +11,7 @@
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 24.1, 24.3
  */
 
-import type { Browser, Page } from 'puppeteer';
+import type { BrowserContext, Page } from 'playwright';
 import { EventEmitter } from 'events';
 import { ScrapedBusiness, ScrapeConfig } from './types';
 import { IndustryScraper } from './industry-scraper';
@@ -22,7 +22,7 @@ export class BrowserWorker {
   private workerId: number;
   private config: ScrapeConfig;
   private eventEmitter: EventEmitter;
-  private browser: Browser | null = null;
+  private context: BrowserContext | null = null;
   private errorLogger: ErrorLogger;
   private activeScrapes: number = 0;
   private isStopped: boolean = false;
@@ -65,9 +65,9 @@ export class BrowserWorker {
         return allBusinesses;
       }
 
-      // Initialize browser if not already initialized
-      if (!this.browser) {
-        await this.initBrowser();
+      // Initialize context if not already initialized
+      if (!this.context) {
+        await this.initContext();
       }
 
       // If no industries, treat as a single search with empty industry string
@@ -152,8 +152,8 @@ export class BrowserWorker {
    * @returns Array of scraped businesses
    */
   private async scrapeIndustry(town: string, industry: string): Promise<ScrapedBusiness[]> {
-    if (!this.browser) {
-      throw new Error(`Worker ${this.workerId}: Browser not initialized`);
+    if (!this.context) {
+      throw new Error(`Worker ${this.workerId}: Context not initialized`);
     }
 
     // Check if stopped
@@ -168,14 +168,8 @@ export class BrowserWorker {
 
     try {
       // Create new page for this search
-      page = await this.browser.newPage();
+      page = await this.context.newPage();
       this.activePages.add(page);
-
-      // Set viewport and user agent
-      await page.setViewport({ width: 1920, height: 1080 });
-      await page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      );
 
       // Set timeouts to prevent hanging on individual operations
       // Note: These are per-operation timeouts, not total page lifetime
@@ -212,28 +206,28 @@ export class BrowserWorker {
   }
 
   /**
-   * Initializes the browser instance with optimal configuration
-   * Requirement 5.5: Throw error with full context if browser initialization fails
+   * Initializes the browser context with optimal configuration
+   * Requirement 5.5: Throw error with full context if context initialization fails
    * 
-   * @throws Error if browser fails to launch
+   * @throws Error if context fails to initialize
    */
-  private async initBrowser(): Promise<void> {
+  private async initContext(): Promise<void> {
     try {
-      console.log(`[Worker ${this.workerId}] Initializing browser...`);
+      console.log(`[Worker ${this.workerId}] Initializing context...`);
 
-      // Use centralized browser manager to prevent conflicts
-      this.browser = await browserManager.getBrowser(`scraper-worker-${this.workerId}`);
+      // Use centralized browser manager to get context
+      this.context = await browserManager.getContext(`scraper-worker-${this.workerId}`);
 
-      console.log(`[Worker ${this.workerId}] Browser initialized successfully`);
+      console.log(`[Worker ${this.workerId}] Context initialized successfully`);
 
-      // Requirement 24.3: Wait 2 seconds after browser creation before first request
+      // Requirement 24.3: Wait 2 seconds after context creation before first request
       await this.sleep(2000);
 
     } catch (error) {
       // Requirement 5.5: Throw error with full context
       this.errorLogger.logBrowserError(error, {
         workerId: this.workerId,
-        operation: 'initBrowser',
+        operation: 'initContext',
       });
 
       // Better error serialization for debugging
@@ -244,19 +238,19 @@ export class BrowserWorker {
           : String(error);
       
       throw new Error(
-        `Worker ${this.workerId}: Failed to initialize browser - ${errorMessage}`
+        `Worker ${this.workerId}: Failed to initialize context - ${errorMessage}`
       );
     }
   }
 
   /**
-   * Cleans up browser resources
-   * Closes browser and releases all resources
+   * Cleans up context resources
+   * Releases context back to manager
    */
   async cleanup(): Promise<void> {
-    if (this.browser) {
+    if (this.context) {
       try {
-        console.log(`[Worker ${this.workerId}] Cleaning up browser...`);
+        console.log(`[Worker ${this.workerId}] Cleaning up context...`);
         
         // Close all active pages first
         for (const page of this.activePages) {
@@ -268,16 +262,16 @@ export class BrowserWorker {
         }
         this.activePages.clear();
         
-        // Release browser back to manager instead of closing directly
-        await browserManager.releaseBrowser(this.browser);
-        this.browser = null;
-        console.log(`[Worker ${this.workerId}] Browser released successfully`);
+        // Release context back to manager
+        await browserManager.releaseContext(this.context);
+        this.context = null;
+        console.log(`[Worker ${this.workerId}] Context released successfully`);
       } catch (error) {
         this.errorLogger.logBrowserError(error, {
           workerId: this.workerId,
           operation: 'cleanup',
         });
-        console.error(`[Worker ${this.workerId}] Error cleaning up browser:`, error);
+        console.error(`[Worker ${this.workerId}] Error cleaning up context:`, error);
       }
     }
   }

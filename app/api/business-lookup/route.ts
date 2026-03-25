@@ -12,7 +12,7 @@ import { ProviderLookupService } from '@/lib/scraper/provider-lookup-service';
 import { browserManager } from '@/lib/scraper/browser-manager';
 
 export async function POST(request: NextRequest) {
-  let browser = null;
+  let context = null;
   let providerLookup: ProviderLookupService | null = null;
 
   try {
@@ -29,10 +29,10 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API /api/business-lookup] Looking up businesses for: ${businessQuery}`);
 
-    // Get browser from centralized manager
-    browser = await browserManager.getBrowser('business-lookup');
+    // Get context from centralized manager (Playwright API)
+    context = await browserManager.getContext('business-lookup');
 
-    const page = await browser.newPage();
+    const page = await context.newPage();
 
     // Create business lookup scraper
     const scraper = new BusinessLookupScraper(page, businessQuery);
@@ -85,9 +85,9 @@ export async function POST(request: NextRequest) {
       await providerLookup.cleanup();
     }
     
-    // Release browser back to manager
-    if (browser) {
-      await browserManager.releaseBrowser(browser);
+    // Release context back to manager
+    if (context) {
+      await browserManager.releaseContext(context);
     }
   }
 }

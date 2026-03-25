@@ -59,30 +59,30 @@ export async function POST(request: NextRequest) {
     const scrapeConfig: ScrapeConfig = {
       towns,
       industries,
-      simultaneousTowns: config?.simultaneousTowns || 2,
-      simultaneousIndustries: config?.simultaneousIndustries || 2,
-      simultaneousLookups: config?.simultaneousLookups || 2,
+      simultaneousTowns: config?.simultaneousTowns || 3,
+      simultaneousIndustries: config?.simultaneousIndustries || 3,
+      simultaneousLookups: config?.simultaneousLookups || 3,
       enableProviderLookup: config?.enableProviderLookup !== undefined ? config.enableProviderLookup : true, // Default to true
     };
 
     // Validate concurrency ranges
-    if (scrapeConfig.simultaneousTowns < 1 || scrapeConfig.simultaneousTowns > 5) {
+    if (scrapeConfig.simultaneousTowns < 1 || scrapeConfig.simultaneousTowns > 8) {
       return NextResponse.json(
-        { error: 'simultaneousTowns must be between 1 and 5' },
+        { error: 'simultaneousTowns must be between 1 and 8' },
         { status: 400 }
       );
     }
 
-    if (scrapeConfig.simultaneousIndustries < 1 || scrapeConfig.simultaneousIndustries > 3) {
+    if (scrapeConfig.simultaneousIndustries < 1 || scrapeConfig.simultaneousIndustries > 5) {
       return NextResponse.json(
-        { error: 'simultaneousIndustries must be between 1 and 3' },
+        { error: 'simultaneousIndustries must be between 1 and 5' },
         { status: 400 }
       );
     }
 
-    if (scrapeConfig.simultaneousLookups < 1 || scrapeConfig.simultaneousLookups > 3) {
+    if (scrapeConfig.simultaneousLookups < 1 || scrapeConfig.simultaneousLookups > 5) {
       return NextResponse.json(
-        { error: 'simultaneousLookups must be between 1 and 3' },
+        { error: 'simultaneousLookups must be between 1 and 5' },
         { status: 400 }
       );
     }

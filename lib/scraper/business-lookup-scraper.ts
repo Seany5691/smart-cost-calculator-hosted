@@ -4,7 +4,7 @@
  * Handles both list view (multiple results) and details view (single business)
  */
 
-import { Page } from 'puppeteer';
+import { Page } from 'playwright';
 import { ScrapedBusiness } from './types';
 import { ErrorLogger } from './error-logger';
 
@@ -41,7 +41,7 @@ export class BusinessLookupScraper {
 
       // Wait for page to load (reduced from 2000ms to 1000ms)
       console.log(`[BusinessLookup] Waiting 1 second for page to load...`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await this.page.waitForTimeout(1000);
 
       // Detect view type
       console.log(`[BusinessLookup] Detecting view type...`);
@@ -245,8 +245,9 @@ export class BusinessLookupScraper {
         await this.page.waitForSelector('div[role="feed"]', { timeout: 10000 });
         console.log(`[BusinessLookup] Feed element found`);
 
-        // Get business cards (limit to 3) - FIXED: Use $$() to get array of elements
-        const cards = await this.page.$$('div[role="feed"] a.hfpxzc');
+        // Get business cards (limit to 3) - Use Playwright locator API
+        const cardsLocator = this.page.locator('div[role="feed"] a.hfpxzc');
+        const cards = await cardsLocator.all();
         console.log(`[BusinessLookup] Found ${cards.length} business cards in list view`);
 
         const limitedCards = cards.slice(0, 3);

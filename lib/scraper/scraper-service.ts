@@ -3,8 +3,7 @@
  * Handles Google Maps scraping operations
  */
 
-import { Page } from 'puppeteer';
-import { getBrowserPool } from './browser-pool';
+import { Page } from 'playwright';
 import { batchLookupProviders } from './provider-lookup';
 import { getRateLimiter } from './rate-limiter';
 import {
@@ -211,6 +210,7 @@ export async function getSessionStatus(sessionId: string): Promise<SessionStatus
 
 /**
  * Process scraping for a session
+ * @deprecated This function is no longer used. Use ScrapingOrchestrator instead.
  */
 async function processScraping(
   sessionId: string,
@@ -218,273 +218,29 @@ async function processScraping(
   config: ScrapeConfig,
   state?: any
 ): Promise<void> {
-  const session = activeSessions.get(sessionId);
-  if (!session) return;
-
-  const browserPool = getBrowserPool();
-  await browserPool.initialize();
-
-  const startTownIndex = state?.currentTownIndex || 0;
-  const completedTowns = state?.completedTowns || [];
-  let totalBusinesses = 0;
-
-  try {
-    // Process towns sequentially to avoid serverless timeouts
-    for (let townIndex = startTownIndex; townIndex < config.towns.length; townIndex++) {
-      // Check if session is paused or stopped
-      if (session.status === 'paused' || session.status === 'stopped') {
-        await updateSessionState(sessionId, {
-          currentTownIndex: townIndex,
-          currentIndustryIndex: 0,
-          completedTowns,
-        });
-        return;
-      }
-
-      const town = config.towns[townIndex];
-      session.currentTown = town;
-
-      session.logs.push({
-        timestamp: new Date().toISOString(),
-        level: 'info',
-        message: `Starting scraping for town: ${town}`,
-      });
-
-      const townStartTime = Date.now();
-      let townBusinessCount = 0;
-
-      // Process industries for this town
-      for (const industry of config.industries) {
-        if ((session.status as string) === 'paused' || (session.status as string) === 'stopped') {
-          await updateSessionState(sessionId, {
-            currentTownIndex: townIndex,
-            currentIndustryIndex: 0,
-            completedTowns,
-          });
-          return;
-        }
-
-        session.currentIndustry = industry;
-
-        try {
-          // Use rate limiter for scraping
-          const rateLimiter = getRateLimiter({ requestsPerSecond: 1, maxRetries: 3 });
-          const businesses = await rateLimiter.execute(() =>
-            scrapeGoogleMaps(town, industry)
-          );
-
-          townBusinessCount += businesses.length;
-          totalBusinesses += businesses.length;
-
-          // Perform provider lookups for businesses with phone numbers
-          const businessesWithPhones = businesses.filter((b) => b.phone && b.phone.trim() !== '');
-          
-          if (businessesWithPhones.length > 0) {
-            session.logs.push({
-              timestamp: new Date().toISOString(),
-              level: 'info',
-              message: `Looking up providers for ${businessesWithPhones.length} phone numbers...`,
-            });
-
-            try {
-              const phoneNumbers = businessesWithPhones.map((b) => b.phone);
-              const providerMap = await batchLookupProviders(phoneNumbers);
-
-              // Update businesses with provider information
-              for (const business of businessesWithPhones) {
-                const providerInfo = providerMap.get(business.phone);
-                if (providerInfo) {
-                  business.provider = providerInfo.provider;
-                } else {
-                  business.provider = 'Unknown';
-                }
-              }
-
-              session.logs.push({
-                timestamp: new Date().toISOString(),
-                level: 'info',
-                message: `Provider lookups completed. Found ${providerMap.size} providers.`,
-              });
-            } catch (error: any) {
-              session.logs.push({
-                timestamp: new Date().toISOString(),
-                level: 'error',
-                message: `Provider lookup failed: ${error.message}`,
-              });
-
-              // Set all providers to Unknown on failure
-              for (const business of businessesWithPhones) {
-                if (!business.provider) {
-                  business.provider = 'Unknown';
-                }
-              }
-            }
-          }
-
-          // Save businesses to database
-          for (const business of businesses) {
-            await saveScrapedBusiness(sessionId, business);
-          }
-
-          session.logs.push({
-            timestamp: new Date().toISOString(),
-            level: 'info',
-            message: `Scraped ${businesses.length} businesses for ${industry} in ${town}`,
-          });
-        } catch (error: any) {
-          session.logs.push({
-            timestamp: new Date().toISOString(),
-            level: 'error',
-            message: `Error scraping ${industry} in ${town}: ${error.message}`,
-          });
-        }
-
-        // Rate limiting: wait 1 second between industries
-        await sleep(1000);
-      }
-
-      const townEndTime = Date.now();
-      const townDuration = (townEndTime - townStartTime) / 1000;
-
-      completedTowns.push(town);
-      session.townsRemaining = config.towns.length - completedTowns.length;
-      session.businessesScraped = totalBusinesses;
-      session.progress = Math.round((completedTowns.length / config.towns.length) * 100);
-
-      // Calculate estimated time remaining
-      const avgTimePerTown = townDuration;
-      session.estimatedTimeRemaining = Math.round(avgTimePerTown * session.townsRemaining);
-
-      session.logs.push({
-        timestamp: new Date().toISOString(),
-        level: 'info',
-        message: `Completed town ${town}: ${townBusinessCount} businesses in ${townDuration.toFixed(1)}s`,
-      });
-
-      // Update database
-      await updateSessionProgress(sessionId, session.progress, {
-        currentTownIndex: townIndex + 1,
-        currentIndustryIndex: 0,
-        completedTowns,
-      });
-    }
-
-    // Scraping completed
-    session.status = 'completed';
-    session.progress = 100;
-    session.logs.push({
-      timestamp: new Date().toISOString(),
-      level: 'info',
-      message: `Scraping completed: ${totalBusinesses} businesses scraped`,
-    });
-
-    await updateSessionStatus(sessionId, 'completed', {
-      totalBusinesses,
-      townsCompleted: completedTowns.length,
-      errors: session.logs.filter((log) => log.level === 'error').length,
-    });
-  } catch (error: any) {
-    session.status = 'error';
-    session.logs.push({
-      timestamp: new Date().toISOString(),
-      level: 'error',
-      message: `Fatal error: ${error.message}`,
-    });
-
-    await updateSessionStatus(sessionId, 'error');
-  }
+  // DEPRECATED: This function is no longer used
+  throw new Error('processScraping is deprecated. Use ScrapingOrchestrator instead.');
 }
 
 /**
  * Scrape Google Maps for businesses
+ * @deprecated This function is no longer used. Use IndustryScraper or BusinessLookupScraper instead.
  */
 async function scrapeGoogleMaps(
   town: string,
   industry: string
 ): Promise<ScrapedBusiness[]> {
-  const browserPool = getBrowserPool();
-  const { page } = await browserPool.acquirePage();
-
-  try {
-    const searchQuery = `${industry} in ${town}, South Africa`;
-    const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
-
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-
-    // Wait for results to load
-    await page.waitForSelector('div[role="feed"]', { timeout: 10000 });
-
-    // Scroll to load more results
-    await autoScroll(page);
-
-    // Extract business data
-    const businesses = await page.evaluate((town, industry) => {
-      const results: any[] = [];
-      const elements = document.querySelectorAll('div[role="feed"] > div > div > a');
-
-      elements.forEach((element: any) => {
-        try {
-          const href = element.getAttribute('href') || '';
-          const nameElement = element.querySelector('div[class*="fontHeadlineSmall"]');
-          const addressElement = element.querySelector('div[class*="fontBodyMedium"]');
-
-          if (nameElement) {
-            const name = nameElement.textContent?.trim() || '';
-            const address = addressElement?.textContent?.trim() || '';
-
-            results.push({
-              maps_address: href,
-              name,
-              phone: '', // Will be extracted in detail page if needed
-              provider: '',
-              address,
-              type_of_business: industry,
-              town,
-            });
-          }
-        } catch (error) {
-          console.error('Error extracting business:', error);
-        }
-      });
-
-      return results;
-    }, town, industry);
-
-    // Identify providers for phone numbers
-    const businessesWithProviders = businesses.map((business) => ({
-      ...business,
-      provider: business.provider || 'Unknown', // Provider will be looked up after scraping
-    }));
-
-    return businessesWithProviders;
-  } finally {
-    await browserPool.releasePage(page);
-  }
+  // DEPRECATED: This function is no longer used
+  throw new Error('scrapeGoogleMaps is deprecated. Use IndustryScraper or BusinessLookupScraper instead.');
 }
 
 /**
  * Auto-scroll to load more results
+ * @deprecated This function is no longer used.
  */
 async function autoScroll(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    const feed = document.querySelector('div[role="feed"]');
-    if (!feed) return;
-
-    await new Promise<void>((resolve) => {
-      let totalHeight = 0;
-      const distance = 100;
-      const timer = setInterval(() => {
-        const scrollHeight = feed.scrollHeight;
-        feed.scrollBy(0, distance);
-        totalHeight += distance;
-
-        if (totalHeight >= scrollHeight || totalHeight > 3000) {
-          clearInterval(timer);
-          resolve();
-        }
-      }, 100);
-    });
-  });
+  // DEPRECATED: This function is no longer used
+  throw new Error('autoScroll is deprecated.');
 }
 
 /**

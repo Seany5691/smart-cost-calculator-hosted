@@ -9,7 +9,7 @@
 
 import { CaptchaDetector, CaptchaAction, CaptchaResponseContext, CaptchaAlert } from './CaptchaDetector';
 import { BatchManager } from './BatchManager';
-import type { Page } from 'puppeteer';
+import type { Page } from 'playwright';
 
 /**
  * Example implementation of captcha response context for a scraping session

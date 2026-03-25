@@ -14,7 +14,7 @@ import { RetryQueue } from './RetryQueue';
 import { NavigationManager } from './NavigationManager';
 import { BatchManager, ProviderLookup } from './BatchManager';
 import { query } from '../db';
-import type { Page } from 'puppeteer';
+import type { Page } from 'playwright';
 
 // Mock the database module
 jest.mock('../db');

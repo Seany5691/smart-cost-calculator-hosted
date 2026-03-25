@@ -11,7 +11,7 @@
 
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { CaptchaDetector, CaptchaAction } from './CaptchaDetector';
-import type { Page } from 'puppeteer';
+import type { Page } from 'playwright';
 
 // Mock logger
 jest.mock('../logger', () => ({

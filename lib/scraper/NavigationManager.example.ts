@@ -6,7 +6,7 @@
  */
 
 import { NavigationManager } from './NavigationManager';
-import type { Page } from 'puppeteer';
+import type { Page } from 'playwright';
 
 /**
  * Example 1: Basic usage with default settings

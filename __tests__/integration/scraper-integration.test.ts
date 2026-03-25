@@ -18,18 +18,26 @@ import { ProviderLookupService } from '../../lib/scraper/provider-lookup-service
 import { ScrapeConfig, ScrapedBusiness } from '../../lib/scraper/types';
 import { v4 as uuidv4 } from 'uuid';
 
-// Mock puppeteer to avoid actual browser launches
-jest.mock('puppeteer', () => ({
-  default: {
+// Mock playwright to avoid actual browser launches
+jest.mock('playwright', () => ({
+  chromium: {
     launch: jest.fn().mockResolvedValue({
-      newPage: jest.fn().mockResolvedValue({
-        goto: jest.fn(),
-        waitForSelector: jest.fn(),
-        waitForTimeout: jest.fn(),
-        evaluate: jest.fn(),
-        $: jest.fn(),
-        setViewport: jest.fn(),
-        setUserAgent: jest.fn(),
+      newContext: jest.fn().mockResolvedValue({
+        newPage: jest.fn().mockResolvedValue({
+          goto: jest.fn(),
+          waitForSelector: jest.fn(),
+          waitForTimeout: jest.fn(),
+          evaluate: jest.fn(),
+          locator: jest.fn().mockReturnValue({
+            count: jest.fn().mockResolvedValue(0),
+            all: jest.fn().mockResolvedValue([]),
+            first: jest.fn(),
+            textContent: jest.fn().mockResolvedValue(''),
+          }),
+          setDefaultTimeout: jest.fn(),
+          setDefaultNavigationTimeout: jest.fn(),
+          close: jest.fn(),
+        }),
         close: jest.fn(),
       }),
       close: jest.fn(),

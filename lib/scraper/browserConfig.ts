@@ -1,14 +1,14 @@
 /**
- * Browser Configuration - Optimal Puppeteer settings for scraping
+ * Browser Configuration - Optimal Playwright settings for scraping
  * 
- * This module provides browser configuration for Puppeteer that works
+ * This module provides browser configuration for Playwright that works
  * in both local development and serverless environments. It includes
  * optimal args for headless operation and resource management.
  * 
  * Requirements: 23.1, 23.2, 23.3, 23.4, 23.5
  */
 
-import type { PuppeteerLaunchOptions } from 'puppeteer';
+import type { LaunchOptions } from 'playwright';
 
 /**
  * Get browser launch options optimized for serverless environments
@@ -17,9 +17,9 @@ import type { PuppeteerLaunchOptions } from 'puppeteer';
  * and serverless environments where resources are limited.
  * 
  * @param headless - Whether to run in headless mode (default: true)
- * @returns Puppeteer launch options
+ * @returns Playwright launch options
  */
-export function getBrowserLaunchOptions(headless: boolean = true): PuppeteerLaunchOptions {
+export function getBrowserLaunchOptions(headless: boolean = true): LaunchOptions {
   return {
     headless: headless,
     args: [
@@ -31,30 +31,13 @@ export function getBrowserLaunchOptions(headless: boolean = true): PuppeteerLaun
       '--disable-dev-shm-usage',
       
       // Performance optimizations
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
       '--disable-gpu',
       
-      // Stability improvements
-      '--disable-background-timer-throttling',
-      '--disable-backgrounding-occluded-windows',
-      '--disable-renderer-backgrounding',
-      
-      // Resource management
-      '--disable-extensions',
-      '--disable-default-apps',
-      '--disable-sync',
-      
-      // Window size for consistent rendering
-      '--window-size=1920,1080',
+      // Hide automation
+      '--disable-blink-features=AutomationControlled',
     ],
-    defaultViewport: {
-      width: 1920,
-      height: 1080,
-    },
-    // Increase timeout for slow networks
-    timeout: 60000,
+    timeout: 30000,
+    chromiumSandbox: false,
   };
 }
 
@@ -90,30 +73,21 @@ export function getChromiumPath(): string | undefined {
 }
 
 /**
- * Get Puppeteer instance (supports both puppeteer and puppeteer-core)
+ * Get Playwright instance
  * 
- * This function dynamically imports the appropriate Puppeteer package
- * based on the environment. Use puppeteer-core in serverless environments
- * to reduce bundle size.
+ * This function dynamically imports the Playwright package.
  * 
- * @returns Puppeteer instance
+ * @returns Playwright instance
  */
-export async function getPuppeteer(): Promise<any> {
-  // Try puppeteer-core first (smaller bundle, requires external Chromium)
+export async function getPlaywright(): Promise<any> {
   try {
-    const puppeteerCore = await import('puppeteer-core');
-    return puppeteerCore.default || puppeteerCore;
+    const playwright = await import('playwright');
+    return playwright;
   } catch (error) {
-    // Fall back to puppeteer (includes bundled Chromium)
-    try {
-      const puppeteer = await import('puppeteer');
-      return puppeteer.default || puppeteer;
-    } catch (fallbackError) {
-      throw new Error(
-        'Neither puppeteer nor puppeteer-core could be loaded. ' +
-        'Please install one of them: npm install puppeteer OR npm install puppeteer-core'
-      );
-    }
+    throw new Error(
+      'Playwright could not be loaded. ' +
+      'Please install it: npm install playwright'
+    );
   }
 }
 
@@ -124,10 +98,10 @@ export async function getPuppeteer(): Promise<any> {
  * functions to create a ready-to-use browser instance.
  * 
  * @param headless - Whether to run in headless mode (default: true)
- * @returns Promise that resolves to a Puppeteer browser instance
+ * @returns Promise that resolves to a Playwright browser instance
  */
 export async function createBrowser(headless: boolean = true): Promise<any> {
-  const puppeteer = await getPuppeteer();
+  const playwright = await getPlaywright();
   const options = getBrowserLaunchOptions(headless);
   const executablePath = getChromiumPath();
   
@@ -136,7 +110,7 @@ export async function createBrowser(headless: boolean = true): Promise<any> {
   }
   
   try {
-    const browser = await puppeteer.launch(options);
+    const browser = await playwright.chromium.launch(options);
     return browser;
   } catch (error) {
     throw new Error(

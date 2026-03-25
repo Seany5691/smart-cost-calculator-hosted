@@ -10,7 +10,7 @@
  * Requirements: 3.3, 4.1
  */
 
-import type { Page } from 'puppeteer';
+import type { Page } from 'playwright';
 import { logger } from '../logger';
 
 /**

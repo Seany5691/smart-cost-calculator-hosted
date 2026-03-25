@@ -17,7 +17,7 @@
  */
 
 import { logger } from '../logger';
-import type { Page } from 'puppeteer';
+import type { Page } from 'playwright';
 import { CaptchaDetector, CaptchaAction, type CaptchaResponseContext } from './CaptchaDetector';
 import { RetryQueue } from './RetryQueue';
 

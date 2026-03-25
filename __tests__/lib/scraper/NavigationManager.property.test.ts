@@ -14,7 +14,7 @@
 
 import * as fc from 'fast-check';
 import { NavigationManager } from '../../../lib/scraper/NavigationManager';
-import type { Page } from 'puppeteer';
+import type { Page } from 'playwright';
 
 // Mock ErrorLogger
 jest.mock('../../../lib/scraper/error-logger', () => ({

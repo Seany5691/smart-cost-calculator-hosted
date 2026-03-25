@@ -11,7 +11,7 @@
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7
  */
 
-import type { Page } from 'puppeteer';
+import type { Page } from 'playwright';
 import { ErrorLogger } from './error-logger';
 import { RetryQueue } from './RetryQueue';
 
@@ -29,8 +29,8 @@ export interface NavigationOptions {
   maxTimeout?: number;
   /** Initial timeout in milliseconds (default: 60000) */
   initialTimeout?: number;
-  /** Wait strategy to use (default: 'networkidle2') */
-  waitStrategy?: 'networkidle2' | 'networkidle0' | 'domcontentloaded' | 'load';
+  /** Wait strategy to use (default: 'domcontentloaded') */
+  waitStrategy?: 'load' | 'domcontentloaded' | 'networkidle' | 'commit';
   /** RetryQueue instance for enqueueing failed navigations (optional) */
   retryQueue?: RetryQueue;
 }
@@ -39,10 +39,10 @@ export interface NavigationOptions {
  * Wait strategies for page navigation, in order of preference
  */
 const WAIT_STRATEGIES = [
-  'networkidle2',
-  'networkidle0',
   'domcontentloaded',
   'load',
+  'networkidle',
+  'commit',
 ] as const;
 
 type WaitStrategy = typeof WAIT_STRATEGIES[number];
@@ -65,7 +65,7 @@ export class NavigationManager {
     minTimeout: 15000, // 15 seconds
     maxTimeout: 120000, // 120 seconds
     initialTimeout: 60000, // 60 seconds
-    waitStrategy: 'networkidle2',
+    waitStrategy: 'domcontentloaded',
   };
 
   constructor(retryQueue?: RetryQueue) {

@@ -10,7 +10,7 @@ import { browserManager } from '@/lib/scraper/browser-manager';
  * Uses the same logic as the scraper business lookup
  */
 export async function POST(request: NextRequest) {
-  let browser = null;
+  let context = null;
   let providerLookup: ProviderLookupService | null = null;
 
   try {
@@ -43,10 +43,10 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API /api/dashboard/lookup-business] Looking up businesses for: ${searchQuery}`);
 
-    // Get browser from centralized manager
-    browser = await browserManager.getBrowser('dashboard-business-lookup');
+    // Get context from centralized manager (Playwright API)
+    context = await browserManager.getContext('dashboard-business-lookup');
 
-    const page = await browser.newPage();
+    const page = await context.newPage();
 
     // Create business lookup scraper
     const scraper = new BusinessLookupScraper(page, searchQuery);
@@ -56,10 +56,10 @@ export async function POST(request: NextRequest) {
 
     console.log(`[API /api/dashboard/lookup-business] Found ${businesses.length} businesses`);
 
-    // Release browser back to manager before provider lookup
-    if (browser) {
-      await browserManager.releaseBrowser(browser);
-      browser = null;
+    // Release context back to manager before provider lookup
+    if (context) {
+      await browserManager.releaseContext(context);
+      context = null;
     }
 
     // Extract phone numbers for provider lookup
@@ -113,9 +113,9 @@ export async function POST(request: NextRequest) {
       await providerLookup.cleanup();
     }
     
-    // Release browser back to manager if still open
-    if (browser) {
-      await browserManager.releaseBrowser(browser);
+    // Release context back to manager if still open
+    if (context) {
+      await browserManager.releaseContext(context);
     }
   }
 }

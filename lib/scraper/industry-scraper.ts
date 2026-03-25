@@ -3,7 +3,7 @@
  * Scrapes Google Maps for businesses by industry and town
  */
 
-import { Page } from 'puppeteer';
+import { Page } from 'playwright';
 import { ScrapedBusiness } from './types';
 import { ErrorLogger } from './error-logger';
 import { EventEmitter } from 'events';
@@ -68,10 +68,10 @@ export class IndustryScraper {
         await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // Wait a bit for page to load
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await this.page.waitForTimeout(2000);
 
         // Check if we have a list view (multiple results) or single business view
-        const hasFeed = await this.page.$('div[role="feed"]');
+        const hasFeed = await this.page.locator('div[role="feed"]').count() > 0;
         
         let businesses: ScrapedBusiness[];
         
@@ -95,7 +95,7 @@ export class IndustryScraper {
         // If this is a timeout and we have retries left, wait and try again
         if (attempt < maxRetries && (error.message?.includes('timeout') || error.message?.includes('Navigation'))) {
           console.log(`[IndustryScraper] Waiting 3 seconds before retry...`);
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await this.page.waitForTimeout(3000);
           continue;
         }
         
@@ -124,7 +124,7 @@ export class IndustryScraper {
       await this.scrollFeed();
 
       // Wait for content to load
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await this.page.waitForTimeout(1000);
 
       // Check if we've reached the end
       const reachedEnd = await this.hasReachedEndOfList();
@@ -133,7 +133,7 @@ export class IndustryScraper {
       }
 
       // Extract business cards
-      const currentCards = await this.page.$$('div[role="feed"] .Nv2PK');
+      const currentCards = await this.page.locator('div[role="feed"] .Nv2PK').all();
       
       // If no new cards appeared, increment counter
       if (currentCards.length === previousCount) {
@@ -148,7 +148,7 @@ export class IndustryScraper {
     }
 
     // Parse all business cards
-    const cards = await this.page.$$('div[role="feed"] .Nv2PK');
+    const cards = await this.page.locator('div[role="feed"] .Nv2PK').all();
     
     for (const card of cards) {
       try {
@@ -181,10 +181,7 @@ export class IndustryScraper {
       // Extract name from qBF1Pd element (REQUIRED - return null if missing)
       let name = '';
       try {
-        name = await cardElement.$eval(
-          '.qBF1Pd',
-          (el: Element) => el.textContent?.trim() || ''
-        );
+        name = (await cardElement.locator('.qBF1Pd').textContent())?.trim() || '';
       } catch (error) {
         this.errorLogger.logError('Failed to extract business name', error);
       }
@@ -230,9 +227,9 @@ export class IndustryScraper {
       for (const infoEl of infoElements) {
         // Parse phone number (look for UsdlK class)
         try {
-          const phoneSpan = await infoEl.$('.UsdlK').catch(() => null);
+          const phoneSpan = await infoEl.locator('.UsdlK').first();
           if (phoneSpan) {
-            const phoneText = await phoneSpan.evaluate((el: Element) => el.textContent?.trim() || '');
+            const phoneText = (await phoneSpan.textContent())?.trim() || '';
             if (phoneText && !phone) {
               phone = phoneText;
             }
@@ -243,7 +240,7 @@ export class IndustryScraper {
 
         // Get all span elements
         try {
-          const spans = await infoEl.$$('span');
+          const spans = await infoEl.locator('span').all();
 
           // Collect all span texts, checking if they contain UsdlK (phone) class
           for (const span of spans) {

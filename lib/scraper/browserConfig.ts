@@ -51,6 +51,11 @@ export function getBrowserLaunchOptions(headless: boolean = true): LaunchOptions
  * @returns Path to Chromium executable or undefined for default
  */
 export function getChromiumPath(): string | undefined {
+  // Check for Puppeteer executable path (Docker/Alpine Linux)
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  
   // Check if running in AWS Lambda
   if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
     // chromium-min package installs to /opt/chromium

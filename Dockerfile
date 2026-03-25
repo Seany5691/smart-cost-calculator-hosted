@@ -31,7 +31,7 @@ WORKDIR /app
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Install Chromium and system dependencies for both Playwright and Puppeteer
+# Install Chromium and dependencies for both Playwright and Puppeteer
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -41,6 +41,14 @@ RUN apk add --no-cache \
     ttf-freefont \
     dbus \
     xvfb
+
+# Configure Puppeteer to use system Chromium (CRITICAL - this is what was working before)
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
+# Configure Playwright to use system Chromium
+ENV PLAYWRIGHT_BROWSERS_PATH=0
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
@@ -55,26 +63,12 @@ COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/run-scraper-migrations.js ./run-scraper-migrations.js
 COPY --from=builder /app/run-scraper-migrations.sh ./run-scraper-migrations.sh
 
-# Copy node_modules to get playwright and puppeteer binaries
-COPY --from=deps /app/node_modules ./node_modules
-
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
 
-# Switch to nextjs user to install browsers
-USER nextjs
-
-# Install Playwright browsers for scraping
-RUN npx playwright install chromium
-
-# Install Puppeteer browsers for PDF generation
-RUN npx puppeteer browsers install chrome
-
-# Create a larger /tmp/shm directory for Chromium (switch back to root temporarily)
-USER root
+# Create a larger /tmp/shm directory for Chromium
 RUN mkdir -p /tmp/shm && chmod 1777 /tmp/shm
 
-# Switch back to nextjs user
 USER nextjs
 
 EXPOSE ${APP_INTERNAL_PORT:-3456}

@@ -11,8 +11,8 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 
-# Install Playwright browsers (must be done after npm ci)
-RUN npx playwright install --with-deps chromium
+# Install Playwright browsers (without system dependencies - we install those separately)
+RUN npx playwright install chromium
 
 # Rebuild the source code only when needed
 FROM base AS builder

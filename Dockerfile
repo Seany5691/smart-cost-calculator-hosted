@@ -11,9 +11,6 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 
-# Install Playwright browsers (without system dependencies - we install those separately)
-RUN npx playwright install chromium
-
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
@@ -34,7 +31,7 @@ WORKDIR /app
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Install Chromium and dependencies for Playwright
+# Install Playwright system dependencies
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -42,14 +39,10 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
-    dbus \
-    xvfb
+    nodejs \
+    npm
 
-# Tell Playwright to use the installed Chromium
-ENV PLAYWRIGHT_BROWSERS_PATH=/home/nextjs/.cache/ms-playwright
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-
-# Create non-root user
+# Create non-root user first
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
@@ -62,16 +55,20 @@ COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/run-scraper-migrations.js ./run-scraper-migrations.js
 COPY --from=builder /app/run-scraper-migrations.sh ./run-scraper-migrations.sh
 
-# Copy Playwright browsers from deps stage
-COPY --from=deps /root/.cache/ms-playwright /home/nextjs/.cache/ms-playwright
-
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
-RUN chown -R nextjs:nodejs /home/nextjs/.cache
 
-# Create a larger /tmp/shm directory for Chromium
+# Switch to nextjs user to install Playwright browsers
+USER nextjs
+
+# Install Playwright browsers as nextjs user
+RUN npx playwright@1.48.0 install chromium
+
+# Create a larger /tmp/shm directory for Chromium (switch back to root temporarily)
+USER root
 RUN mkdir -p /tmp/shm && chmod 1777 /tmp/shm
 
+# Switch back to nextjs user
 USER nextjs
 
 EXPOSE ${APP_INTERNAL_PORT:-3456}

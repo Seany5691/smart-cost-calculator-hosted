@@ -189,38 +189,52 @@ export class ProviderLookupService {
   ): Promise<Map<string, string>> {
     const results = new Map<string, string>();
     let completedLookups = cachedCount;
-    let batchNumber = 0;
 
     console.log(`[ProviderLookup] Using BatchManager for ${phonesToLookup.length} lookups`);
+    console.log(`[ProviderLookup] Processing with max ${this.maxConcurrentBrowsers} concurrent batches`);
 
     // Initialize single browser instance once for all batches
     await this.initBrowser();
 
-    // Process all phone numbers through BatchManager
-    for (let i = 0; i < phonesToLookup.length; i++) {
-      const phoneNumber = phonesToLookup[i];
-      
-      // Add to current batch
-      const lookup: ProviderLookup = {
-        phoneNumber,
-        metadata: { index: i },
-      };
-      
-      this.batchManager.addToBatch(lookup);
+    // Create batches of 5 phone numbers each
+    const batches: string[][] = [];
+    for (let i = 0; i < phonesToLookup.length; i += 5) {
+      batches.push(phonesToLookup.slice(i, i + 5));
+    }
 
-      // Process batch when full or at end of list
-      if (this.batchManager.isBatchFull() || i === phonesToLookup.length - 1) {
-        batchNumber++;
-        
-        const batchSize = this.batchManager.getCurrentBatchCount();
+    console.log(`[ProviderLookup] Created ${batches.length} batches of up to 5 numbers each`);
+
+    // Process batches with concurrency control
+    const concurrency = this.maxConcurrentBrowsers;
+    let globalBatchNumber = 0;
+
+    for (let i = 0; i < batches.length; i += concurrency) {
+      const batchGroup = batches.slice(i, i + concurrency);
+      console.log(`[ProviderLookup] Processing batch group ${Math.floor(i / concurrency) + 1}: ${batchGroup.length} batches in parallel`);
+
+      // Process this group of batches in parallel
+      const batchPromises = batchGroup.map(async (phoneBatch, groupIndex) => {
+        const batchNumber = globalBatchNumber + groupIndex + 1;
+        const batchSize = phoneBatch.length;
+
+        // Add phones to BatchManager
+        for (const phoneNumber of phoneBatch) {
+          const lookup: ProviderLookup = {
+            phoneNumber,
+            metadata: { batchNumber },
+          };
+          this.batchManager.addToBatch(lookup);
+        }
+
         console.log(`[ProviderLookup] Processing batch ${batchNumber} with ${batchSize} lookups`);
-        
+
         // Create context for this batch
         let context: BrowserContext | null = null;
         let lookupIndex = 0;
         let contextRestartCount = 0;
-        const MAX_CONTEXT_RESTARTS = 3; // Prevent infinite restart loop
-        
+        const MAX_CONTEXT_RESTARTS = 3;
+        const batchResults = new Map<string, string>();
+
         try {
           // Create initial context from single browser
           this.activeContexts++;
@@ -230,36 +244,29 @@ export class ProviderLookupService {
             ignoreHTTPSErrors: true,
           });
           console.log(`[ProviderLookup] [Batch ${batchNumber}] Created context for ${batchSize} lookups (Active contexts: ${this.activeContexts})`);
-          
+
           // Process the batch using BatchManager
           const batchResult = await this.batchManager.processBatch(async (lookup) => {
             lookupIndex++;
             console.log(`[ProviderLookup] [Batch ${batchNumber}] Lookup ${lookupIndex}/${batchSize}: ${lookup.phoneNumber}`);
-            
+
             try {
-              // Try lookup with current context
-              // Pass isFirstLookup flag (true for first lookup in batch)
               const provider = await this.lookupSingleProviderWithContext(context!, lookup.phoneNumber, lookupIndex === 1);
-              
-              // No delay needed - page refresh handles cleanup
-              
               return provider === 'Unknown' ? null : provider;
-              
+
             } catch (error) {
               const errorMessage = (error as Error).message;
-              
+
               // If captcha detected, restart context and retry
               if (errorMessage === 'CAPTCHA_DETECTED' && contextRestartCount < MAX_CONTEXT_RESTARTS) {
                 contextRestartCount++;
                 console.warn(`[ProviderLookup] [Batch ${batchNumber}] Captcha detected, restarting context (attempt ${contextRestartCount}/${MAX_CONTEXT_RESTARTS})`);
-                
-                // Close current context
+
                 if (context) {
                   await context.close();
                   this.activeContexts--;
                 }
-                
-                // Create new context
+
                 this.activeContexts++;
                 context = await this.browser!.newContext({
                   viewport: { width: 1920, height: 1080 },
@@ -267,68 +274,42 @@ export class ProviderLookupService {
                   ignoreHTTPSErrors: true,
                 });
                 console.log(`[ProviderLookup] [Batch ${batchNumber}] New context created after captcha`);
-                
-                // Wait a bit before retrying
+
                 await this.sleep(2000);
-                
-                // Retry the lookup with new context
+
                 try {
-                  const provider = await this.lookupSingleProviderWithContext(context!, lookup.phoneNumber, true); // First lookup with new context
-                  
-                  // No delay needed - page refresh handles cleanup
-                  
+                  const provider = await this.lookupSingleProviderWithContext(context!, lookup.phoneNumber, true);
                   return provider === 'Unknown' ? null : provider;
                 } catch (retryError) {
                   console.error(`[ProviderLookup] [Batch ${batchNumber}] Retry failed for ${lookup.phoneNumber}:`, retryError);
-                  
-                  // Add minimal delay between lookups
                   if (lookupIndex < batchSize) {
                     await this.sleep(100);
                   }
-                  
                   return null;
                 }
               }
-              
-              // All retries exhausted or other error
+
               console.error(`[ProviderLookup] All retries exhausted for ${lookup.phoneNumber}:`, error);
-              
-              // Add minimal delay between lookups
               if (lookupIndex < batchSize) {
                 await this.sleep(100);
               }
-              
               return null;
             }
           });
 
-          // Add batch results to final results
+          // Store batch results
           for (const [phone, provider] of batchResult.results.entries()) {
-            results.set(phone, provider);
-          }
-
-          completedLookups += batchResult.batchSize;
-
-          // Emit progress event
-          if (this.eventEmitter) {
-            this.eventEmitter.emit('lookup-progress', {
-              completed: completedLookups,
-              total: totalCount,
-              percentage: Math.round((completedLookups / totalCount) * 100),
-              currentBatch: batchNumber,
-              fromCache: cachedCount,
-              batchSuccessRate: batchResult.successRate,
-              batchSize: batchResult.batchSize,
-              contextRestarts: contextRestartCount,
-            });
+            batchResults.set(phone, provider);
           }
 
           console.log(`[ProviderLookup] [Batch ${batchNumber}] Complete: ${batchResult.successful} successful, ${batchResult.failed} failed (${Math.round(batchResult.successRate * 100)}% success rate, ${contextRestartCount} context restarts)`);
-          
+
+          return { batchNumber, batchResults, batchSize: batchResult.batchSize, successRate: batchResult.successRate, contextRestarts: contextRestartCount };
+
         } catch (error) {
           console.error(`[ProviderLookup] [Batch ${batchNumber}] Error processing batch:`, error);
+          return { batchNumber, batchResults, batchSize: 0, successRate: 0, contextRestarts: contextRestartCount };
         } finally {
-          // CRITICAL: Close context AFTER batch completes (not browser)
           if (context) {
             console.log(`[ProviderLookup] [Batch ${batchNumber}] Closing context after ${batchSize} lookups (Active contexts: ${this.activeContexts})`);
             await context.close();
@@ -336,7 +317,34 @@ export class ProviderLookupService {
             console.log(`[ProviderLookup] [Batch ${batchNumber}] Context closed successfully (Active contexts: ${this.activeContexts})`);
           }
         }
+      });
+
+      // Wait for all batches in this group to complete
+      const groupResults = await Promise.all(batchPromises);
+
+      // Merge results and emit progress
+      for (const { batchNumber, batchResults, batchSize, successRate, contextRestarts } of groupResults) {
+        for (const [phone, provider] of batchResults.entries()) {
+          results.set(phone, provider);
+        }
+
+        completedLookups += batchSize;
+
+        if (this.eventEmitter) {
+          this.eventEmitter.emit('lookup-progress', {
+            completed: completedLookups,
+            total: totalCount,
+            percentage: Math.round((completedLookups / totalCount) * 100),
+            currentBatch: batchNumber,
+            fromCache: cachedCount,
+            batchSuccessRate: successRate,
+            batchSize: batchSize,
+            contextRestarts: contextRestarts,
+          });
+        }
       }
+
+      globalBatchNumber += batchGroup.length;
     }
 
     return results;

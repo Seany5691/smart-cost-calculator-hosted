@@ -217,15 +217,6 @@ export class ProviderLookupService {
         const batchNumber = globalBatchNumber + groupIndex + 1;
         const batchSize = phoneBatch.length;
 
-        // Add phones to BatchManager
-        for (const phoneNumber of phoneBatch) {
-          const lookup: ProviderLookup = {
-            phoneNumber,
-            metadata: { batchNumber },
-          };
-          this.batchManager.addToBatch(lookup);
-        }
-
         console.log(`[ProviderLookup] Processing batch ${batchNumber} with ${batchSize} lookups`);
 
         // Create context for this batch
@@ -245,14 +236,23 @@ export class ProviderLookupService {
           });
           console.log(`[ProviderLookup] [Batch ${batchNumber}] Created context for ${batchSize} lookups (Active contexts: ${this.activeContexts})`);
 
-          // Process the batch using BatchManager
-          const batchResult = await this.batchManager.processBatch(async (lookup) => {
-            lookupIndex++;
-            console.log(`[ProviderLookup] [Batch ${batchNumber}] Lookup ${lookupIndex}/${batchSize}: ${lookup.phoneNumber}`);
+          // Process each phone number in the batch sequentially
+          let successCount = 0;
+          let failCount = 0;
+
+          for (let lookupIndex = 0; lookupIndex < phoneBatch.length; lookupIndex++) {
+            const phoneNumber = phoneBatch[lookupIndex];
+            console.log(`[ProviderLookup] [Batch ${batchNumber}] Lookup ${lookupIndex + 1}/${batchSize}: ${phoneNumber}`);
 
             try {
-              const provider = await this.lookupSingleProviderWithContext(context!, lookup.phoneNumber, lookupIndex === 1);
-              return provider === 'Unknown' ? null : provider;
+              const provider = await this.lookupSingleProviderWithContext(context!, phoneNumber, lookupIndex === 0);
+              
+              if (provider && provider !== 'Unknown') {
+                batchResults.set(phoneNumber, provider);
+                successCount++;
+              } else {
+                failCount++;
+              }
 
             } catch (error) {
               const errorMessage = (error as Error).message;
@@ -278,33 +278,34 @@ export class ProviderLookupService {
                 await this.sleep(2000);
 
                 try {
-                  const provider = await this.lookupSingleProviderWithContext(context!, lookup.phoneNumber, true);
-                  return provider === 'Unknown' ? null : provider;
+                  const provider = await this.lookupSingleProviderWithContext(context!, phoneNumber, true);
+                  if (provider && provider !== 'Unknown') {
+                    batchResults.set(phoneNumber, provider);
+                    successCount++;
+                  } else {
+                    failCount++;
+                  }
                 } catch (retryError) {
-                  console.error(`[ProviderLookup] [Batch ${batchNumber}] Retry failed for ${lookup.phoneNumber}:`, retryError);
-                  if (lookupIndex < batchSize) {
+                  console.error(`[ProviderLookup] [Batch ${batchNumber}] Retry failed for ${phoneNumber}:`, retryError);
+                  failCount++;
+                  if (lookupIndex < batchSize - 1) {
                     await this.sleep(100);
                   }
-                  return null;
+                }
+              } else {
+                console.error(`[ProviderLookup] Lookup failed for ${phoneNumber}:`, error);
+                failCount++;
+                if (lookupIndex < batchSize - 1) {
+                  await this.sleep(100);
                 }
               }
-
-              console.error(`[ProviderLookup] All retries exhausted for ${lookup.phoneNumber}:`, error);
-              if (lookupIndex < batchSize) {
-                await this.sleep(100);
-              }
-              return null;
             }
-          });
-
-          // Store batch results
-          for (const [phone, provider] of batchResult.results.entries()) {
-            batchResults.set(phone, provider);
           }
 
-          console.log(`[ProviderLookup] [Batch ${batchNumber}] Complete: ${batchResult.successful} successful, ${batchResult.failed} failed (${Math.round(batchResult.successRate * 100)}% success rate, ${contextRestartCount} context restarts)`);
+          const successRate = batchSize > 0 ? successCount / batchSize : 0;
+          console.log(`[ProviderLookup] [Batch ${batchNumber}] Complete: ${successCount} successful, ${failCount} failed (${Math.round(successRate * 100)}% success rate, ${contextRestartCount} context restarts)`);
 
-          return { batchNumber, batchResults, batchSize: batchResult.batchSize, successRate: batchResult.successRate, contextRestarts: contextRestartCount };
+          return { batchNumber, batchResults, batchSize, successRate, contextRestarts: contextRestartCount };
 
         } catch (error) {
           console.error(`[ProviderLookup] [Batch ${batchNumber}] Error processing batch:`, error);

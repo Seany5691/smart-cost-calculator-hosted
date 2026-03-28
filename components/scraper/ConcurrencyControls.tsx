@@ -65,13 +65,13 @@ export default function ConcurrencyControls({
           <label htmlFor="industries-slider" className="text-sm text-gray-300">
             Simultaneous Industries: {simultaneousIndustries}
           </label>
-          <span className="text-xs text-gray-500">1-3</span>
+          <span className="text-xs text-gray-500">1-10</span>
         </div>
         <input
           id="industries-slider"
           type="range"
           min="1"
-          max="3"
+          max="10"
           value={simultaneousIndustries}
           onChange={(e) => onIndustriesChange(parseInt(e.target.value))}
           disabled={disabled}
@@ -85,13 +85,13 @@ export default function ConcurrencyControls({
           <label htmlFor="lookups-slider" className="text-sm text-gray-300">
             Simultaneous Lookups: {simultaneousLookups}
           </label>
-          <span className="text-xs text-gray-500">1-3</span>
+          <span className="text-xs text-gray-500">1-10</span>
         </div>
         <input
           id="lookups-slider"
           type="range"
           min="1"
-          max="3"
+          max="10"
           value={simultaneousLookups}
           onChange={(e) => onLookupsChange(parseInt(e.target.value))}
           disabled={disabled}

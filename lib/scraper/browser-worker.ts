@@ -90,9 +90,25 @@ export class BrowserWorker {
         const batchDescription = industries.length === 0 ? 'business search' : industryBatch.join(', ');
         console.log(`[Worker ${this.workerId}] Processing batch ${Math.floor(i / concurrency) + 1}: ${batchDescription}`);
 
-        // Process batch in parallel
+        // Process batch in parallel with timeout protection
+        // Each industry gets 3 minutes max to complete, preventing one stuck industry from blocking everything
+        const SCRAPE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+        
         const batchPromises = industryBatch.map(industry =>
-          this.scrapeIndustry(town, industry)
+          Promise.race([
+            this.scrapeIndustry(town, industry),
+            new Promise<ScrapedBusiness[]>((_, reject) => 
+              setTimeout(() => reject(new Error(`Scraping timeout after 3 minutes for ${industry || town}`)), SCRAPE_TIMEOUT_MS)
+            )
+          ]).catch(error => {
+            const searchDesc = industry === '' ? town : `${town} - ${industry}`;
+            console.error(`[Worker ${this.workerId}] ${searchDesc} failed or timed out: ${error.message}`);
+            this.errorLogger.logScrapingError(town, industry || 'business search', error, {
+              workerId: this.workerId,
+              timeout: true,
+            });
+            return []; // Return empty array on timeout/error so batch can continue
+          })
         );
 
         const batchResults = await Promise.allSettled(batchPromises);

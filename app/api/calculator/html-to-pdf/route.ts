@@ -11,6 +11,7 @@ import { browserManager } from '@/lib/scraper/browser-manager';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { PDFDocument } from 'pdf-lib';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -46,6 +47,38 @@ export async function POST(request: NextRequest) {
       .replace(/href="\/fonts\//g, `href="${baseUrl}/fonts/`)
       // Convert font file paths in CSS (if any inline styles reference fonts)
       .replace(/url\(\/fonts\//g, `url(${baseUrl}/fonts/`);
+
+    console.log('[HTML-to-PDF] Injecting Font Awesome font-face overrides...');
+    // Inject a style tag to override Font Awesome font paths with absolute URLs
+    // This ensures icons load correctly in the PDF
+    const fontFaceOverride = `
+    <style>
+      @font-face {
+        font-family: "Font Awesome 6 Brands";
+        font-style: normal;
+        font-weight: 400;
+        font-display: block;
+        src: url(${baseUrl}/fonts/fontawesome/fa-brands-400.woff2) format("woff2");
+      }
+      @font-face {
+        font-family: "Font Awesome 6 Free";
+        font-style: normal;
+        font-weight: 400;
+        font-display: block;
+        src: url(${baseUrl}/fonts/fontawesome/fa-regular-400.woff2) format("woff2");
+      }
+      @font-face {
+        font-family: "Font Awesome 6 Free";
+        font-style: normal;
+        font-weight: 900;
+        font-display: block;
+        src: url(${baseUrl}/fonts/fontawesome/fa-solid-900.woff2) format("woff2");
+      }
+    </style>
+    `;
+    
+    // Inject the font-face override right before the closing </head> tag
+    htmlWithAbsoluteUrls = htmlWithAbsoluteUrls.replace('</head>', `${fontFaceOverride}</head>`);
 
     console.log('[HTML-to-PDF] Converted relative paths to absolute URLs');
 
@@ -125,22 +158,76 @@ export async function POST(request: NextRequest) {
     console.log('[HTML-to-PDF] Waiting for fonts and final rendering...');
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    console.log('[HTML-to-PDF] Generating PDF...');
-    // Generate PDF with optimal settings
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '0',
-        right: '0',
-        bottom: '0',
-        left: '0',
-      },
-      preferCSSPageSize: true,
+    console.log('[HTML-to-PDF] Generating rasterized PDF for consistent rendering across all viewers...');
+    
+    // Count total pages in the document
+    const pageCount = await page.evaluate(() => {
+      return document.querySelectorAll('.page').length;
     });
+    console.log(`[HTML-to-PDF] Found ${pageCount} pages to render`);
+
+    // Create a new PDF document using pdf-lib
+    const pdfDoc = await PDFDocument.create();
+    
+    // A4 dimensions in points (72 DPI)
+    const A4_WIDTH = 595.28;  // 210mm
+    const A4_HEIGHT = 841.89; // 297mm
+    
+    // Capture each page as a high-resolution screenshot
+    for (let i = 0; i < pageCount; i++) {
+      console.log(`[HTML-to-PDF] Rendering page ${i + 1}/${pageCount}...`);
+      
+      // Get the specific page element
+      const pageElement = await page.evaluateHandle((index) => {
+        return document.querySelectorAll('.page')[index];
+      }, i);
+      
+      // Take a screenshot of this specific page at high resolution
+      // Using 2x device scale factor gives us ~150 DPI effective resolution
+      // Combined with quality 92 JPEG compression for optimal file size
+      const screenshotBuffer = await (pageElement as any).screenshot({
+        type: 'jpeg',
+        quality: 92,
+        omitBackground: false,
+      });
+      
+      // Embed the image in the PDF
+      const jpegImage = await pdfDoc.embedJpg(screenshotBuffer);
+      
+      // Add a new page with A4 dimensions
+      const pdfPage = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
+      
+      // Get the image dimensions
+      const imgDims = jpegImage.scale(1);
+      
+      // Calculate scaling to fit A4 page perfectly
+      const scaleX = A4_WIDTH / imgDims.width;
+      const scaleY = A4_HEIGHT / imgDims.height;
+      const scale = Math.min(scaleX, scaleY);
+      
+      // Center the image on the page
+      const scaledWidth = imgDims.width * scale;
+      const scaledHeight = imgDims.height * scale;
+      const x = (A4_WIDTH - scaledWidth) / 2;
+      const y = (A4_HEIGHT - scaledHeight) / 2;
+      
+      // Draw the image
+      pdfPage.drawImage(jpegImage, {
+        x,
+        y,
+        width: scaledWidth,
+        height: scaledHeight,
+      });
+      
+      console.log(`[HTML-to-PDF] Page ${i + 1}/${pageCount} rendered successfully`);
+    }
+    
+    // Save the PDF
+    const pdfBytes = await pdfDoc.save();
+    const pdfBuffer = Buffer.from(pdfBytes);
 
     await page.close();
-    console.log('[HTML-to-PDF] PDF generated successfully');
+    console.log('[HTML-to-PDF] Rasterized PDF generated successfully');
 
     // Generate filename if not provided
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);

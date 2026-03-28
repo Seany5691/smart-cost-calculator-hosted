@@ -486,15 +486,20 @@ export class ProviderLookupService {
     console.log('[ProviderLookup] Initializing single browser instance...');
     const playwright = await import('playwright');
     
-    this.browser = await playwright.chromium.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-      ],
-      timeout: 30000,
-    });
+    // Import browser configuration to use system Chromium
+    const { getBrowserLaunchOptions, getChromiumPath } = await import('./browserConfig');
+    const launchOptions = getBrowserLaunchOptions(true);
+    
+    // CRITICAL: Use system Chromium if available (Docker/Alpine Linux)
+    const executablePath = getChromiumPath();
+    if (executablePath) {
+      console.log(`[ProviderLookup] Using system Chromium at: ${executablePath}`);
+      launchOptions.executablePath = executablePath;
+    }
+    
+    console.log('[ProviderLookup] Launch options:', JSON.stringify(launchOptions, null, 2));
+    
+    this.browser = await playwright.chromium.launch(launchOptions);
     
     console.log('[ProviderLookup] Browser initialized successfully');
   }

@@ -5,7 +5,7 @@
 
 import ExcelJS from 'exceljs';
 import { ScrapedBusiness } from './types';
-import { getProviderPriority } from './provider-lookup';
+import { getProviderPriority } from './provider-utils';
 
 /**
  * Export scraped businesses to Excel

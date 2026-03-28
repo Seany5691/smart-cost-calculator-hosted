@@ -1,10 +1,12 @@
 /**
  * Scraper Service
  * Handles Google Maps scraping operations
+ * 
+ * NOTE: Most functions in this file are DEPRECATED.
+ * Use ScrapingOrchestrator for new scraping operations.
  */
 
 import { Page } from 'playwright';
-import { batchLookupProviders } from './provider-lookup';
 import { getRateLimiter } from './rate-limiter';
 import {
   ScrapeConfig,

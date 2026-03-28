@@ -254,6 +254,18 @@ export async function POST(request: NextRequest) {
     // No active session and no queue - start immediately
     console.log(`[SCRAPER API] No active session, starting ${sessionId} immediately`);
 
+    // CRITICAL FIX: Delete all old scraped businesses for this user before starting new scrape
+    // This ensures each scrape starts fresh with no old data
+    console.log(`[SCRAPER API] Clearing old scraped businesses for user ${user.userId}`);
+    const deleteResult = await pool.query(
+      `DELETE FROM scraped_businesses 
+       WHERE session_id IN (
+         SELECT id FROM scraping_sessions WHERE user_id = $1
+       )`,
+      [user.userId]
+    );
+    console.log(`[SCRAPER API] Deleted ${deleteResult.rowCount} old scraped businesses`);
+
     // Create session in database with 'running' status
     await pool.query(
       `INSERT INTO scraping_sessions (id, user_id, name, config, status, progress, state, created_at, updated_at)

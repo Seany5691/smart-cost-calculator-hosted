@@ -223,75 +223,105 @@ export class IndustryScraper {
       let phone = '';
       let address = '';
 
-      // Process each W4Efsd container
+      // Process each W4Efsd container - OPTIMIZED: Use single evaluate call instead of multiple round-trips
       for (const infoEl of infoElements) {
-        // Parse phone number (look for UsdlK class)
         try {
-          const phoneSpan = await infoEl.locator('.UsdlK').first();
-          if (phoneSpan) {
-            const phoneText = (await phoneSpan.textContent())?.trim() || '';
-            if (phoneText && !phone) {
-              phone = phoneText;
-            }
-          }
-        } catch (error) {
-          // Phone is optional, continue
-        }
+          // Extract phone and address in a single evaluate call to minimize round-trips
+          const extracted = await infoEl.evaluate((container: Element) => {
+            let phone = '';
+            let address = '';
 
-        // Get all span elements
-        try {
-          const spans = await infoEl.locator('span').all();
-
-          // Collect all span texts, checking if they contain UsdlK (phone) class
-          for (const span of spans) {
-            // Skip if this span contains the phone number (has UsdlK class)
-            const hasPhoneClass = await span.evaluate((el: Element) => {
-              return el.classList.contains('UsdlK') || el.querySelector('.UsdlK') !== null;
-            });
-
-            if (hasPhoneClass) {
-              continue;
+            // Extract phone from UsdlK span
+            const phoneSpan = container.querySelector('.UsdlK');
+            if (phoneSpan) {
+              phone = phoneSpan.textContent?.trim() || '';
             }
 
-            let spanText = await span.evaluate((el: Element) => el.textContent?.trim() || '');
+            // Get all span elements
+            const spans = container.querySelectorAll('span');
+            
+            for (const span of spans) {
+              // Skip if this span contains the phone number (has UsdlK class)
+              if (span.classList.contains('UsdlK') || span.querySelector('.UsdlK') !== null) {
+                continue;
+              }
 
-            // Remove leading separator character if present
-            if (spanText.startsWith('·')) {
-              spanText = spanText.substring(1).trim();
-            }
+              let spanText = span.textContent?.trim() || '';
 
-            // Skip empty spans, separator characters, opening hours, ratings, and icons
-            if (!spanText ||
-              spanText === '·' ||
-              spanText === '' ||
-              this.isOpeningHours(spanText) ||
-              this.looksLikeRating(spanText) ||
-              this.looksLikePhoneNumber(spanText) ||
-              spanText.toLowerCase().includes('open') ||
-              spanText.toLowerCase().includes('close') ||
-              spanText.toLowerCase().includes('wheelchair')) {
-              continue;
-            }
+              // Remove leading separator character if present
+              if (spanText.startsWith('·')) {
+                spanText = spanText.substring(1).trim();
+              }
 
-            // Check if this looks like a business type (first meaningful text)
-            const isBusinessType = spanText.split(' ').length <= 3 && !address;
+              // Skip empty spans, separator characters, opening hours, ratings, and icons
+              if (!spanText || spanText === '·' || spanText === '') {
+                continue;
+              }
 
-            // If we haven't found an address yet and this isn't a business type, it's likely the address
-            if (!isBusinessType && !address) {
-              // Address typically contains street indicators or is a location name
-              const addressIndicators = ['street', 'ave', 'avenue', 'road', 'rd', 'drive', 'dr', 'lane', 'ln', 'way', 'blvd', 'boulevard'];
-              const lowerText = spanText.toLowerCase();
-              const hasAddressIndicator = addressIndicators.some(indicator => lowerText.includes(indicator));
+              // Skip opening hours patterns
+              const openingHoursPatterns = [
+                /^(Open|Closed|Opens|Closes)/i,
+                /\d{1,2}:\d{2}\s*(AM|PM|am|pm)/i,
+                /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i,
+                /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i,
+              ];
+              if (openingHoursPatterns.some(pattern => pattern.test(spanText))) {
+                continue;
+              }
 
-              // If it has address indicators or is longer than typical business type, treat as address
-              if (hasAddressIndicator || spanText.length > 10) {
-                address = spanText;
-                break;
+              // Skip ratings
+              if (/^\d+(\.\d+)?\s*\([\d,]+\)/.test(spanText)) {
+                continue;
+              }
+
+              // Skip phone numbers
+              const digitCount = (spanText.match(/\d/g) || []).length;
+              if (digitCount >= 7 && (/\d{3}.*\d{3}.*\d{4}/.test(spanText) || /\+?\d{10,}/.test(spanText))) {
+                continue;
+              }
+
+              // Skip common non-address text
+              if (spanText.toLowerCase().includes('open') ||
+                  spanText.toLowerCase().includes('close') ||
+                  spanText.toLowerCase().includes('wheelchair')) {
+                continue;
+              }
+
+              // Check if this looks like a business type (first meaningful text)
+              const isBusinessType = spanText.split(' ').length <= 3 && !address;
+
+              // If we haven't found an address yet and this isn't a business type, it's likely the address
+              if (!isBusinessType && !address) {
+                // Address typically contains street indicators or is a location name
+                const addressIndicators = ['street', 'ave', 'avenue', 'road', 'rd', 'drive', 'dr', 'lane', 'ln', 'way', 'blvd', 'boulevard'];
+                const lowerText = spanText.toLowerCase();
+                const hasAddressIndicator = addressIndicators.some(indicator => lowerText.includes(indicator));
+
+                // If it has address indicators or is longer than typical business type, treat as address
+                if (hasAddressIndicator || spanText.length > 10) {
+                  address = spanText;
+                  break;
+                }
               }
             }
+
+            return { phone, address };
+          });
+
+          // Use extracted values
+          if (extracted.phone && !phone) {
+            phone = extracted.phone;
+          }
+          if (extracted.address && !address) {
+            address = extracted.address;
+          }
+
+          // If we found both, no need to check more containers
+          if (phone && address) {
+            break;
           }
         } catch (error) {
-          // Address is optional, continue
+          // Optional fields, continue
         }
       }
 

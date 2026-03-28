@@ -197,14 +197,14 @@ export class ProviderLookupService {
    */
   private async extractProviderFromPage(page: Page): Promise<string> {
     try {
-      // Look for the span.p1 element
-      const spanElement = await page.$('span.p1');
-      if (!spanElement) {
+      // Look for the span.p1 element - check count first
+      const spanCount = await page.locator('span.p1').count();
+      if (spanCount === 0) {
         console.log('[ProviderLookup] No span.p1 element found');
         return 'Unknown';
       }
 
-      const text = await spanElement.evaluate(el => el.textContent);
+      const text = await page.locator('span.p1').first().textContent();
       console.log(`[ProviderLookup] Extracted text from page: "${text}"`);
       
       if (!text || text.trim() === '') {

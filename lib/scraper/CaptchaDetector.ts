@@ -269,7 +269,6 @@ export class CaptchaDetector {
     try {
       // Check for each captcha selector
       for (const selector of this.CAPTCHA_SELECTORS) {
-        const element = await page.locator(selector).first();
         const elementCount = await page.locator(selector).count();
         if (elementCount > 0) {
           return {

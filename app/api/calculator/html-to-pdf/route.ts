@@ -43,44 +43,14 @@ export async function POST(request: NextRequest) {
     let htmlWithAbsoluteUrls = html
       // Convert image paths
       .replace(/src="Pictures\//g, `src="${baseUrl}/Pictures/`)
-      // Convert font CSS paths
-      .replace(/href="\/fonts\//g, `href="${baseUrl}/fonts/`)
-      // Convert font file paths in CSS (if any inline styles reference fonts)
+      // Replace local Font Awesome with CDN version for reliable icon loading
+      .replace(/href="\/fonts\/fontawesome\/all\.min\.css"/g, 'href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"')
+      // Convert font CSS paths (for Google Fonts)
+      .replace(/href="\/fonts\/google\//g, `href="${baseUrl}/fonts/google/`)
+      // Convert any remaining font file paths in CSS
       .replace(/url\(\/fonts\//g, `url(${baseUrl}/fonts/`);
 
-    console.log('[HTML-to-PDF] Injecting Font Awesome font-face overrides...');
-    // Inject a style tag to override Font Awesome font paths with absolute URLs
-    // This ensures icons load correctly in the PDF
-    const fontFaceOverride = `
-    <style>
-      @font-face {
-        font-family: "Font Awesome 6 Brands";
-        font-style: normal;
-        font-weight: 400;
-        font-display: block;
-        src: url(${baseUrl}/fonts/fontawesome/fa-brands-400.woff2) format("woff2");
-      }
-      @font-face {
-        font-family: "Font Awesome 6 Free";
-        font-style: normal;
-        font-weight: 400;
-        font-display: block;
-        src: url(${baseUrl}/fonts/fontawesome/fa-regular-400.woff2) format("woff2");
-      }
-      @font-face {
-        font-family: "Font Awesome 6 Free";
-        font-style: normal;
-        font-weight: 900;
-        font-display: block;
-        src: url(${baseUrl}/fonts/fontawesome/fa-solid-900.woff2) format("woff2");
-      }
-    </style>
-    `;
-    
-    // Inject the font-face override right before the closing </head> tag
-    htmlWithAbsoluteUrls = htmlWithAbsoluteUrls.replace('</head>', `${fontFaceOverride}</head>`);
-
-    console.log('[HTML-to-PDF] Converted relative paths to absolute URLs');
+    console.log('[HTML-to-PDF] Converted relative paths to absolute URLs and using Font Awesome CDN');
 
     // Get browser instance from the manager (reuses existing scraper setup)
     console.log('[HTML-to-PDF] Getting browser instance...');
@@ -121,11 +91,16 @@ export async function POST(request: NextRequest) {
     await page.waitForFunction(() => {
       const icons = document.querySelectorAll('.fa, .fa-solid, .far, .fab');
       if (icons.length === 0) return true; // No icons, continue
-      // Check if at least one icon has loaded
+      
+      // Check if Font Awesome fonts are loaded by checking if the icon content is rendered
       const firstIcon = icons[0] as HTMLElement;
       const styles = window.getComputedStyle(firstIcon);
-      return styles.fontFamily.includes('Font Awesome');
-    }, { timeout: 5000 }).catch(() => {
+      const content = window.getComputedStyle(firstIcon, ':before').content;
+      
+      // Font Awesome icons use :before pseudo-element with unicode content
+      // If content is not 'none' or empty, the font is loaded
+      return styles.fontFamily.includes('Font Awesome') && content !== 'none' && content !== '""';
+    }, { timeout: 15000 }).catch(() => {
       console.log('[HTML-to-PDF] Font Awesome check timed out, continuing anyway');
     });
 
@@ -155,8 +130,15 @@ export async function POST(request: NextRequest) {
     });
 
     // Extra wait for fonts and dynamic content to fully render
-    console.log('[HTML-to-PDF] Waiting for fonts and final rendering...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('[HTML-to-PDF] Waiting for all fonts to load using document.fonts API...');
+    await page.evaluate(() => {
+      return document.fonts.ready;
+    }).catch(() => {
+      console.log('[HTML-to-PDF] document.fonts.ready not supported or timed out');
+    });
+    
+    console.log('[HTML-to-PDF] Final rendering wait...');
+    await new Promise(resolve => setTimeout(resolve, 3000)); // Increased from 2000 to 3000
 
     console.log('[HTML-to-PDF] Generating rasterized PDF for consistent rendering across all viewers...');
     

@@ -212,10 +212,18 @@ export class ProviderLookupService {
       const batchGroup = batches.slice(i, i + concurrency);
       console.log(`[ProviderLookup] Processing batch group ${Math.floor(i / concurrency) + 1}: ${batchGroup.length} batches in parallel`);
 
-      // Process this group of batches in parallel
+      // Process this group of batches in parallel with staggered startup
       const batchPromises = batchGroup.map(async (phoneBatch, groupIndex) => {
         const batchNumber = globalBatchNumber + groupIndex + 1;
         const batchSize = phoneBatch.length;
+
+        // CRITICAL FIX: Stagger batch startup to prevent overwhelming the system
+        // Each batch waits a bit before starting to avoid all contexts navigating simultaneously
+        const startupDelay = groupIndex * 500; // 500ms between each batch startup
+        if (startupDelay > 0) {
+          console.log(`[ProviderLookup] [Batch ${batchNumber}] Waiting ${startupDelay}ms before starting (staggered startup)`);
+          await this.sleep(startupDelay);
+        }
 
         console.log(`[ProviderLookup] Processing batch ${batchNumber} with ${batchSize} lookups`);
 

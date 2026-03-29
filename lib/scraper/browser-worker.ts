@@ -97,17 +97,37 @@ export class BrowserWorker {
         const batchPromises = industryBatch.map(async (industry, batchIndex) => {
           // CRITICAL FIX: Stagger industry startup to prevent overwhelming Google Maps
           // Each industry waits a bit before starting to avoid all navigating simultaneously
-          const startupDelay = batchIndex * 500; // 500ms between each industry startup
+          const startupDelay = batchIndex * 1000; // 1000ms (1 second) between each industry startup
           if (startupDelay > 0) {
             console.log(`[Worker ${this.workerId}] [Industry ${batchIndex + 1}/${industryBatch.length}] Waiting ${startupDelay}ms before starting (staggered startup)`);
             await this.sleep(startupDelay);
           }
 
+          // Check if stopped during staggered delay
+          if (this.isStopped) {
+            console.log(`[Worker ${this.workerId}] Stopped during startup delay for ${industry || town}`);
+            return [];
+          }
+
           return Promise.race([
             this.scrapeIndustry(town, industry),
-            new Promise<ScrapedBusiness[]>((_, reject) => 
-              setTimeout(() => reject(new Error(`Scraping timeout after 3 minutes for ${industry || town}`)), SCRAPE_TIMEOUT_MS)
-            )
+            // Timeout promise that also checks stop signal
+            new Promise<ScrapedBusiness[]>((resolve, reject) => {
+              const startTime = Date.now();
+              const checkInterval = setInterval(() => {
+                // Check if stopped
+                if (this.isStopped) {
+                  clearInterval(checkInterval);
+                  console.log(`[Worker ${this.workerId}] Stop detected in timeout wrapper for ${industry || town}`);
+                  resolve([]); // Resolve with empty array instead of rejecting
+                }
+                // Check if timeout exceeded
+                if (Date.now() - startTime >= SCRAPE_TIMEOUT_MS) {
+                  clearInterval(checkInterval);
+                  reject(new Error(`Scraping timeout after 3 minutes for ${industry || town}`));
+                }
+              }, 500); // Check every 500ms
+            })
           ]).catch(error => {
             const searchDesc = industry === '' ? town : `${town} - ${industry}`;
             console.error(`[Worker ${this.workerId}] ${searchDesc} failed or timed out: ${error.message}`);

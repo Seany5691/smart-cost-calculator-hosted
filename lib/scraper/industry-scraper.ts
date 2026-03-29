@@ -73,7 +73,10 @@ export class IndustryScraper {
 
         console.log(`[IndustryScraper] Attempt ${attempt}/${maxRetries} - Navigating to: ${searchQuery}`);
         
-        await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        // Exponential backoff for retries: first attempt = 90s, second attempt = 120s
+        const navigationTimeout = attempt === 1 ? 90000 : 120000;
+        
+        await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: navigationTimeout });
 
         // Wait a bit for page to load
         await this.page.waitForTimeout(2000);
@@ -107,10 +110,11 @@ export class IndustryScraper {
         
         console.error(`[IndustryScraper] Attempt ${attempt}/${maxRetries} failed for ${this.industry} in ${this.town}:`, error.message);
         
-        // If this is a timeout and we have retries left, wait and try again
-        if (attempt < maxRetries && (error.message?.includes('timeout') || error.message?.includes('Navigation'))) {
-          console.log(`[IndustryScraper] Waiting 3 seconds before retry...`);
-          await this.page.waitForTimeout(3000);
+        // If this is a timeout and we have retries left, wait and try again with exponential backoff
+        if (attempt < maxRetries && (error.message?.includes('timeout') || error.message?.includes('Timeout') || error.message?.includes('Navigation'))) {
+          const backoffDelay = attempt * 5000; // 5s, 10s
+          console.log(`[IndustryScraper] Waiting ${backoffDelay}ms before retry...`);
+          await this.page.waitForTimeout(backoffDelay);
           continue;
         }
         
@@ -172,6 +176,12 @@ export class IndustryScraper {
     const cards = await this.page.locator('div[role="feed"] .Nv2PK').all();
     
     for (const card of cards) {
+      // Check if stopped during card parsing
+      if (this.isStoppedChecker && this.isStoppedChecker()) {
+        console.log(`[IndustryScraper] Stopped during card parsing for ${this.industry} in ${this.town}`);
+        return businesses; // Return what we have so far
+      }
+
       try {
         const business = await this.parseBusinessCard(card);
         if (business) {

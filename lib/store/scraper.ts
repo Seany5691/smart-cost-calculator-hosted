@@ -108,9 +108,9 @@ interface ScraperState {
 }
 
 const defaultConfig: ScrapingConfig = {
-  simultaneousTowns: 2,
-  simultaneousIndustries: 2,
-  simultaneousLookups: 2,
+  simultaneousTowns: 1,
+  simultaneousIndustries: 5,
+  simultaneousLookups: 5,
   retryAttempts: 3,
   retryDelay: 2000,
   browserHeadless: true,

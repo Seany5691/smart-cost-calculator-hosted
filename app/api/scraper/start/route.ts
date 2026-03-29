@@ -59,9 +59,9 @@ export async function POST(request: NextRequest) {
     const scrapeConfig: ScrapeConfig = {
       towns,
       industries,
-      simultaneousTowns: config?.simultaneousTowns || 3,
-      simultaneousIndustries: config?.simultaneousIndustries || 3,
-      simultaneousLookups: config?.simultaneousLookups || 3,
+      simultaneousTowns: config?.simultaneousTowns || 1,
+      simultaneousIndustries: config?.simultaneousIndustries || 5,
+      simultaneousLookups: config?.simultaneousLookups || 5,
       enableProviderLookup: config?.enableProviderLookup !== undefined ? config.enableProviderLookup : true, // Default to true
     };
 

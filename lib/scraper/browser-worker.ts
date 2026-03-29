@@ -90,12 +90,20 @@ export class BrowserWorker {
         const batchDescription = industries.length === 0 ? 'business search' : industryBatch.join(', ');
         console.log(`[Worker ${this.workerId}] Processing batch ${Math.floor(i / concurrency) + 1}: ${batchDescription}`);
 
-        // Process batch in parallel with timeout protection
+        // Process batch in parallel with timeout protection and staggered startup
         // Each industry gets 3 minutes max to complete, preventing one stuck industry from blocking everything
         const SCRAPE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
         
-        const batchPromises = industryBatch.map(industry =>
-          Promise.race([
+        const batchPromises = industryBatch.map(async (industry, batchIndex) => {
+          // CRITICAL FIX: Stagger industry startup to prevent overwhelming Google Maps
+          // Each industry waits a bit before starting to avoid all navigating simultaneously
+          const startupDelay = batchIndex * 500; // 500ms between each industry startup
+          if (startupDelay > 0) {
+            console.log(`[Worker ${this.workerId}] [Industry ${batchIndex + 1}/${industryBatch.length}] Waiting ${startupDelay}ms before starting (staggered startup)`);
+            await this.sleep(startupDelay);
+          }
+
+          return Promise.race([
             this.scrapeIndustry(town, industry),
             new Promise<ScrapedBusiness[]>((_, reject) => 
               setTimeout(() => reject(new Error(`Scraping timeout after 3 minutes for ${industry || town}`)), SCRAPE_TIMEOUT_MS)
@@ -108,8 +116,8 @@ export class BrowserWorker {
               timeout: true,
             });
             return []; // Return empty array on timeout/error so batch can continue
-          })
-        );
+          });
+        });
 
         const batchResults = await Promise.allSettled(batchPromises);
 

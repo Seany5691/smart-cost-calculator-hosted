@@ -202,7 +202,7 @@ export class BrowserWorker {
       page.setDefaultNavigationTimeout(60000); // 60 seconds per navigation
 
       // Create scraper and scrape
-      const scraper = new IndustryScraper(page, town, industry, this.eventEmitter);
+      const scraper = new IndustryScraper(page, town, industry, this.eventEmitter, () => this.isStopped);
       const businesses = await scraper.scrape();
 
       return businesses;

@@ -14,13 +14,15 @@ export class IndustryScraper {
   private industry: string;
   private errorLogger: ErrorLogger;
   private eventEmitter?: EventEmitter;
+  private isStoppedChecker?: () => boolean;
 
-  constructor(page: Page, town: string, industry: string, eventEmitter?: EventEmitter) {
+  constructor(page: Page, town: string, industry: string, eventEmitter?: EventEmitter, isStoppedChecker?: () => boolean) {
     this.page = page;
     this.town = town;
     this.industry = industry;
     this.errorLogger = ErrorLogger.getInstance();
     this.eventEmitter = eventEmitter;
+    this.isStoppedChecker = isStoppedChecker;
   }
 
   /**
@@ -33,6 +35,12 @@ export class IndustryScraper {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
+        // Check if stopped before starting
+        if (this.isStoppedChecker && this.isStoppedChecker()) {
+          console.log(`[IndustryScraper] Stopped, aborting scrape for ${this.industry} in ${this.town}`);
+          return [];
+        }
+
         // Navigate to Google Maps search
         // Build search query: "industry in town" or just "town" if no industry
         // Don't add "South Africa" if town already contains location info (province, country, etc.)
@@ -90,6 +98,13 @@ export class IndustryScraper {
         
       } catch (error: any) {
         lastError = error;
+        
+        // If page/context was closed (stop was called), return empty array immediately
+        if (error.message?.includes('Target page, context or browser has been closed')) {
+          console.log(`[IndustryScraper] Page closed (stop requested) for ${this.industry} in ${this.town}`);
+          return [];
+        }
+        
         console.error(`[IndustryScraper] Attempt ${attempt}/${maxRetries} failed for ${this.industry} in ${this.town}:`, error.message);
         
         // If this is a timeout and we have retries left, wait and try again
@@ -120,6 +135,12 @@ export class IndustryScraper {
     const maxNoChangeIterations = 3;
 
     while (true) {
+      // Check if stopped during scrolling
+      if (this.isStoppedChecker && this.isStoppedChecker()) {
+        console.log(`[IndustryScraper] Stopped during list extraction for ${this.industry} in ${this.town}`);
+        return businesses; // Return what we have so far
+      }
+
       // Scroll the feed
       await this.scrollFeed();
 

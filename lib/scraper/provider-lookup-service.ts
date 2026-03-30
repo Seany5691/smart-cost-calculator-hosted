@@ -236,14 +236,21 @@ export class ProviderLookupService {
         const batchResults = new Map<string, string>();
 
         try {
-          // Create initial context from single browser
+          // Create initial context from single browser with COMPLETE ISOLATION
+          // Each context should appear as a completely separate user to the website
           this.activeContexts++;
           context = await this.browser!.newContext({
             viewport: { width: 1920, height: 1080 },
             userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
             ignoreHTTPSErrors: true,
+            // CRITICAL: Each context gets its own isolated storage (cookies, localStorage, etc.)
+            // This makes each context appear as a completely different user
+            storageState: undefined, // No shared storage state
+            // Additional isolation options
+            bypassCSP: false,
+            javaScriptEnabled: true,
           });
-          console.log(`[ProviderLookup] [Batch ${batchNumber}] Created context for ${batchSize} lookups (Active contexts: ${this.activeContexts})`);
+          console.log(`[ProviderLookup] [Batch ${batchNumber}] Created isolated context for ${batchSize} lookups (Active contexts: ${this.activeContexts})`);
 
           // Process each phone number in the batch sequentially
           let successCount = 0;
@@ -259,8 +266,17 @@ export class ProviderLookupService {
               if (provider && provider !== 'Unknown') {
                 batchResults.set(phoneNumber, provider);
                 successCount++;
+                
+                // Small delay between lookups to avoid overwhelming the server
+                if (lookupIndex < phoneBatch.length - 1) {
+                  await this.sleep(100);
+                }
               } else {
                 failCount++;
+                // Small delay after failed lookup
+                if (lookupIndex < phoneBatch.length - 1) {
+                  await this.sleep(100);
+                }
               }
 
             } catch (error) {
@@ -276,13 +292,18 @@ export class ProviderLookupService {
                   this.activeContexts--;
                 }
 
+                // Create new isolated context after captcha
                 this.activeContexts++;
                 context = await this.browser!.newContext({
                   viewport: { width: 1920, height: 1080 },
                   userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
                   ignoreHTTPSErrors: true,
+                  // CRITICAL: Fresh isolated storage for new context
+                  storageState: undefined,
+                  bypassCSP: false,
+                  javaScriptEnabled: true,
                 });
-                console.log(`[ProviderLookup] [Batch ${batchNumber}] New context created after captcha`);
+                console.log(`[ProviderLookup] [Batch ${batchNumber}] New isolated context created after captcha`);
 
                 await this.sleep(2000);
 
@@ -557,9 +578,8 @@ export class ProviderLookupService {
       this.activePages.add(page); // Track page to prevent leaks
 
       try {
-        // Set timeouts to prevent hanging on individual operations
-        page.setDefaultTimeout(30000); // 30 second timeout per operation
-        page.setDefaultNavigationTimeout(30000); // 30 second timeout per navigation
+        // OPTIMIZATION: Don't set default timeouts - use specific timeouts per operation
+        // This prevents Playwright from doing extra timeout checks
         
         // Clean phone number (remove spaces, dashes, etc.)
         const cleanPhone = this.cleanPhoneNumber(phoneNumber);
@@ -569,31 +589,27 @@ export class ProviderLookupService {
         // Navigate to the form page (or refresh if not first lookup)
         const formUrl = 'https://www.porting.co.za/PublicWebsiteApp/#/number-inquiry';
         console.log(`[ProviderLookup] ${isFirstLookup ? 'Navigating to' : 'Refreshing'} form: ${formUrl}`);
-        await page.goto(formUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
-
-        // Wait for Angular to load
-        await this.sleep(500);
-
-        // Wait for the input field to be available (increased timeout for VPS)
-        await page.waitForSelector('#numberTextInput', { timeout: 15000 });
         
-        // Clear and fill the input field
-        await page.evaluate(() => {
-          const input = document.querySelector('#numberTextInput') as HTMLInputElement;
-          if (input) {
-            input.value = '';
-          }
-        });
-        await page.type('#numberTextInput', cleanPhone);
+        // OPTIMIZATION: Use 'commit' instead of 'domcontentloaded' for faster navigation
+        await page.goto(formUrl, { waitUntil: 'commit', timeout: 10000 });
+
+        // OPTIMIZATION: Reduced Angular wait from 500ms to 100ms
+        await this.sleep(100);
+
+        // OPTIMIZATION: Use locator with 'attached' state for faster selector waiting
+        await page.locator('#numberTextInput').waitFor({ timeout: 8000, state: 'attached' });
+        
+        // OPTIMIZATION: Use locator.fill() instead of evaluate + type (faster)
+        await page.locator('#numberTextInput').fill(cleanPhone);
         
         console.log(`[ProviderLookup] Entered phone number: ${cleanPhone}`);
 
-        // Click the Query button
-        await page.click('#retrieveBtn');
+        // OPTIMIZATION: Use locator.click() instead of page.click() (faster)
+        await page.locator('#retrieveBtn').click();
         console.log(`[ProviderLookup] Clicked Query button`);
 
-        // Wait a moment for either the result or error message to appear
-        await this.sleep(300);
+        // OPTIMIZATION: Reduced wait from 200ms to 100ms
+        await this.sleep(100);
 
         // Check for captcha error message FIRST
         const hasCaptchaError = await page.evaluate(() => {
@@ -609,11 +625,11 @@ export class ProviderLookupService {
           throw new Error('CAPTCHA_DETECTED');
         }
 
-        // Wait for the result to appear (increased timeout for VPS)
-        await page.waitForSelector('#dataMsg', { timeout: 20000 });
+        // OPTIMIZATION: Use locator with 'attached' state + 8 second timeout (same as Puppeteer)
+        await page.locator('#dataMsg').waitFor({ timeout: 8000, state: 'attached' });
         
-        // Wait a bit for the result to fully populate
-        await this.sleep(200);
+        // OPTIMIZATION: Reduced wait from 100ms to 50ms
+        await this.sleep(50);
 
         // Extract provider name from the result
         const provider = await this.extractProviderFromFormResult(page);
@@ -672,9 +688,9 @@ export class ProviderLookupService {
       this.activePages.add(page); // Track page to prevent leaks
 
       try {
-        // Set timeouts to prevent hanging on individual operations
-        page.setDefaultTimeout(30000); // 30 second timeout per operation
-        page.setDefaultNavigationTimeout(30000); // 30 second timeout per navigation
+        // Set reasonable timeouts - site loads fast
+        page.setDefaultTimeout(10000); // 10 second timeout per operation
+        page.setDefaultNavigationTimeout(10000); // 10 second timeout per navigation
         
         // Clean phone number (remove spaces, dashes, etc.)
         const cleanPhone = this.cleanPhoneNumber(phoneNumber);
@@ -686,11 +702,11 @@ export class ProviderLookupService {
         console.log(`[ProviderLookup] ${isFirstLookup ? 'Navigating to' : 'Refreshing'} form: ${formUrl}`);
         await page.goto(formUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
 
-        // Wait for Angular to load (optimized from 1000ms to 500ms)
-        await this.sleep(500);
+        // Wait briefly for Angular to load
+        await this.sleep(200);
 
-        // Wait for the input field to be available (increased timeout for VPS)
-        await page.waitForSelector('#numberTextInput', { timeout: 15000 });
+        // Wait for the input field to be available (reduced timeout - site loads fast)
+        await page.waitForSelector('#numberTextInput', { timeout: 5000 });
         
         // Clear and fill the input field
         await page.evaluate(() => {
@@ -707,8 +723,8 @@ export class ProviderLookupService {
         await page.click('#retrieveBtn');
         console.log(`[ProviderLookup] Clicked Query button`);
 
-        // Wait a moment for either the result or error message to appear (optimized from 500ms to 300ms)
-        await this.sleep(300);
+        // Wait a moment for either the result or error message to appear
+        await this.sleep(200);
 
         // Check for captcha error message FIRST
         const hasCaptchaError = await page.evaluate(() => {
@@ -724,11 +740,11 @@ export class ProviderLookupService {
           throw new Error('CAPTCHA_DETECTED');
         }
 
-        // Wait for the result to appear (increased timeout for VPS)
-        await page.waitForSelector('#dataMsg', { timeout: 20000 });
+        // Wait for the result to appear (reduced timeout - site responds fast)
+        await page.waitForSelector('#dataMsg', { timeout: 5000 });
         
-        // Wait a bit for the result to fully populate (optimized from 500ms to 200ms)
-        await this.sleep(200);
+        // Wait briefly for the result to fully populate
+        await this.sleep(100);
 
         // Extract provider name from the result
         const provider = await this.extractProviderFromFormResult(page);

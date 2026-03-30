@@ -37,11 +37,14 @@ export class BusinessLookupScraper {
       // Navigate to Google Maps search
       const url = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
       console.log(`[BusinessLookup] Navigating to: ${url}`);
-      await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-      // Wait for page to load (reduced from 2000ms to 1000ms)
-      console.log(`[BusinessLookup] Waiting 1 second for page to load...`);
-      await this.page.waitForTimeout(1000);
+      // Wait for page to be fully loaded (network idle)
+      console.log(`[BusinessLookup] Waiting for page to load...`);
+      await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {
+        // Ignore timeout - page might still be usable
+        console.log(`[BusinessLookup] Network idle timeout (non-critical)`);
+      });
 
       // Detect view type
       console.log(`[BusinessLookup] Detecting view type...`);

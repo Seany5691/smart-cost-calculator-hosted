@@ -219,7 +219,8 @@ export class ProviderLookupService {
 
         // CRITICAL FIX: Stagger batch startup to prevent overwhelming the system
         // Each batch waits a bit before starting to avoid all contexts navigating simultaneously
-        const startupDelay = groupIndex * 500; // 500ms between each batch startup
+        // Minimal staggered startup to avoid thundering herd (reduced from 500ms to 100ms)
+        const startupDelay = groupIndex * 100; // 100ms between each batch startup
         if (startupDelay > 0) {
           console.log(`[ProviderLookup] [Batch ${batchNumber}] Waiting ${startupDelay}ms before starting (staggered startup)`);
           await this.sleep(startupDelay);

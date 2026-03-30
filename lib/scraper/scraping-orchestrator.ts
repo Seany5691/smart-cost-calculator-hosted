@@ -39,6 +39,12 @@ export class ScrapingOrchestrator {
   private allBusinesses: ScrapedBusiness[] = [];
   private workers: BrowserWorker[] = [];
   
+  // NEW: Provider lookup streaming
+  private providerLookupService: ProviderLookupService | null = null;
+  private providerLookupQueue: string[] = []; // Queue of phone numbers to lookup
+  private providerLookupActive: boolean = false;
+  private providerLookupPromise: Promise<void> | null = null;
+  
   private status: 'idle' | 'running' | 'paused' | 'stopped' | 'completed' | 'error' = 'idle';
   private isPaused: boolean = false;
   private isStopped: boolean = false;
@@ -78,21 +84,37 @@ export class ScrapingOrchestrator {
   }
 
   /**
-   * Starts the scraping orchestration
+   * Starts the scraping orchestration with STREAMING provider lookups
+   * 
+   * NEW APPROACH:
+   * - Workers use pipeline pattern (continuous industry processing)
+   * - Provider lookups start immediately when first industry completes
+   * - Lookups run in parallel with ongoing scraping
+   * 
    * Requirement 4.1: Create worker pool with simultaneousTowns workers
    * Requirement 4.2: Distribute towns from queue to available workers
-   * Requirement 4.4: Perform provider lookups after all towns are processed
+   * Requirement 4.4: Perform provider lookups (now streaming, not batch)
    * 
    * @returns Promise that resolves when scraping is complete
    */
   async start(): Promise<void> {
     try {
       this.status = 'running';
-      this.loggingManager.logMessage('Starting scraping orchestration...');
+      this.loggingManager.logMessage('Starting scraping orchestration (STREAMING MODE)...');
       
       console.log(`[Orchestrator] Starting with ${this.towns.length} towns and ${this.industries.length} industries`);
       console.log(`[Orchestrator] Worker pool size: ${this.config.simultaneousTowns}`);
-      console.log(`[Orchestrator] Industries per worker: ${this.config.simultaneousIndustries}`);
+      console.log(`[Orchestrator] Industries per worker: ${this.config.simultaneousIndustries} (PIPELINE MODE)`);
+      console.log(`[Orchestrator] Provider lookups: ${this.config.enableProviderLookup ? 'STREAMING' : 'DISABLED'}`);
+
+      // Initialize provider lookup service if enabled
+      if (this.config.enableProviderLookup) {
+        this.providerLookupService = new ProviderLookupService({
+          maxConcurrentBatches: this.config.simultaneousLookups,
+          eventEmitter: this.eventEmitter,
+        });
+        console.log(`[Orchestrator] Provider lookup service initialized (max ${this.config.simultaneousLookups} concurrent batches)`);
+      }
 
       // Requirement 4.1: Create worker pool
       const workerCount = this.config.simultaneousTowns;
@@ -109,6 +131,12 @@ export class ScrapingOrchestrator {
       // Wait for all workers to complete
       await Promise.all(workerPromises);
 
+      // Wait for any remaining provider lookups to complete
+      if (this.providerLookupPromise) {
+        console.log('[Orchestrator] Waiting for remaining provider lookups to complete...');
+        await this.providerLookupPromise;
+      }
+
       // Check if stopped or paused
       if (this.isStopped) {
         this.status = 'stopped';
@@ -120,14 +148,6 @@ export class ScrapingOrchestrator {
         this.status = 'paused';
         this.loggingManager.logMessage('Scraping paused by user');
         return;
-      }
-
-      // Requirement 4.4: Perform provider lookups after scraping completes (if enabled)
-      if (this.config.enableProviderLookup) {
-        await this.performProviderLookups();
-      } else {
-        this.loggingManager.logMessage('Provider lookups disabled - skipping');
-        console.log('[Orchestrator] Provider lookups disabled in config');
       }
 
       // Mark as completed
@@ -142,11 +162,22 @@ export class ScrapingOrchestrator {
       this.errorLogger.logError('Orchestrator failed', error);
       this.loggingManager.logMessage(`Scraping failed: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
+    } finally {
+      // Cleanup provider lookup service
+      if (this.providerLookupService) {
+        await this.providerLookupService.cleanup();
+        this.providerLookupService = null;
+      }
     }
   }
 
   /**
    * Worker loop that processes towns from the queue
+   * 
+   * NEW: Uses streaming callback to process businesses as they arrive
+   * - Businesses are added to results immediately
+   * - Provider lookups are triggered immediately (if enabled)
+   * 
    * Requirement 4.2: Distribute towns from queue to available workers
    * Requirement 4.3: Assign next town when worker completes current town
    * 
@@ -180,25 +211,41 @@ export class ScrapingOrchestrator {
         this.loggingManager.logTownStart(town);
         const townStartTime = Date.now();
 
-        // Process town with all industries
-        const businesses = await worker.processTown(town, this.industries);
+        // Process town with streaming callback
+        const businesses = await worker.processTown(
+          town, 
+          this.industries,
+          // Streaming callback: called immediately when each industry completes
+          (industry: string, industryBusinesses: ScrapedBusiness[]) => {
+            // Add businesses to results immediately
+            this.allBusinesses.push(...industryBusinesses);
+            this.progress.totalBusinesses += industryBusinesses.length;
+
+            const searchDesc = industry === '' ? town : `${industry} in ${town}`;
+            console.log(`[Orchestrator] STREAM: ${searchDesc} completed - ${industryBusinesses.length} businesses`);
+
+            // Trigger provider lookups immediately for these businesses
+            if (this.config.enableProviderLookup && industryBusinesses.length > 0) {
+              this.queueProviderLookups(industryBusinesses);
+            }
+
+            // Emit progress update
+            this.emitProgress();
+          }
+        );
 
         // Calculate duration
         const townDuration = Date.now() - townStartTime;
 
-        // Add businesses to results
-        this.allBusinesses.push(...businesses);
-
         // Update progress
         this.progress.completedTowns++;
-        this.progress.totalBusinesses += businesses.length;
         this.progress.townCompletionTimes.push(townDuration);
-        this.progress.successfulTowns.push(town); // Phase 4: Track success
+        this.progress.successfulTowns.push(town);
 
         // Log town completion
         this.loggingManager.logTownComplete(town, businesses.length, townDuration);
 
-        // Emit town-complete event (Phase 2)
+        // Emit town-complete event
         this.eventEmitter.emit('town-complete', {
           town,
           businessCount: businesses.length,
@@ -214,7 +261,7 @@ export class ScrapingOrchestrator {
         this.errorLogger.logError(`Worker ${workerId} failed to process town: ${town}`, error);
         this.loggingManager.logError(town, 'all industries', error instanceof Error ? error.message : String(error));
         
-        // Phase 4: Track failed town
+        // Track failed town
         this.progress.failedTowns.push(town);
         
         // Continue with next town despite error
@@ -244,8 +291,130 @@ export class ScrapingOrchestrator {
   }
 
   /**
-   * Performs provider lookups for all collected phone numbers
-   * Requirement 4.4: Perform provider lookups after all towns are processed
+   * Queues businesses for provider lookup (STREAMING approach)
+   * 
+   * NEW: Instead of waiting for all scraping to complete, we start lookups immediately
+   * - Extract phone numbers from businesses
+   * - Add to lookup queue
+   * - Start lookup processor if not already running
+   * 
+   * @param businesses - Businesses to queue for lookup
+   */
+  private queueProviderLookups(businesses: ScrapedBusiness[]): void {
+    if (!this.providerLookupService) {
+      return;
+    }
+
+    // Extract phone numbers
+    const phoneNumbers = businesses
+      .map(b => b.phone)
+      .filter(phone => phone && phone.trim() !== '' && phone !== 'No phone')
+      .map(phone => this.cleanPhoneNumber(phone));
+
+    if (phoneNumbers.length === 0) {
+      return;
+    }
+
+    // Add to queue
+    this.providerLookupQueue.push(...phoneNumbers);
+    console.log(`[Orchestrator] Queued ${phoneNumbers.length} phone numbers for lookup (queue size: ${this.providerLookupQueue.length})`);
+
+    // Start lookup processor if not already running
+    if (!this.providerLookupActive && this.providerLookupQueue.length > 0) {
+      this.providerLookupActive = true;
+      this.providerLookupPromise = this.processProviderLookupQueue();
+    }
+  }
+
+  /**
+   * Processes the provider lookup queue (STREAMING approach with PARALLEL batches)
+   * 
+   * Continuously processes phone numbers from the queue in parallel batches
+   * Runs in parallel with ongoing scraping
+   * 
+   * NEW: Process up to simultaneousLookups batches in parallel (5 batches = 25 numbers at once)
+   */
+  private async processProviderLookupQueue(): Promise<void> {
+    if (!this.providerLookupService) {
+      return;
+    }
+
+    console.log('[Orchestrator] Provider lookup processor started (STREAMING MODE with PARALLEL BATCHES)');
+
+    try {
+      while (this.providerLookupQueue.length > 0 || !this.isStopped) {
+        // Check if stopped
+        if (this.isStopped) {
+          console.log('[Orchestrator] Provider lookup processor stopped');
+          break;
+        }
+
+        // If queue is empty, wait a bit for more numbers to arrive
+        if (this.providerLookupQueue.length === 0) {
+          await this.sleep(1000);
+          continue;
+        }
+
+        // Process up to simultaneousLookups batches in parallel
+        const maxBatches = this.config.simultaneousLookups; // 5 batches
+        const batchSize = 5; // Each batch has 5 numbers
+        const totalNumbers = Math.min(maxBatches * batchSize, this.providerLookupQueue.length);
+        
+        if (totalNumbers === 0) {
+          await this.sleep(1000);
+          continue;
+        }
+
+        // Take numbers from queue
+        const phoneBatch = this.providerLookupQueue.splice(0, totalNumbers);
+
+        console.log(`[Orchestrator] Processing ${Math.ceil(phoneBatch.length / batchSize)} parallel lookup batches: ${phoneBatch.length} numbers (${this.providerLookupQueue.length} remaining in queue)`);
+
+        // Perform lookups (provider service handles batching internally)
+        const providerMap = await this.providerLookupService.lookupProviders(phoneBatch);
+
+        // Update businesses with provider information
+        let updatedCount = 0;
+        for (const business of this.allBusinesses) {
+          if (business.phone && business.phone.trim() !== '' && business.phone !== 'No phone') {
+            const cleanedPhone = this.cleanPhoneNumber(business.phone);
+            const provider = providerMap.get(cleanedPhone);
+            
+            if (provider && !business.provider) {
+              business.provider = provider;
+              updatedCount++;
+            }
+          }
+        }
+
+        console.log(`[Orchestrator] Provider lookup batch complete: ${updatedCount} businesses updated`);
+
+        // Emit providers-updated event
+        this.eventEmitter.emit('providers-updated', {
+          businesses: this.allBusinesses,
+          updatedCount: updatedCount,
+        });
+
+        // Small delay between batch groups
+        if (this.providerLookupQueue.length > 0) {
+          await this.sleep(500);
+        }
+      }
+
+      console.log('[Orchestrator] Provider lookup processor finished');
+
+    } catch (error) {
+      this.errorLogger.logError('Provider lookup processor failed', error);
+      console.error('[Orchestrator] Provider lookup processor error:', error);
+    } finally {
+      this.providerLookupActive = false;
+    }
+  }
+
+  /**
+   * Performs provider lookups for all collected phone numbers (LEGACY - kept for compatibility)
+   * 
+   * NOTE: This is now only used for retry scenarios. Normal operation uses streaming lookups.
    * 
    * @returns Promise that resolves when lookups are complete
    */
@@ -515,6 +684,14 @@ export class ScrapingOrchestrator {
     }
     
     return cleaned;
+  }
+
+  /**
+   * Sleep utility for delays
+   * @param ms - Milliseconds to sleep
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 

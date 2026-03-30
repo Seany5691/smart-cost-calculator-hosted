@@ -73,13 +73,16 @@ export class IndustryScraper {
 
         console.log(`[IndustryScraper] Attempt ${attempt}/${maxRetries} - Navigating to: ${searchQuery}`);
         
-        // Exponential backoff for retries: first attempt = 90s, second attempt = 120s
-        const navigationTimeout = attempt === 1 ? 90000 : 120000;
+        // Reduced timeout: 30s is sufficient for Google Maps
+        const navigationTimeout = 30000;
         
         await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: navigationTimeout });
 
-        // Wait a bit for page to load
-        await this.page.waitForTimeout(2000);
+        // Wait for page to be fully loaded (network idle)
+        await this.page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {
+          // Ignore timeout - page might still be usable
+          console.log(`[IndustryScraper] Network idle timeout (non-critical)`);
+        });
 
         // Check if we have a list view (multiple results) or single business view
         const hasFeed = await this.page.locator('div[role="feed"]').count() > 0;
@@ -130,7 +133,7 @@ export class IndustryScraper {
   }
 
   /**
-   * Extract businesses from list view with scrolling
+   * Extract businesses from list view with scrolling (OPTIMIZED)
    */
   async extractFromListView(): Promise<ScrapedBusiness[]> {
     const businesses: ScrapedBusiness[] = [];
@@ -148,8 +151,11 @@ export class IndustryScraper {
       // Scroll the feed
       await this.scrollFeed();
 
-      // Wait for content to load
-      await this.page.waitForTimeout(1000);
+      // OPTIMIZATION: Reduced wait time from 1000ms to 500ms
+      // Wait for new content to load (network idle or 500ms max)
+      await this.page.waitForLoadState('networkidle', { timeout: 500 }).catch(() => {
+        // Ignore timeout - continue scrolling
+      });
 
       // Check if we've reached the end
       const reachedEnd = await this.hasReachedEndOfList();

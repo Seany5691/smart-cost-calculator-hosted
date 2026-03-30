@@ -40,23 +40,34 @@ export class BrowserWorker {
   }
 
   /**
-   * Processes all industries for a town
+   * Processes all industries for a town using a PIPELINE approach
+   * 
+   * NEW APPROACH: Instead of batching industries, we use a worker pool pattern:
+   * - Maintain exactly `simultaneousIndustries` workers active at all times
+   * - Each worker: pulls industry from queue → scrapes → reports results → pulls next industry
+   * - This creates a continuous pipeline with no idle workers
+   * - Results are streamed back as they complete (not batched)
    * 
    * UPDATED: If no industries provided, searches for the town/business name directly
    * - With industries: Searches "industry in town" (e.g., "Restaurants in Cape Town")
    * - Without industries: Searches just the town/business name (e.g., "REGAL VANDERBIJLPARK")
    * 
    * Requirement 5.1: Initialize browser instance if not already initialized
-   * Requirement 5.2: Process up to simultaneousIndustries in parallel
+   * Requirement 5.2: Process up to simultaneousIndustries in parallel (now as worker pool)
    * Requirement 5.3: Log errors and continue with remaining industries
    * Requirement 5.4: Close browser after town is complete to free resources
    * 
    * @param town - Town name to scrape OR business name if no industries
    * @param industries - Array of industries to scrape (empty array for business-only search)
+   * @param onIndustryComplete - Optional callback when each industry completes (for streaming results)
    * @returns Array of all scraped businesses
    */
-  async processTown(town: string, industries: string[]): Promise<ScrapedBusiness[]> {
-    const allBusinesses: ScrapedBusiness[]= [];
+  async processTown(
+    town: string, 
+    industries: string[],
+    onIndustryComplete?: (industry: string, businesses: ScrapedBusiness[]) => void
+  ): Promise<ScrapedBusiness[]> {
+    const allBusinesses: ScrapedBusiness[] = [];
 
     try {
       // Check if stopped before starting
@@ -73,100 +84,115 @@ export class BrowserWorker {
       // If no industries, treat as a single search with empty industry string
       const industriesToProcess = industries.length === 0 ? [''] : industries;
 
-      console.log(`[Worker ${this.workerId}] Processing: ${town} with ${industries.length === 0 ? 'no industry filter' : `${industries.length} industries`}`);
+      console.log(`[Worker ${this.workerId}] Processing: ${town} with ${industries.length === 0 ? 'no industry filter' : `${industries.length} industries`} (PIPELINE MODE)`);
 
-      // Process industries with concurrency control
-      const concurrency = this.config.simultaneousIndustries;
-      
-      for (let i = 0; i < industriesToProcess.length; i += concurrency) {
-        // Check if stopped during processing
-        if (this.isStopped) {
-          console.log(`[Worker ${this.workerId}] Stopped during town processing: ${town}`);
-          break;
+      // Create industry queue
+      const industryQueue = [...industriesToProcess];
+      let queueIndex = 0;
+
+      // Get next industry from queue
+      const getNextIndustry = (): string | null => {
+        if (queueIndex >= industryQueue.length) {
+          return null;
         }
+        return industryQueue[queueIndex++];
+      };
 
-        const industryBatch = industriesToProcess.slice(i, i + concurrency);
+      // Worker function that processes industries from queue
+      const workerFunction = async (workerIndex: number) => {
+        const workerBusinesses: ScrapedBusiness[] = [];
         
-        const batchDescription = industries.length === 0 ? 'business search' : industryBatch.join(', ');
-        console.log(`[Worker ${this.workerId}] Processing batch ${Math.floor(i / concurrency) + 1}: ${batchDescription}`);
-
-        // Process batch in parallel with timeout protection and staggered startup
-        // Each industry gets 3 minutes max to complete, preventing one stuck industry from blocking everything
-        const SCRAPE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
-        
-        const batchPromises = industryBatch.map(async (industry, batchIndex) => {
-          // CRITICAL FIX: Stagger industry startup to prevent overwhelming Google Maps
-          // Each industry waits a bit before starting to avoid all navigating simultaneously
-          const startupDelay = batchIndex * 1000; // 1000ms (1 second) between each industry startup
-          if (startupDelay > 0) {
-            console.log(`[Worker ${this.workerId}] [Industry ${batchIndex + 1}/${industryBatch.length}] Waiting ${startupDelay}ms before starting (staggered startup)`);
-            await this.sleep(startupDelay);
-          }
-
-          // Check if stopped during staggered delay
+        while (true) {
+          // Check if stopped
           if (this.isStopped) {
-            console.log(`[Worker ${this.workerId}] Stopped during startup delay for ${industry || town}`);
-            return [];
+            console.log(`[Worker ${this.workerId}] [Pipeline ${workerIndex}] Stopped`);
+            break;
           }
 
-          return Promise.race([
-            this.scrapeIndustry(town, industry),
-            // Timeout promise that also checks stop signal
-            new Promise<ScrapedBusiness[]>((resolve, reject) => {
-              const startTime = Date.now();
-              const checkInterval = setInterval(() => {
-                // Check if stopped
-                if (this.isStopped) {
-                  clearInterval(checkInterval);
-                  console.log(`[Worker ${this.workerId}] Stop detected in timeout wrapper for ${industry || town}`);
-                  resolve([]); // Resolve with empty array instead of rejecting
-                }
-                // Check if timeout exceeded
-                if (Date.now() - startTime >= SCRAPE_TIMEOUT_MS) {
-                  clearInterval(checkInterval);
-                  reject(new Error(`Scraping timeout after 3 minutes for ${industry || town}`));
-                }
-              }, 500); // Check every 500ms
-            })
-          ]).catch(error => {
-            const searchDesc = industry === '' ? town : `${town} - ${industry}`;
-            console.error(`[Worker ${this.workerId}] ${searchDesc} failed or timed out: ${error.message}`);
+          // Get next industry from queue
+          const industry = getNextIndustry();
+          if (industry === null) {
+            console.log(`[Worker ${this.workerId}] [Pipeline ${workerIndex}] No more industries in queue`);
+            break;
+          }
+
+          const searchDesc = industry === '' ? town : `${industry} in ${town}`;
+          console.log(`[Worker ${this.workerId}] [Pipeline ${workerIndex}] Starting: ${searchDesc}`);
+
+          try {
+            // Scrape this industry with timeout protection
+            const SCRAPE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+            
+            const businesses = await Promise.race([
+              this.scrapeIndustry(town, industry),
+              new Promise<ScrapedBusiness[]>((resolve, reject) => {
+                const startTime = Date.now();
+                const checkInterval = setInterval(() => {
+                  if (this.isStopped) {
+                    clearInterval(checkInterval);
+                    resolve([]);
+                  }
+                  if (Date.now() - startTime >= SCRAPE_TIMEOUT_MS) {
+                    clearInterval(checkInterval);
+                    reject(new Error(`Scraping timeout after 3 minutes for ${searchDesc}`));
+                  }
+                }, 500);
+              })
+            ]);
+
+            workerBusinesses.push(...businesses);
+            console.log(`[Worker ${this.workerId}] [Pipeline ${workerIndex}] Completed: ${searchDesc} - Found ${businesses.length} businesses`);
+
+            // Stream results back immediately via callback
+            if (onIndustryComplete) {
+              onIndustryComplete(industry, businesses);
+            }
+
+          } catch (error) {
+            console.error(`[Worker ${this.workerId}] [Pipeline ${workerIndex}] Failed: ${searchDesc} - ${error instanceof Error ? error.message : String(error)}`);
             this.errorLogger.logScrapingError(town, industry || 'business search', error, {
               workerId: this.workerId,
+              pipelineWorker: workerIndex,
               timeout: true,
             });
-            return []; // Return empty array on timeout/error so batch can continue
-          });
-        });
+            
+            // Stream empty result on error
+            if (onIndustryComplete) {
+              onIndustryComplete(industry, []);
+            }
+          }
 
-        const batchResults = await Promise.allSettled(batchPromises);
-
-        // Collect successful results and log failures
-        for (let j = 0; j < batchResults.length; j++) {
-          const result = batchResults[j];
-          const industry = industryBatch[j];
-
-          if (result.status === 'fulfilled') {
-            allBusinesses.push(...result.value);
-            const searchDesc = industry === '' ? town : `${town} - ${industry}`;
-            console.log(`[Worker ${this.workerId}] ${searchDesc}: Found ${result.value.length} businesses`);
-          } else {
-            // Requirement 5.3: Log error and continue with remaining industries
-            this.errorLogger.logScrapingError(town, industry || 'business search', result.reason, {
-              workerId: this.workerId,
-            });
-            const searchDesc = industry === '' ? town : `${town} - ${industry}`;
-            console.error(`[Worker ${this.workerId}] ${searchDesc}: Failed - ${result.reason.message}`);
+          // Small delay between industries for this worker (rate limiting)
+          if (!this.isStopped) {
+            await this.sleep(500);
           }
         }
 
-        // Requirement 24.1: Wait 1 second between industry scrapes to avoid rate limiting
-        if (i + concurrency < industriesToProcess.length && !this.isStopped) {
-          await this.sleep(1000);
+        return workerBusinesses;
+      };
+
+      // Start worker pool (exactly simultaneousIndustries workers)
+      const concurrency = this.config.simultaneousIndustries;
+      console.log(`[Worker ${this.workerId}] Starting ${concurrency} pipeline workers for ${industriesToProcess.length} industries`);
+
+      const workerPromises: Promise<ScrapedBusiness[]>[] = [];
+      for (let i = 0; i < concurrency; i++) {
+        // Stagger worker startup slightly to avoid thundering herd
+        if (i > 0) {
+          await this.sleep(200);
         }
+        workerPromises.push(workerFunction(i + 1));
       }
 
-      console.log(`[Worker ${this.workerId}] Completed: ${town} - Total businesses: ${allBusinesses.length}`);
+      // Wait for all workers to complete
+      const workerResults = await Promise.all(workerPromises);
+
+      // Aggregate results from all workers
+      for (const businesses of workerResults) {
+        allBusinesses.push(...businesses);
+      }
+
+      console.log(`[Worker ${this.workerId}] Completed: ${town} - Total businesses: ${allBusinesses.length} (PIPELINE MODE)`);
 
     } catch (error) {
       this.errorLogger.logError(
@@ -215,11 +241,23 @@ export class BrowserWorker {
       page = await this.context.newPage();
       this.activePages.add(page);
 
+      // OPTIMIZATION: Block unnecessary resources for faster page loads
+      await page.route('**/*', (route) => {
+        const resourceType = route.request().resourceType();
+        // Block images, stylesheets, fonts, and media - we only need HTML and scripts
+        if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
+          route.abort();
+        } else {
+          route.continue();
+        }
+      });
+
       // Set timeouts to prevent hanging on individual operations
       // Note: These are per-operation timeouts, not total page lifetime
       // Page can stay open for hours as long as each operation completes within timeout
-      page.setDefaultTimeout(60000); // 60 seconds per operation (selector waits, etc.)
-      page.setDefaultNavigationTimeout(60000); // 60 seconds per navigation
+      // Reduced from 60s to 30s for faster failure detection
+      page.setDefaultTimeout(30000); // 30 seconds per operation (selector waits, etc.)
+      page.setDefaultNavigationTimeout(30000); // 30 seconds per navigation
 
       // Create scraper and scrape
       const scraper = new IndustryScraper(page, town, industry, this.eventEmitter, () => this.isStopped);

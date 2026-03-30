@@ -73,9 +73,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (scrapeConfig.simultaneousIndustries < 1 || scrapeConfig.simultaneousIndustries > 10) {
+    if (scrapeConfig.simultaneousIndustries < 1 || scrapeConfig.simultaneousIndustries > 5) {
       return NextResponse.json(
-        { error: 'simultaneousIndustries must be between 1 and 10' },
+        { error: 'simultaneousIndustries must be between 1 and 5' },
+        { status: 400 }
+      );
+    }
+
+    if (scrapeConfig.simultaneousLookups < 1 || scrapeConfig.simultaneousLookups > 5) {
+      return NextResponse.json(
+        { error: 'simultaneousLookups must be between 1 and 5' },
         { status: 400 }
       );
     }

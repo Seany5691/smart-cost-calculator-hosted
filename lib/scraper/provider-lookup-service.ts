@@ -573,99 +573,107 @@ export class ProviderLookupService {
    * @throws Error with 'CAPTCHA_DETECTED' if captcha error message appears
    */
   async lookupSingleProviderWithContext(context: BrowserContext, phoneNumber: string, isFirstLookup: boolean = false): Promise<string> {
-    return this.retryStrategy.execute(async () => {
-      const page = await context.newPage();
-      this.activePages.add(page); // Track page to prevent leaks
+    // Wrap entire lookup in a timeout to prevent hanging
+    const lookupTimeout = 30000; // 30 seconds max per lookup
+    
+    return Promise.race([
+      this.retryStrategy.execute(async () => {
+        const page = await context.newPage();
+        this.activePages.add(page); // Track page to prevent leaks
 
-      try {
-        // OPTIMIZATION: Don't set default timeouts - use specific timeouts per operation
-        // This prevents Playwright from doing extra timeout checks
-        
-        // Clean phone number (remove spaces, dashes, etc.)
-        const cleanPhone = this.cleanPhoneNumber(phoneNumber);
-        
-        console.log(`[ProviderLookup] Looking up phone: ${phoneNumber} -> cleaned: ${cleanPhone}`);
-
-        // Navigate to the form page (or refresh if not first lookup)
-        const formUrl = 'https://www.porting.co.za/PublicWebsiteApp/#/number-inquiry';
-        console.log(`[ProviderLookup] ${isFirstLookup ? 'Navigating to' : 'Refreshing'} form: ${formUrl}`);
-        
-        // OPTIMIZATION: Use 'commit' instead of 'domcontentloaded' for faster navigation
-        await page.goto(formUrl, { waitUntil: 'commit', timeout: 10000 });
-
-        // OPTIMIZATION: Reduced Angular wait from 500ms to 100ms
-        await this.sleep(100);
-
-        // OPTIMIZATION: Use locator with 'attached' state for faster selector waiting
-        await page.locator('#numberTextInput').waitFor({ timeout: 8000, state: 'attached' });
-        
-        // OPTIMIZATION: Use locator.fill() instead of evaluate + type (faster)
-        await page.locator('#numberTextInput').fill(cleanPhone);
-        
-        console.log(`[ProviderLookup] Entered phone number: ${cleanPhone}`);
-
-        // Click the Query button - this will navigate to results page with ?sid=xxx
-        console.log(`[ProviderLookup] Clicking Query button...`);
-        
-        // Use Promise.all to click and wait for navigation simultaneously
-        await Promise.all([
-          page.waitForLoadState('domcontentloaded', { timeout: 10000 }),
-          page.locator('#retrieveBtn').click()
-        ]);
-        
-        console.log(`[ProviderLookup] Navigation completed. Current URL: ${page.url()}`);
-
-        // Wait a moment for Angular to render the result
-        await this.sleep(200);
-
-        // Check for captcha error message on results page
-        const hasCaptchaError = await page.evaluate(() => {
-          const errorDiv = document.querySelector('#erromsg');
-          if (!errorDiv) return false;
-          
-          const errorText = errorDiv.textContent || '';
-          return errorText.includes('Verification Code') && errorText.includes('Field(s) value must be entered');
-        });
-
-        if (hasCaptchaError) {
-          console.warn(`[ProviderLookup] CAPTCHA ERROR detected for ${phoneNumber} - "Verification Code - Field(s) value must be entered."`);
-          throw new Error('CAPTCHA_DETECTED');
-        }
-
-        // Wait for result element on the results page
-        console.log(`[ProviderLookup] Waiting for #dataMsg element on results page...`);
-        await page.locator('#dataMsg').waitFor({ timeout: 10000, state: 'attached' });
-        
-        // OPTIMIZATION: Reduced wait from 100ms to 50ms
-        await this.sleep(50);
-
-        // Extract provider name from the result
-        const provider = await this.extractProviderFromFormResult(page);
-        
-        console.log(`[ProviderLookup] Result for ${phoneNumber}: ${provider}`);
-
-        return provider;
-
-      } catch (error) {
-        const errorMessage = (error as Error).message;
-        
-        // If captcha detected, throw special error to trigger context restart
-        if (errorMessage === 'CAPTCHA_DETECTED') {
-          console.warn(`[ProviderLookup] Captcha detected for ${phoneNumber}, context needs restart`);
-          throw error;
-        }
-        
-        console.warn(`[ProviderLookup] Lookup failed for ${phoneNumber}:`, error);
-        throw error; // Throw to trigger retry
-      } finally {
-        this.activePages.delete(page); // Untrack page
         try {
-          await page.close();
-        } catch (err) {
-          console.error('[ProviderLookup] Error closing page:', err);
+          // OPTIMIZATION: Don't set default timeouts - use specific timeouts per operation
+          // This prevents Playwright from doing extra timeout checks
+          
+          // Clean phone number (remove spaces, dashes, etc.)
+          const cleanPhone = this.cleanPhoneNumber(phoneNumber);
+          
+          console.log(`[ProviderLookup] Looking up phone: ${phoneNumber} -> cleaned: ${cleanPhone}`);
+
+          // Navigate to the form page (or refresh if not first lookup)
+          const formUrl = 'https://www.porting.co.za/PublicWebsiteApp/#/number-inquiry';
+          console.log(`[ProviderLookup] ${isFirstLookup ? 'Navigating to' : 'Refreshing'} form: ${formUrl}`);
+          
+          // OPTIMIZATION: Use 'commit' instead of 'domcontentloaded' for faster navigation
+          await page.goto(formUrl, { waitUntil: 'commit', timeout: 10000 });
+
+          // OPTIMIZATION: Reduced Angular wait from 500ms to 100ms
+          await this.sleep(100);
+
+          // OPTIMIZATION: Use locator with 'attached' state for faster selector waiting
+          await page.locator('#numberTextInput').waitFor({ timeout: 8000, state: 'attached' });
+          
+          // OPTIMIZATION: Use locator.fill() instead of evaluate + type (faster)
+          await page.locator('#numberTextInput').fill(cleanPhone);
+          
+          console.log(`[ProviderLookup] Entered phone number: ${cleanPhone}`);
+
+          // Click the Query button - this will navigate to results page with ?sid=xxx
+          console.log(`[ProviderLookup] Clicking Query button...`);
+          
+          // Use Promise.all to click and wait for navigation simultaneously
+          await Promise.all([
+            page.waitForLoadState('domcontentloaded', { timeout: 10000 }),
+            page.locator('#retrieveBtn').click()
+          ]);
+          
+          console.log(`[ProviderLookup] Navigation completed. Current URL: ${page.url()}`);
+
+          // Wait a moment for Angular to render the result
+          await this.sleep(200);
+
+          // Check for captcha error message on results page
+          const hasCaptchaError = await page.evaluate(() => {
+            const errorDiv = document.querySelector('#erromsg');
+            if (!errorDiv) return false;
+            
+            const errorText = errorDiv.textContent || '';
+            return errorText.includes('Verification Code') && errorText.includes('Field(s) value must be entered');
+          });
+
+          if (hasCaptchaError) {
+            console.warn(`[ProviderLookup] CAPTCHA ERROR detected for ${phoneNumber} - "Verification Code - Field(s) value must be entered."`);
+            throw new Error('CAPTCHA_DETECTED');
+          }
+
+          // Wait for result element on the results page
+          console.log(`[ProviderLookup] Waiting for #dataMsg element on results page...`);
+          await page.locator('#dataMsg').waitFor({ timeout: 10000, state: 'attached' });
+          
+          // OPTIMIZATION: Reduced wait from 100ms to 50ms
+          await this.sleep(50);
+
+          // Extract provider name from the result
+          const provider = await this.extractProviderFromFormResult(page);
+          
+          console.log(`[ProviderLookup] Result for ${phoneNumber}: ${provider}`);
+
+          return provider;
+
+        } catch (error) {
+          const errorMessage = (error as Error).message;
+          
+          // If captcha detected, throw special error to trigger context restart
+          if (errorMessage === 'CAPTCHA_DETECTED') {
+            console.warn(`[ProviderLookup] Captcha detected for ${phoneNumber}, context needs restart`);
+            throw error;
+          }
+          
+          console.warn(`[ProviderLookup] Lookup failed for ${phoneNumber}:`, error);
+          throw error; // Throw to trigger retry
+        } finally {
+          this.activePages.delete(page); // Untrack page
+          try {
+            await page.close();
+          } catch (err) {
+            console.error('[ProviderLookup] Error closing page:', err);
+          }
         }
-      }
-    });
+      }),
+      new Promise<string>((_, reject) => 
+        setTimeout(() => reject(new Error(`Lookup timeout after ${lookupTimeout}ms`)), lookupTimeout)
+      )
+    ]);
   }
 
   /**

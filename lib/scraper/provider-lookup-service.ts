@@ -625,8 +625,8 @@ export class ProviderLookupService {
           throw new Error('CAPTCHA_DETECTED');
         }
 
-        // OPTIMIZATION: Use locator with 'attached' state + 8 second timeout (same as Puppeteer)
-        await page.locator('#dataMsg').waitFor({ timeout: 8000, state: 'attached' });
+        // TEST: Increased timeout from 8s to 20s to rule out slow response times
+        await page.locator('#dataMsg').waitFor({ timeout: 20000, state: 'attached' });
         
         // OPTIMIZATION: Reduced wait from 100ms to 50ms
         await this.sleep(50);

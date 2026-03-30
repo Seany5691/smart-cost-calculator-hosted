@@ -604,25 +604,19 @@ export class ProviderLookupService {
         
         console.log(`[ProviderLookup] Entered phone number: ${cleanPhone}`);
 
-        // Click the Query button and wait for navigation if it occurs
-        console.log(`[ProviderLookup] Current URL before click: ${page.url()}`);
+        // Click the Query button - this will navigate to results page with ?sid=xxx
+        console.log(`[ProviderLookup] Clicking Query button...`);
+        await page.locator('#retrieveBtn').click();
         
-        // Use Promise.race to handle both navigation and non-navigation scenarios
-        await Promise.race([
-          page.locator('#retrieveBtn').click(),
-          page.waitForURL(/.*/, { timeout: 2000 }).catch(() => {
-            // Navigation didn't happen - that's fine for SPA
-            console.log(`[ProviderLookup] No navigation detected (SPA behavior)`);
-          })
-        ]);
-        
-        console.log(`[ProviderLookup] Clicked Query button`);
-        console.log(`[ProviderLookup] Current URL after click: ${page.url()}`);
+        // Wait for navigation to results page (URL will change to include ?sid=xxx)
+        console.log(`[ProviderLookup] Waiting for navigation to results page...`);
+        await page.waitForURL(/.*\?sid=.*/, { timeout: 10000 });
+        console.log(`[ProviderLookup] Navigated to results page: ${page.url()}`);
 
-        // Wait for Angular to process the request
-        await this.sleep(200);
+        // Wait a moment for Angular to render the result
+        await this.sleep(100);
 
-        // Check for captcha error message FIRST
+        // Check for captcha error message on results page
         const hasCaptchaError = await page.evaluate(() => {
           const errorDiv = document.querySelector('#erromsg');
           if (!errorDiv) return false;
@@ -636,9 +630,9 @@ export class ProviderLookupService {
           throw new Error('CAPTCHA_DETECTED');
         }
 
-        // TEST: Increased timeout from 8s to 20s to rule out slow response times
-        console.log(`[ProviderLookup] Waiting for #dataMsg element...`);
-        await page.locator('#dataMsg').waitFor({ timeout: 20000, state: 'attached' });
+        // Wait for result element on the results page
+        console.log(`[ProviderLookup] Waiting for #dataMsg element on results page...`);
+        await page.locator('#dataMsg').waitFor({ timeout: 10000, state: 'attached' });
         
         // OPTIMIZATION: Reduced wait from 100ms to 50ms
         await this.sleep(50);

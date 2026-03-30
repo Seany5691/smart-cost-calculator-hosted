@@ -382,8 +382,22 @@ export class ScrapingOrchestrator {
 
         console.log(`[Orchestrator] Processing ${Math.ceil(phoneBatch.length / batchSize)} parallel lookup batches: ${phoneBatch.length} numbers (${this.providerLookupQueue.length} remaining in queue)`);
 
-        // Perform lookups (provider service handles batching internally)
-        const providerMap = await this.providerLookupService.lookupProviders(phoneBatch);
+        // Perform lookups with timeout (5 minutes max for any batch group)
+        const lookupTimeout = 5 * 60 * 1000; // 5 minutes
+        let providerMap: Map<string, string>;
+        
+        try {
+          providerMap = await Promise.race([
+            this.providerLookupService.lookupProviders(phoneBatch),
+            new Promise<Map<string, string>>((_, reject) => 
+              setTimeout(() => reject(new Error('Provider lookup timeout after 5 minutes')), lookupTimeout)
+            )
+          ]);
+        } catch (error) {
+          console.error(`[Orchestrator] Provider lookup batch failed or timed out:`, error);
+          // Create empty map so we can continue
+          providerMap = new Map();
+        }
 
         // Update businesses with provider information
         let updatedCount = 0;

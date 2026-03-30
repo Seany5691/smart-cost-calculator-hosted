@@ -235,6 +235,16 @@ export const useScraperStore = create<ScraperState>()(
         // No validation needed for industries
         
         try {
+          // CRITICAL FIX: Clear old businesses and logs BEFORE starting new scrape
+          // This ensures the UI starts fresh and doesn't show old data
+          console.log('[SCRAPER] Clearing old businesses and logs before starting new scrape');
+          set({
+            businesses: [],
+            logs: [],
+            progress: defaultProgress,
+            lookupProgress: defaultLookupProgress,
+          });
+          
           set({ status: 'running' });
           
           const searchType = state.industries.length === 0 ? 'business search' : `${state.industries.length} industry(ies)`;

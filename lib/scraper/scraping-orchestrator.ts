@@ -44,6 +44,7 @@ export class ScrapingOrchestrator {
   private providerLookupQueue: string[] = []; // Queue of phone numbers to lookup
   private providerLookupActive: boolean = false;
   private providerLookupPromise: Promise<void> | null = null;
+  private scrapingComplete: boolean = false; // NEW: Flag to signal scraping is done
   
   private status: 'idle' | 'running' | 'paused' | 'stopped' | 'completed' | 'error' = 'idle';
   private isPaused: boolean = false;
@@ -130,6 +131,10 @@ export class ScrapingOrchestrator {
 
       // Wait for all workers to complete
       await Promise.all(workerPromises);
+
+      // Signal that scraping is complete (no more businesses will be added)
+      this.scrapingComplete = true;
+      console.log('[Orchestrator] All workers completed, scraping is done');
 
       // Wait for any remaining provider lookups to complete
       if (this.providerLookupPromise) {
@@ -333,6 +338,7 @@ export class ScrapingOrchestrator {
    * Runs in parallel with ongoing scraping
    * 
    * NEW: Process up to simultaneousLookups batches in parallel (5 batches = 25 numbers at once)
+   * FIXED: Now exits when scraping is complete AND queue is empty (no more waiting indefinitely)
    */
   private async processProviderLookupQueue(): Promise<void> {
     if (!this.providerLookupService) {
@@ -342,14 +348,20 @@ export class ScrapingOrchestrator {
     console.log('[Orchestrator] Provider lookup processor started (STREAMING MODE with PARALLEL BATCHES)');
 
     try {
-      while (this.providerLookupQueue.length > 0 || !this.isStopped) {
+      while (true) {
         // Check if stopped
         if (this.isStopped) {
           console.log('[Orchestrator] Provider lookup processor stopped');
           break;
         }
 
-        // If queue is empty, wait a bit for more numbers to arrive
+        // If queue is empty and scraping is complete, we're done
+        if (this.providerLookupQueue.length === 0 && this.scrapingComplete) {
+          console.log('[Orchestrator] Provider lookup queue empty and scraping complete - finishing');
+          break;
+        }
+
+        // If queue is empty but scraping still ongoing, wait for more numbers
         if (this.providerLookupQueue.length === 0) {
           await this.sleep(1000);
           continue;

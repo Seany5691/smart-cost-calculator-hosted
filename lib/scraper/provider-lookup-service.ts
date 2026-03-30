@@ -609,8 +609,8 @@ export class ProviderLookupService {
           throw new Error('CAPTCHA_DETECTED');
         }
 
-        // Wait for the result to appear
-        await page.waitForSelector('#dataMsg', { timeout: 8000 });
+        // Wait for the result to appear (increased timeout for VPS)
+        await page.waitForSelector('#dataMsg', { timeout: 20000 });
         
         // Wait a bit for the result to fully populate
         await this.sleep(200);
@@ -724,8 +724,8 @@ export class ProviderLookupService {
           throw new Error('CAPTCHA_DETECTED');
         }
 
-        // Wait for the result to appear
-        await page.waitForSelector('#dataMsg', { timeout: 8000 });
+        // Wait for the result to appear (increased timeout for VPS)
+        await page.waitForSelector('#dataMsg', { timeout: 20000 });
         
         // Wait a bit for the result to fully populate (optimized from 500ms to 200ms)
         await this.sleep(200);

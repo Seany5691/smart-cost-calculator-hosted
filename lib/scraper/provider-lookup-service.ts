@@ -606,15 +606,17 @@ export class ProviderLookupService {
 
         // Click the Query button - this will navigate to results page with ?sid=xxx
         console.log(`[ProviderLookup] Clicking Query button...`);
-        await page.locator('#retrieveBtn').click();
         
-        // Wait for navigation to results page (URL will change to include ?sid=xxx)
-        console.log(`[ProviderLookup] Waiting for navigation to results page...`);
-        await page.waitForURL(/.*\?sid=.*/, { timeout: 10000 });
-        console.log(`[ProviderLookup] Navigated to results page: ${page.url()}`);
+        // Use Promise.all to click and wait for navigation simultaneously
+        await Promise.all([
+          page.waitForLoadState('domcontentloaded', { timeout: 10000 }),
+          page.locator('#retrieveBtn').click()
+        ]);
+        
+        console.log(`[ProviderLookup] Navigation completed. Current URL: ${page.url()}`);
 
         // Wait a moment for Angular to render the result
-        await this.sleep(100);
+        await this.sleep(200);
 
         // Check for captcha error message on results page
         const hasCaptchaError = await page.evaluate(() => {

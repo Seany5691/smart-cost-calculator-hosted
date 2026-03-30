@@ -604,12 +604,23 @@ export class ProviderLookupService {
         
         console.log(`[ProviderLookup] Entered phone number: ${cleanPhone}`);
 
-        // OPTIMIZATION: Use locator.click() instead of page.click() (faster)
-        await page.locator('#retrieveBtn').click();
+        // Click the Query button and wait for navigation if it occurs
+        console.log(`[ProviderLookup] Current URL before click: ${page.url()}`);
+        
+        // Use Promise.race to handle both navigation and non-navigation scenarios
+        await Promise.race([
+          page.locator('#retrieveBtn').click(),
+          page.waitForURL(/.*/, { timeout: 2000 }).catch(() => {
+            // Navigation didn't happen - that's fine for SPA
+            console.log(`[ProviderLookup] No navigation detected (SPA behavior)`);
+          })
+        ]);
+        
         console.log(`[ProviderLookup] Clicked Query button`);
+        console.log(`[ProviderLookup] Current URL after click: ${page.url()}`);
 
-        // OPTIMIZATION: Reduced wait from 200ms to 100ms
-        await this.sleep(100);
+        // Wait for Angular to process the request
+        await this.sleep(200);
 
         // Check for captcha error message FIRST
         const hasCaptchaError = await page.evaluate(() => {
@@ -626,6 +637,7 @@ export class ProviderLookupService {
         }
 
         // TEST: Increased timeout from 8s to 20s to rule out slow response times
+        console.log(`[ProviderLookup] Waiting for #dataMsg element...`);
         await page.locator('#dataMsg').waitFor({ timeout: 20000, state: 'attached' });
         
         // OPTIMIZATION: Reduced wait from 100ms to 50ms

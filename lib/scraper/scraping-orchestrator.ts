@@ -346,6 +346,8 @@ export class ScrapingOrchestrator {
     }
 
     console.log('[Orchestrator] Provider lookup processor started (STREAMING MODE with PARALLEL BATCHES)');
+    
+    const failedLookups: string[] = []; // Track failed phone numbers for retry
 
     try {
       while (true) {
@@ -355,9 +357,19 @@ export class ScrapingOrchestrator {
           break;
         }
 
-        // If queue is empty and scraping is complete, we're done
+        // If queue is empty and scraping is complete, we're done with initial lookups
         if (this.providerLookupQueue.length === 0 && this.scrapingComplete) {
-          console.log('[Orchestrator] Provider lookup queue empty and scraping complete - finishing');
+          console.log('[Orchestrator] Provider lookup queue empty and scraping complete');
+          
+          // Retry failed lookups if any
+          if (failedLookups.length > 0) {
+            console.log(`[Orchestrator] Retrying ${failedLookups.length} failed lookups...`);
+            this.providerLookupQueue.push(...failedLookups);
+            failedLookups.length = 0; // Clear the failed list
+            continue; // Process the retry queue
+          }
+          
+          console.log('[Orchestrator] All provider lookups complete (including retries)');
           break;
         }
 
@@ -395,25 +407,40 @@ export class ScrapingOrchestrator {
           ]);
         } catch (error) {
           console.error(`[Orchestrator] Provider lookup batch failed or timed out:`, error);
+          // Add all phones from this batch to failed list for retry
+          failedLookups.push(...phoneBatch);
+          console.log(`[Orchestrator] Added ${phoneBatch.length} numbers to retry queue`);
           // Create empty map so we can continue
           providerMap = new Map();
         }
 
         // Update businesses with provider information
         let updatedCount = 0;
+        let failedCount = 0;
+        
         for (const business of this.allBusinesses) {
           if (business.phone && business.phone.trim() !== '' && business.phone !== 'No phone') {
             const cleanedPhone = this.cleanPhoneNumber(business.phone);
-            const provider = providerMap.get(cleanedPhone);
             
-            if (provider && !business.provider) {
-              business.provider = provider;
-              updatedCount++;
+            // Check if this phone was in the current batch
+            if (phoneBatch.includes(cleanedPhone)) {
+              const provider = providerMap.get(cleanedPhone);
+              
+              if (provider && provider !== 'Unknown' && !business.provider) {
+                business.provider = provider;
+                updatedCount++;
+              } else if (!provider || provider === 'Unknown') {
+                // Track as failed for retry (if not already in failed list)
+                if (!failedLookups.includes(cleanedPhone)) {
+                  failedLookups.push(cleanedPhone);
+                  failedCount++;
+                }
+              }
             }
           }
         }
 
-        console.log(`[Orchestrator] Provider lookup batch complete: ${updatedCount} businesses updated`);
+        console.log(`[Orchestrator] Provider lookup batch complete: ${updatedCount} businesses updated, ${failedCount} failed (will retry)`);
 
         // Emit providers-updated event
         this.eventEmitter.emit('providers-updated', {

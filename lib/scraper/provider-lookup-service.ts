@@ -574,8 +574,8 @@ export class ProviderLookupService {
         // Wait for Angular to load
         await this.sleep(500);
 
-        // Wait for the input field to be available
-        await page.waitForSelector('#numberTextInput', { timeout: 5000 });
+        // Wait for the input field to be available (increased timeout for VPS)
+        await page.waitForSelector('#numberTextInput', { timeout: 15000 });
         
         // Clear and fill the input field
         await page.evaluate(() => {
@@ -689,8 +689,8 @@ export class ProviderLookupService {
         // Wait for Angular to load (optimized from 1000ms to 500ms)
         await this.sleep(500);
 
-        // Wait for the input field to be available
-        await page.waitForSelector('#numberTextInput', { timeout: 5000 });
+        // Wait for the input field to be available (increased timeout for VPS)
+        await page.waitForSelector('#numberTextInput', { timeout: 15000 });
         
         // Clear and fill the input field
         await page.evaluate(() => {

@@ -528,11 +528,52 @@ export default function ScraperPage() {
     setShowClearConfirm(true);
   };
 
-  const handleConfirmClear = () => {
-    clearAll();
-    setTownInput('');
-    setShowClearConfirm(false);
-    toast.success('All scraping data has been cleared');
+  const handleConfirmClear = async () => {
+    try {
+      // Call API to delete from database
+      const token = localStorage.getItem('auth-storage');
+      let authToken = null;
+      
+      if (token) {
+        try {
+          const data = JSON.parse(token);
+          authToken = data.token;
+        } catch (e) {
+          console.error('Error parsing auth token:', e);
+        }
+      }
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+
+      const response = await fetch('/api/scraper/clear', {
+        method: 'POST',
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to clear data from database');
+      }
+
+      const result = await response.json();
+      console.log('[SCRAPER] Clear result:', result);
+
+      // Clear local state
+      clearAll();
+      setTownInput('');
+      setShowClearConfirm(false);
+      
+      toast.success(`Cleared ${result.deletedCount} businesses from database`);
+    } catch (error) {
+      console.error('[SCRAPER] Error clearing data:', error);
+      toast.error('Failed to clear data. Please try again.');
+      setShowClearConfirm(false);
+    }
   };
 
   const handleExport = async () => {

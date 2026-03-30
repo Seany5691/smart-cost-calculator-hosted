@@ -92,11 +92,15 @@ export function useScraperSSE(sessionId: string | null, enabled: boolean = true)
                 currentBatch: message.data.currentBatch,
                 totalBatches: message.data.totalBatches,
               });
-              addLog({
-                timestamp: new Date().toISOString(),
-                message: `📞 Looking up phone providers... ${message.data.completed}/${message.data.total} (${message.data.percentage}%)`,
-                level: 'info',
-              });
+              // Only log every 20% progress or when complete to reduce log spam
+              const percentage = message.data.percentage;
+              if (percentage === 100 || percentage % 20 === 0 || message.data.completed === message.data.total) {
+                addLog({
+                  timestamp: new Date().toISOString(),
+                  message: `📞 Provider lookup: ${message.data.completed}/${message.data.total} numbers (${percentage}%)`,
+                  level: 'info',
+                });
+              }
               break;
 
             case 'providers-updated':
@@ -127,11 +131,14 @@ export function useScraperSSE(sessionId: string | null, enabled: boolean = true)
               // Deactivate lookup progress
               updateLookupProgress({ isActive: false });
               
-              addLog({
-                timestamp: new Date().toISOString(),
-                message: `✅ Provider lookups completed! ${message.data.updatedCount} phone numbers identified`,
-                level: 'success',
-              });
+              // Only log if providers were actually updated
+              if (message.data.updatedCount > 0) {
+                addLog({
+                  timestamp: new Date().toISOString(),
+                  message: `✅ Identified providers for ${message.data.updatedCount} phone numbers`,
+                  level: 'success',
+                });
+              }
               break;
 
             case 'complete':

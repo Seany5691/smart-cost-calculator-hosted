@@ -133,59 +133,65 @@ export class IndustryScraper {
   }
 
   /**
-   * Extract businesses from list view with scrolling (OPTIMIZED)
+   * Extract businesses from list view with scrolling (BULLETPROOF - scroll until end marker found)
+   * 
+   * NEW APPROACH:
+   * - Scroll continuously until we find <span class="HlvSq">You've reached the end of the list.</span>
+   * - No arbitrary "no change" logic that stops too early
+   * - Minimal waits (300ms for DOM update, not network idle)
+   * - Comprehensive logging to track progress
    */
   async extractFromListView(): Promise<ScrapedBusiness[]> {
     const businesses: ScrapedBusiness[] = [];
-    let previousCount = 0;
-    let noChangeCount = 0;
-    const maxNoChangeIterations = 3;
 
-    while (true) {
+    console.log(`[IndustryScraper] Starting list extraction for ${this.industry} in ${this.town}`);
+
+    // Scroll until we find the end marker
+    let scrollAttempts = 0;
+    const maxScrollAttempts = 200; // Increased safety limit for industries with many businesses
+
+    while (scrollAttempts < maxScrollAttempts) {
       // Check if stopped during scrolling
       if (this.isStoppedChecker && this.isStoppedChecker()) {
         console.log(`[IndustryScraper] Stopped during list extraction for ${this.industry} in ${this.town}`);
-        return businesses; // Return what we have so far
+        return businesses;
+      }
+
+      // Check if we've reached the end BEFORE scrolling
+      const reachedEnd = await this.hasReachedEndOfList();
+      if (reachedEnd) {
+        console.log(`[IndustryScraper] ✓ Found end marker for ${this.industry} in ${this.town} after ${scrollAttempts} scrolls`);
+        break;
+      }
+
+      // Log progress every 10 scrolls
+      if (scrollAttempts > 0 && scrollAttempts % 10 === 0) {
+        const currentCards = await this.page.locator('div[role="feed"] .Nv2PK').count();
+        console.log(`[IndustryScraper] Scroll ${scrollAttempts}: ${currentCards} cards visible for ${this.industry} in ${this.town}`);
       }
 
       // Scroll the feed
       await this.scrollFeed();
+      scrollAttempts++;
 
-      // OPTIMIZATION: Reduced wait time from 1000ms to 500ms
-      // Wait for new content to load (network idle or 500ms max)
-      await this.page.waitForLoadState('networkidle', { timeout: 500 }).catch(() => {
-        // Ignore timeout - continue scrolling
-      });
+      // OPTIMIZATION: Minimal wait for DOM to update (not network idle)
+      // 300ms is enough for Google Maps to render new cards
+      await this.page.waitForTimeout(300);
+    }
 
-      // Check if we've reached the end
-      const reachedEnd = await this.hasReachedEndOfList();
-      if (reachedEnd) {
-        break;
-      }
-
-      // Extract business cards
-      const currentCards = await this.page.locator('div[role="feed"] .Nv2PK').all();
-      
-      // If no new cards appeared, increment counter
-      if (currentCards.length === previousCount) {
-        noChangeCount++;
-        if (noChangeCount >= maxNoChangeIterations) {
-          break;
-        }
-      } else {
-        noChangeCount = 0;
-        previousCount = currentCards.length;
-      }
+    if (scrollAttempts >= maxScrollAttempts) {
+      console.log(`[IndustryScraper] ⚠ Max scroll attempts (${maxScrollAttempts}) reached for ${this.industry} in ${this.town} - stopping`);
     }
 
     // Parse all business cards
     const cards = await this.page.locator('div[role="feed"] .Nv2PK').all();
+    console.log(`[IndustryScraper] Found ${cards.length} business cards for ${this.industry} in ${this.town}`);
     
     for (const card of cards) {
       // Check if stopped during card parsing
       if (this.isStoppedChecker && this.isStoppedChecker()) {
         console.log(`[IndustryScraper] Stopped during card parsing for ${this.industry} in ${this.town}`);
-        return businesses; // Return what we have so far
+        return businesses;
       }
 
       try {
@@ -193,7 +199,7 @@ export class IndustryScraper {
         if (business) {
           businesses.push(business);
           
-          // Emit individual business for real-time display (Phase 2)
+          // Emit individual business for real-time display
           if (this.eventEmitter) {
             this.eventEmitter.emit('business', business);
           }
@@ -207,6 +213,7 @@ export class IndustryScraper {
       }
     }
 
+    console.log(`[IndustryScraper] ✓ Extracted ${businesses.length} businesses for ${this.industry} in ${this.town}`);
     return businesses;
   }
 
@@ -393,17 +400,60 @@ export class IndustryScraper {
   }
 
   /**
-   * Check if we've reached the end of the list
+   * Check if we've reached the end of the list by looking for the specific end marker element
+   * Google Maps shows: <span class="HlvSq">You've reached the end of the list.</span>
+   * 
+   * BULLETPROOF APPROACH:
+   * 1. First check for the specific element with exact text
+   * 2. Fallback to checking if element is visible
+   * 3. Final fallback to body text search
    */
   private async hasReachedEndOfList(): Promise<boolean> {
-    return await this.page.evaluate(() => {
-      const bodyText = document.body.textContent || '';
-      return (
-        bodyText.includes("You've reached the end of the list") ||
-        bodyText.includes("You've reached the end") ||
-        bodyText.includes('No more results')
-      );
-    });
+    try {
+      // Method 1: Check for specific element with exact text (most reliable)
+      const endMarkerCount = await this.page.locator('span.HlvSq')
+        .filter({ hasText: "You've reached the end of the list" })
+        .count();
+      
+      if (endMarkerCount > 0) {
+        // Double-check it's actually visible
+        const isVisible = await this.page.locator('span.HlvSq')
+          .filter({ hasText: "You've reached the end of the list" })
+          .first()
+          .isVisible()
+          .catch(() => false);
+        
+        if (isVisible) {
+          return true;
+        }
+      }
+
+      // Method 2: Check for any HlvSq span (might have slightly different text)
+      const anyEndMarker = await this.page.locator('span.HlvSq').count();
+      if (anyEndMarker > 0) {
+        const text = await this.page.locator('span.HlvSq').first().textContent().catch(() => '');
+        if (text && text.toLowerCase().includes('reached') && text.toLowerCase().includes('end')) {
+          return true;
+        }
+      }
+
+      // Method 3: Fallback to body text search (least reliable but catches edge cases)
+      const bodyCheck = await this.page.evaluate(() => {
+        const bodyText = document.body.textContent || '';
+        return (
+          bodyText.includes("You've reached the end of the list") ||
+          bodyText.includes("You've reached the end") ||
+          bodyText.includes('No more results')
+        );
+      });
+
+      return bodyCheck;
+
+    } catch (error) {
+      // If there's an error checking, assume we haven't reached the end
+      // Better to scroll more than stop too early
+      return false;
+    }
   }
 
   /**

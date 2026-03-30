@@ -241,15 +241,22 @@ export class BrowserWorker {
       page = await this.context.newPage();
       this.activePages.add(page);
 
-      // OPTIMIZATION: Block unnecessary resources for faster page loads
+      // OPTIMIZATION: Block unnecessary resources ONLY on Google Maps for faster page loads
       await page.route('**/*', (route) => {
+        const url = route.request().url();
         const resourceType = route.request().resourceType();
-        // Block images, stylesheets, fonts, and media - we only need HTML and scripts
-        if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
-          route.abort();
-        } else {
-          route.continue();
+        
+        // Only block resources on Google Maps domains
+        if (url.includes('google.com') || url.includes('gstatic.com') || url.includes('googleapis.com')) {
+          // Block images, stylesheets, fonts, and media - we only need HTML and scripts
+          if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
+            route.abort();
+            return;
+          }
         }
+        
+        // Allow everything else
+        route.continue();
       });
 
       // Set timeouts to prevent hanging on individual operations

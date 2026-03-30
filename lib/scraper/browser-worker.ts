@@ -121,7 +121,7 @@ export class BrowserWorker {
 
           try {
             // Scrape this industry with timeout protection
-            const SCRAPE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+            const SCRAPE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes (increased from 3 to handle industries with many businesses)
             
             const businesses = await Promise.race([
               this.scrapeIndustry(town, industry),
@@ -134,7 +134,7 @@ export class BrowserWorker {
                   }
                   if (Date.now() - startTime >= SCRAPE_TIMEOUT_MS) {
                     clearInterval(checkInterval);
-                    reject(new Error(`Scraping timeout after 3 minutes for ${searchDesc}`));
+                    reject(new Error(`Scraping timeout after 5 minutes for ${searchDesc}`));
                   }
                 }, 500);
               })

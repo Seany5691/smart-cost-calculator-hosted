@@ -127,10 +127,10 @@ export async function POST(
       `INSERT INTO attachments (
         lead_id,
         user_id,
-        file_name,
-        storage_path,
+        filename,
+        file_path,
         file_size,
-        file_type,
+        mime_type,
         created_at
       ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
       RETURNING *`,

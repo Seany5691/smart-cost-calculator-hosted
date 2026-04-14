@@ -115,27 +115,32 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
     setRemindersLoading(true);
     try {
       const token = getAuthToken();
-      if (!token) return;
+      if (!token) {
+        setRemindersLoading(false);
+        return;
+      }
       
       const headers: HeadersInit = { 'Authorization': `Bearer ${token}` };
       
-      // Fetch ALL reminders once (not per lead)
-      const response = await fetch(`/api/reminders?includeCompleted=false&limit=1000`, { headers });
+      // Fetch reminders for each lead using the lead-specific endpoint
+      const reminderPromises = leads.map(async (lead) => {
+        try {
+          const response = await fetch(`/api/leads/${lead.id}/reminders`, { headers });
+          if (response.ok) {
+            const data = await response.json();
+            return data.reminders || [];
+          }
+          return [];
+        } catch (err) {
+          console.error(`Error fetching reminders for lead ${lead.id}:`, err);
+          return [];
+        }
+      });
       
-      if (response.ok) {
-        const data = await response.json();
-        const reminders = data.reminders || [];
-        
-        // Filter to only reminders that have a lead_id matching our appointments leads
-        const leadIds = new Set(leads.map(l => l.id));
-        const filteredReminders = reminders.filter((r: LeadReminder) => 
-          r.lead_id && leadIds.has(r.lead_id)
-        );
-        
-        setAllReminders(filteredReminders);
-      } else {
-        setAllReminders([]);
-      }
+      const results = await Promise.all(reminderPromises);
+      const allFetchedReminders = results.flat();
+      
+      setAllReminders(allFetchedReminders);
     } catch (err) {
       console.error('Error fetching reminders:', err);
       setAllReminders([]);

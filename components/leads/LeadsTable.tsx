@@ -88,7 +88,9 @@ function getRelativeTime(date: string): string {
 
 // Helper to format reminder date/time for appointments
 function formatReminderDateTime(date: string, time: string | null): string {
-  const d = new Date(`${date}T${time || '00:00:00'}`);
+  // Extract just the date part (YYYY-MM-DD) from the date string
+  const dateOnly = date.split('T')[0];
+  const d = new Date(`${dateOnly}T${time || '00:00:00'}`);
   
   // Format date as DD/MM/YYYY
   const day = d.getDate().toString().padStart(2, '0');

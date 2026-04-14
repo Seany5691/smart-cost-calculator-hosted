@@ -456,7 +456,7 @@ export default function RemindersPage() {
           if (!reminder) return;
           
           const response = await fetch(`/api/leads/${reminder.lead_id}/reminders/${reminderId}`, {
-            method: 'PATCH',
+            method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`

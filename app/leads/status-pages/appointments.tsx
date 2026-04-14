@@ -119,20 +119,26 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
       
       const headers: HeadersInit = { 'Authorization': `Bearer ${token}` };
       
-      // Fetch reminders for all leads in parallel
-      const reminderPromises = leads.map(lead =>
-        fetch(`/api/reminders?includeCompleted=false&limit=1000`, { headers })
-          .then(res => res.ok ? res.json() : { reminders: [] })
-          .then(data => data.reminders || [])
-          .catch(() => [])
-      );
+      // Fetch ALL reminders once (not per lead)
+      const response = await fetch(`/api/reminders?includeCompleted=false&limit=1000`, { headers });
       
-      const results = await Promise.all(reminderPromises);
-      const allFetchedReminders = results.flat();
-      
-      setAllReminders(allFetchedReminders);
+      if (response.ok) {
+        const data = await response.json();
+        const reminders = data.reminders || [];
+        
+        // Filter to only reminders that have a lead_id matching our appointments leads
+        const leadIds = new Set(leads.map(l => l.id));
+        const filteredReminders = reminders.filter((r: LeadReminder) => 
+          r.lead_id && leadIds.has(r.lead_id)
+        );
+        
+        setAllReminders(filteredReminders);
+      } else {
+        setAllReminders([]);
+      }
     } catch (err) {
       console.error('Error fetching reminders:', err);
+      setAllReminders([]);
     } finally {
       setRemindersLoading(false);
     }
@@ -383,59 +389,59 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
         </div>
       )}
 
-      {/* Route Generation Section */}
-      <div className="glass-card p-6">
-        <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-blue-400" />
-          Generate Route
-        </h3>
-        
-        {/* Starting Point */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-white mb-2">
-            Starting Point (Optional)
-          </label>
-          <input
-            type="text"
-            value={startingPoint}
-            onChange={(e) => setStartingPoint(e.target.value)}
-            placeholder="Paste Google Maps URL or enter address..."
-            className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-          <p className="text-xs text-gray-400 mt-2">
-            Example: https://maps.google.com/?q=123+Main+St or "123 Main Street, City"
-          </p>
-        </div>
-        
-        {/* Generate Button */}
-        <button
-          onClick={handleGenerateRoute}
-          disabled={selectedLeads.length === 0 || routeLoading}
-          className={`w-full px-6 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-            selectedLeads.length === 0 || routeLoading
-              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-              : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:shadow-lg'
-          }`}
-        >
-          {routeLoading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Generating Route...
-            </>
-          ) : (
-            <>
-              <MapPin className="w-5 h-5" />
-              Generate Route ({selectedLeads.length} {selectedLeads.length === 1 ? 'stop' : 'stops'})
-            </>
-          )}
-        </button>
-        
-        {selectedLeads.length > 0 && (
+      {/* Route Generation Section - Only show when leads are selected */}
+      {selectedLeads.length > 0 && (
+        <div className="glass-card p-6">
+          <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-blue-400" />
+            Generate Route
+          </h3>
+          
+          {/* Starting Point */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-white mb-2">
+              Starting Point (Optional)
+            </label>
+            <input
+              type="text"
+              value={startingPoint}
+              onChange={(e) => setStartingPoint(e.target.value)}
+              placeholder="Paste Google Maps URL or enter address..."
+              className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            <p className="text-xs text-gray-400 mt-2">
+              Example: https://maps.google.com/?q=123+Main+St or "123 Main Street, City"
+            </p>
+          </div>
+          
+          {/* Generate Button */}
+          <button
+            onClick={handleGenerateRoute}
+            disabled={routeLoading}
+            className={`w-full px-6 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+              routeLoading
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:shadow-lg'
+            }`}
+          >
+            {routeLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Generating Route...
+              </>
+            ) : (
+              <>
+                <MapPin className="w-5 h-5" />
+                Generate Route ({selectedLeads.length} {selectedLeads.length === 1 ? 'stop' : 'stops'})
+              </>
+            )}
+          </button>
+          
           <p className="text-xs text-emerald-300 mt-2 text-center">
             Route will be generated in the order you selected the leads
           </p>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Content */}
       {loading || remindersLoading ? (

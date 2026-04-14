@@ -86,15 +86,50 @@ function getRelativeTime(date: string): string {
   return `In ${diffDays} days`;
 }
 
+// Helper to format reminder date/time for appointments
+function formatReminderDateTime(date: string, time: string | null): string {
+  const d = new Date(`${date}T${time || '00:00:00'}`);
+  
+  // Format date as DD/MM/YYYY
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  
+  // Format time as HH:MM am/pm
+  let hours = d.getHours();
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12 || 12;
+  
+  return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
+}
+
 interface LeadsTableProps {
   leads: Lead[];
   onUpdate: () => void;
   disableBackgroundColor?: boolean; // Don't show background_color styling
   showDateInfo?: boolean; // Show Date Info column (for Later Stage and Signed tabs)
   highlightLeadId?: string | null; // Lead ID to highlight and scroll to
+  leadReminders?: Record<string, { date: string; time: string | null } | null>; // Next reminder for each lead (Appointments tab)
+  // Route selection props (Appointments tab only)
+  isAppointmentsTab?: boolean;
+  selectedLeads?: string[];
+  onToggleSelect?: (leadId: string) => void;
+  getSelectionOrder?: (leadId: string) => number | null;
 }
 
-export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = false, showDateInfo = false, highlightLeadId = null }: LeadsTableProps) {
+export default function LeadsTable({ 
+  leads, 
+  onUpdate, 
+  disableBackgroundColor = false, 
+  showDateInfo = false, 
+  highlightLeadId = null,
+  leadReminders,
+  isAppointmentsTab = false,
+  selectedLeads: appointmentsSelectedLeads,
+  onToggleSelect,
+  getSelectionOrder
+}: LeadsTableProps) {
   const { selectedLeads, toggleLeadSelection } = useLeadsStore();
   const { resetCalculator } = useCalculatorStore();
   const { toast } = useToast();
@@ -605,18 +640,22 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
             <thead className="bg-white/5">
               <tr>
                 <th className="px-3 py-3 text-left w-12">
-                  <input
-                    type="checkbox"
-                    checked={selectedLeads.length === leads.length && leads.length > 0}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        useLeadsStore.getState().setSelectedLeads(leads.map(l => l.id));
-                      } else {
-                        useLeadsStore.getState().clearSelection();
-                      }
-                    }}
-                    className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-emerald-500"
-                  />
+                  {isAppointmentsTab ? (
+                    <span className="text-xs font-medium text-gray-300">#</span>
+                  ) : (
+                    <input
+                      type="checkbox"
+                      checked={selectedLeads.length === leads.length && leads.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          useLeadsStore.getState().setSelectedLeads(leads.map(l => l.id));
+                        } else {
+                          useLeadsStore.getState().clearSelection();
+                        }
+                      }}
+                      className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-emerald-500"
+                    />
+                  )}
                 </th>
                 <th className={`px-3 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider ${showDateInfo ? 'w-1/5 min-w-[150px]' : 'w-1/4 min-w-[200px]'}`}>
                   Name
@@ -673,12 +712,43 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                       }}
                     >
                       <td className="px-3 py-3 w-12">
-                        <input
-                          type="checkbox"
-                          checked={selectedLeads.includes(lead.id)}
-                          onChange={() => toggleLeadSelection(lead.id)}
-                          className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-emerald-500"
-                        />
+                        {isAppointmentsTab ? (
+                          // Appointments tab: show numbered badge or checkbox
+                          onToggleSelect && getSelectionOrder ? (
+                            <div className="flex items-center justify-center">
+                              {getSelectionOrder(lead.id) ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleSelect(lead.id);
+                                  }}
+                                  className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center hover:bg-blue-600 transition-colors"
+                                >
+                                  {getSelectionOrder(lead.id)}
+                                </button>
+                              ) : (
+                                <input
+                                  type="checkbox"
+                                  checked={false}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    onToggleSelect(lead.id);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500"
+                                />
+                              )}
+                            </div>
+                          ) : null
+                        ) : (
+                          // Other tabs: regular checkbox
+                          <input
+                            type="checkbox"
+                            checked={selectedLeads.includes(lead.id)}
+                            onChange={() => toggleLeadSelection(lead.id)}
+                            className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-emerald-500"
+                          />
+                        )}
                       </td>
                       <td className="px-3 py-3">
                         <div className="text-sm font-medium text-white">
@@ -725,6 +795,14 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                             <div className="flex items-center gap-1.5 text-orange-400">
                               <Calendar className="w-3 h-3 flex-shrink-0" />
                               <span className="text-xs">Callback: {formatDate(lead.date_to_call_back)}</span>
+                            </div>
+                          )}
+                          {lead.status === 'appointments' && leadReminders?.[lead.id] && (
+                            <div className="flex items-center gap-1.5 text-pink-400">
+                              <Calendar className="w-3 h-3 flex-shrink-0" />
+                              <span className="text-xs">
+                                {formatReminderDateTime(leadReminders[lead.id]!.date, leadReminders[lead.id]!.time)}
+                              </span>
                             </div>
                           )}
                         </td>

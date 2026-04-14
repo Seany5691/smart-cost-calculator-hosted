@@ -28,6 +28,12 @@ interface LeadsCardsProps {
   disableBackgroundColor?: boolean; // Don't show background_color styling
   showDateInfo?: boolean; // Show Date Info (for Later Stage and Signed tabs)
   highlightLeadId?: string | null; // Lead ID to highlight and scroll to
+  leadReminders?: Record<string, { date: string; time: string | null } | null>; // Next reminder for each lead (Appointments tab)
+  // Route selection props (Appointments tab only)
+  isAppointmentsTab?: boolean;
+  selectedLeads?: string[];
+  onToggleSelect?: (leadId: string) => void;
+  getSelectionOrder?: (leadId: string) => number | null;
 }
 
 interface LeadNote {
@@ -65,7 +71,36 @@ function getAuthToken(): string | null {
   return null;
 }
 
-export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = false, showDateInfo = false, highlightLeadId = null }: LeadsCardsProps) {
+// Helper to format reminder date/time for appointments
+function formatReminderDateTime(date: string, time: string | null): string {
+  const d = new Date(`${date}T${time || '00:00:00'}`);
+  
+  // Format date as DD/MM/YYYY
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  
+  // Format time as HH:MM am/pm
+  let hours = d.getHours();
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12 || 12;
+  
+  return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
+}
+
+export default function LeadsCards({ 
+  leads, 
+  onUpdate, 
+  disableBackgroundColor = false, 
+  showDateInfo = false, 
+  highlightLeadId = null,
+  leadReminders,
+  isAppointmentsTab = false,
+  selectedLeads: appointmentsSelectedLeads,
+  onToggleSelect,
+  getSelectionOrder
+}: LeadsCardsProps) {
   const { selectedLeads, toggleLeadSelection } = useLeadsStore();
   const { resetCalculator } = useCalculatorStore();
   const { toast } = useToast();
@@ -637,12 +672,36 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
               <div className="p-4 border-b border-white/10">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <input
-                      type="checkbox"
-                      checked={selectedLeads.includes(lead.id)}
-                      onChange={() => toggleLeadSelection(lead.id)}
-                      className="mt-1 rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-emerald-500"
-                    />
+                    {isAppointmentsTab ? (
+                      // Appointments tab: show numbered badge or checkbox
+                      onToggleSelect && getSelectionOrder ? (
+                        <div className="flex items-center justify-center mt-1">
+                          {getSelectionOrder(lead.id) ? (
+                            <button
+                              onClick={() => onToggleSelect(lead.id)}
+                              className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center hover:bg-blue-600 transition-colors"
+                            >
+                              {getSelectionOrder(lead.id)}
+                            </button>
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={false}
+                              onChange={() => onToggleSelect(lead.id)}
+                              className="rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500"
+                            />
+                          )}
+                        </div>
+                      ) : null
+                    ) : (
+                      // Other tabs: regular checkbox
+                      <input
+                        type="checkbox"
+                        checked={selectedLeads.includes(lead.id)}
+                        onChange={() => toggleLeadSelection(lead.id)}
+                        className="mt-1 rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-emerald-500"
+                      />
+                    )}
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-semibold text-white truncate mb-1">
                         {lead.name}
@@ -742,6 +801,15 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
                     <Calendar className="w-4 h-4 text-indigo-400" />
                     <span className="text-sm text-indigo-300 font-medium">
                       Proposal Created: {new Date(lead.date_proposal_created).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </span>
+                  </div>
+                )}
+
+                {lead.status === 'appointments' && leadReminders?.[lead.id] && (
+                  <div className="flex items-center gap-1.5 p-2 bg-pink-500/10 rounded-lg border border-pink-500/20">
+                    <Calendar className="w-4 h-4 text-pink-400" />
+                    <span className="text-sm text-pink-300 font-medium">
+                      {formatReminderDateTime(leadReminders[lead.id]!.date, leadReminders[lead.id]!.time)}
                     </span>
                   </div>
                 )}

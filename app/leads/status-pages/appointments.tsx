@@ -116,23 +116,28 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
     try {
       const token = getAuthToken();
       if (!token) {
+        console.log('[APPOINTMENTS] No auth token found');
         setRemindersLoading(false);
         return;
       }
       
+      console.log('[APPOINTMENTS] Fetching reminders for', leads.length, 'leads');
       const headers: HeadersInit = { 'Authorization': `Bearer ${token}` };
       
       // Fetch reminders for each lead using the lead-specific endpoint
       const reminderPromises = leads.map(async (lead) => {
         try {
+          console.log(`[APPOINTMENTS] Fetching reminders for lead ${lead.name} (${lead.id})`);
           const response = await fetch(`/api/leads/${lead.id}/reminders`, { headers });
           if (response.ok) {
             const data = await response.json();
+            console.log(`[APPOINTMENTS] Got ${data.reminders?.length || 0} reminders for ${lead.name}:`, data.reminders);
             return data.reminders || [];
           }
+          console.log(`[APPOINTMENTS] Failed to fetch reminders for ${lead.name}:`, response.status);
           return [];
         } catch (err) {
-          console.error(`Error fetching reminders for lead ${lead.id}:`, err);
+          console.error(`[APPOINTMENTS] Error fetching reminders for lead ${lead.id}:`, err);
           return [];
         }
       });
@@ -140,9 +145,11 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
       const results = await Promise.all(reminderPromises);
       const allFetchedReminders = results.flat();
       
+      console.log('[APPOINTMENTS] Total reminders fetched:', allFetchedReminders.length);
+      console.log('[APPOINTMENTS] All fetched reminders:', allFetchedReminders);
       setAllReminders(allFetchedReminders);
     } catch (err) {
-      console.error('Error fetching reminders:', err);
+      console.error('[APPOINTMENTS] Error fetching reminders:', err);
       setAllReminders([]);
     } finally {
       setRemindersLoading(false);
@@ -175,9 +182,15 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
   
   // Get next reminder info for each lead
   const leadReminders = useMemo(() => {
+    console.log('[APPOINTMENTS] Building leadReminders map');
+    console.log('[APPOINTMENTS] Total reminders:', allReminders.length);
+    console.log('[APPOINTMENTS] All reminders:', allReminders);
+    console.log('[APPOINTMENTS] Sorted leads:', sortedLeads.map(l => ({ id: l.id, name: l.name })));
+    
     const map: Record<string, { date: string; time: string | null } | null> = {};
     sortedLeads.forEach(lead => {
       const reminder = getNextReminderForLead(lead.id, allReminders);
+      console.log(`[APPOINTMENTS] Lead ${lead.name} (${lead.id}):`, reminder);
       if (reminder) {
         map[lead.id] = {
           date: reminder.reminder_date,
@@ -187,6 +200,7 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
         map[lead.id] = null;
       }
     });
+    console.log('[APPOINTMENTS] Final leadReminders map:', map);
     return map;
   }, [sortedLeads, allReminders]);
   

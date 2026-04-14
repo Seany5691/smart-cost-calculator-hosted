@@ -389,12 +389,15 @@ export default function RemindersPage() {
   const handleCompleteReminder = async (reminderId: string, leadId: string) => {
     try {
       const response = await fetch(`/api/leads/${leadId}/reminders/${reminderId}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ completed: true })
+        body: JSON.stringify({ 
+          completed: true,
+          status: 'completed'
+        })
       });
 
       if (response.ok) {

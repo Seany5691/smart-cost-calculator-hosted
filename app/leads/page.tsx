@@ -12,13 +12,14 @@ const TABS = [
   { index: 0, id: 'dashboard', name: 'Dashboard', shortName: 'Dashboard' },
   { index: 1, id: 'main-sheet', name: 'Main Sheet', shortName: 'Main' },
   { index: 2, id: 'leads', name: 'Leads', shortName: 'Leads' },
-  { index: 3, id: 'working', name: 'Working On', shortName: 'Working' },
-  { index: 4, id: 'proposal', name: 'Proposal', shortName: 'Proposal' },
-  { index: 5, id: 'later', name: 'Later Stage', shortName: 'Later' },
-  { index: 6, id: 'bad', name: 'Bad Leads', shortName: 'Bad' },
-  { index: 7, id: 'signed', name: 'Signed', shortName: 'Signed' },
-  { index: 8, id: 'routes', name: 'Routes', shortName: 'Routes' },
-  { index: 9, id: 'reminders', name: 'Reminders', shortName: 'Reminders' },
+  { index: 3, id: 'appointments', name: 'Appointments', shortName: 'Appts' },
+  { index: 4, id: 'working', name: 'Working On', shortName: 'Working' },
+  { index: 5, id: 'proposal', name: 'Proposal', shortName: 'Proposal' },
+  { index: 6, id: 'later', name: 'Later Stage', shortName: 'Later' },
+  { index: 7, id: 'bad', name: 'Bad Leads', shortName: 'Bad' },
+  { index: 8, id: 'signed', name: 'Signed', shortName: 'Signed' },
+  { index: 9, id: 'routes', name: 'Routes', shortName: 'Routes' },
+  { index: 10, id: 'reminders', name: 'Reminders', shortName: 'Reminders' },
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
@@ -28,6 +29,7 @@ type TabId = typeof TABS[number]['id'];
 const DashboardContent = lazy(() => import('./dashboard-content').catch(() => ({ default: () => <PlaceholderContent name="Dashboard" /> })));
 const MainSheetContent = lazy(() => import('./status-pages/main-sheet').catch(() => ({ default: () => <PlaceholderContent name="Main Sheet" /> })));
 const LeadsContent = lazy(() => import('./status-pages/leads').catch(() => ({ default: () => <PlaceholderContent name="Leads" /> })));
+const AppointmentsContent = lazy(() => import('./status-pages/appointments').catch(() => ({ default: () => <PlaceholderContent name="Appointments" /> })));
 const WorkingContent = lazy(() => import('./status-pages/working').catch(() => ({ default: () => <PlaceholderContent name="Working On" /> })));
 const ProposalContent = lazy(() => import('./status-pages/proposal').catch(() => ({ default: () => <PlaceholderContent name="Proposal" /> })));
 const LaterContent = lazy(() => import('./status-pages/later').catch(() => ({ default: () => <PlaceholderContent name="Later Stage" /> })));
@@ -92,6 +94,7 @@ export default function LeadsPage() {
     totalLeads: 0,
     newCount: 0,
     leadsCount: 0,
+    appointmentsCount: 0,
     workingCount: 0,
     proposalCount: 0,
     laterCount: 0,
@@ -224,6 +227,7 @@ export default function LeadsPage() {
         totalLeads: allLeads.length,
         newCount: allLeads.filter(lead => lead.status === 'new').length,
         leadsCount: allLeads.filter(lead => lead.status === 'leads').length,
+        appointmentsCount: allLeads.filter(lead => lead.status === 'appointments').length,
         workingCount: allLeads.filter(lead => lead.status === 'working').length,
         proposalCount: allLeads.filter(lead => lead.status === 'proposal').length,
         laterCount: allLeads.filter(lead => lead.status === 'later').length,
@@ -330,6 +334,7 @@ export default function LeadsPage() {
               {activeTab === 'dashboard' && <DashboardContent stats={stats} />}
               {activeTab === 'main-sheet' && <MainSheetContent key={refreshKey} />}
               {activeTab === 'leads' && <LeadsContent key={refreshKey} highlightLeadId={highlightLeadId} />}
+              {activeTab === 'appointments' && <AppointmentsContent key={refreshKey} highlightLeadId={highlightLeadId} />}
               {activeTab === 'working' && <WorkingContent key={refreshKey} highlightLeadId={highlightLeadId} />}
               {activeTab === 'proposal' && <ProposalContent key={refreshKey} highlightLeadId={highlightLeadId} />}
               {activeTab === 'later' && <LaterContent key={refreshKey} highlightLeadId={highlightLeadId} />}

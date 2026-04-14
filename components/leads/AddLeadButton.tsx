@@ -28,6 +28,7 @@ interface AddLeadButtonProps {
 const LEAD_STATUSES = [
   { value: 'new', label: 'New (Main Sheet)' },
   { value: 'leads', label: 'Leads (Active Pipeline)' },
+  { value: 'appointments', label: 'Appointments' },
   { value: 'working', label: 'Working On' },
   { value: 'proposal', label: 'Proposal' },
   { value: 'later', label: 'Later Stage' },

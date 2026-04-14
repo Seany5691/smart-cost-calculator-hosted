@@ -1,7 +1,7 @@
 /**
  * Generic Migration Runner Script
- * Usage: node run-queue-migration.js <migration-filename>
- * Example: node run-queue-migration.js 021_add_appointments_status.sql
+ * Usage: node run-migration.js <migration-file.sql>
+ * Example: node run-migration.js 021_add_appointments_status.sql
  */
 
 const { Pool } = require('pg');
@@ -10,17 +10,17 @@ const path = require('path');
 require('dotenv').config({ path: '.env.local' });
 
 async function runMigration() {
-  // Get migration filename from command line arguments
-  const migrationFilename = process.argv[2];
+  // Get migration file from command line argument
+  const migrationFile = process.argv[2];
   
-  if (!migrationFilename) {
-    console.error('❌ Error: Migration filename is required');
-    console.log('\nUsage: node run-queue-migration.js <migration-filename>');
-    console.log('Example: node run-queue-migration.js 021_add_appointments_status.sql');
+  if (!migrationFile) {
+    console.error('❌ Error: Please provide a migration file name');
+    console.log('\nUsage: node run-migration.js <migration-file.sql>');
+    console.log('Example: node run-migration.js 021_add_appointments_status.sql');
     process.exit(1);
   }
 
-  console.log(`� Starting migration: ${migrationFilename}\n`);
+  console.log(`🚀 Starting migration: ${migrationFile}\n`);
 
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -28,8 +28,8 @@ async function runMigration() {
 
   try {
     // Read the migration file
-    const migrationPath = path.join(__dirname, 'database/migrations', migrationFilename);
-    console.log(`� Readfing migration file: ${migrationPath}`);
+    const migrationPath = path.join(__dirname, 'database/migrations', migrationFile);
+    console.log(`📄 Reading migration file: ${migrationPath}`);
     
     if (!fs.existsSync(migrationPath)) {
       throw new Error(`Migration file not found: ${migrationPath}`);
@@ -43,7 +43,8 @@ async function runMigration() {
     await pool.query(migrationSQL);
     console.log('✅ Migration executed successfully!\n');
 
-    console.log(`\n🎉 Migration ${migrationFilename} completed successfully!`);
+    console.log('🎉 Migration completed successfully!');
+    console.log(`\n✨ ${migrationFile} has been applied to the database!`);
 
   } catch (error) {
     console.error('\n❌ Migration failed:', error.message);

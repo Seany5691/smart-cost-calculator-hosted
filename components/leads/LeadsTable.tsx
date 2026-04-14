@@ -10,6 +10,7 @@ import EditLeadModal from './EditLeadModal';
 import LaterStageModal from './LaterStageModal';
 import SignedModal from './SignedModal';
 import ProposalModal from './ProposalModal';
+import AppointmentsModal from './AppointmentsModal';
 import AddNoteModal from './AddNoteModal';
 import AddReminderModal from './AddReminderModal';
 import ShareLeadModal from './ShareLeadModal';
@@ -104,6 +105,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
   const [laterStageLead, setLaterStageLead] = useState<Lead | null>(null);
   const [signedLead, setSignedLead] = useState<Lead | null>(null);
   const [proposalLead, setProposalLead] = useState<Lead | null>(null);
+  const [appointmentsLead, setAppointmentsLead] = useState<Lead | null>(null);
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
   const [notesReminders, setNotesReminders] = useState<Record<string, { notes: LeadNote[], reminders: LeadReminder[], loading: boolean }>>({});
   const [addNoteModalLead, setAddNoteModalLead] = useState<Lead | null>(null);
@@ -404,7 +406,12 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
   };
   
   const handleStatusChange = async (lead: Lead, newStatus: string) => {
-    // Show modal for proposal, later or signed status
+    // Show modal for appointments, proposal, later or signed status
+    if (newStatus === 'appointments') {
+      setAppointmentsLead(lead);
+      return;
+    }
+    
     if (newStatus === 'proposal') {
       setProposalLead(lead);
       return;
@@ -580,6 +587,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
     const colors = {
       new: 'bg-blue-100 text-blue-800',
       leads: 'bg-purple-100 text-purple-800',
+      appointments: 'bg-pink-100 text-pink-800',
       working: 'bg-yellow-100 text-yellow-800',
       proposal: 'bg-indigo-100 text-indigo-800',
       bad: 'bg-red-100 text-red-800',
@@ -730,6 +738,7 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
                         >
                           <option value="new">New</option>
                           <option value="leads">Leads</option>
+                          <option value="appointments">Appointments</option>
                           <option value="working">Working</option>
                           <option value="proposal">Proposal</option>
                           <option value="later">Later</option>
@@ -1022,6 +1031,24 @@ export default function LeadsTable({ leads, onUpdate, disableBackgroundColor = f
           isOpen={true}
           onClose={() => setProposalLead(null)}
           onConfirm={handleProposalConfirm}
+        />
+      )}
+
+      {/* Appointments Modal */}
+      {appointmentsLead && (
+        <AppointmentsModal
+          isOpen={true}
+          onClose={() => setAppointmentsLead(null)}
+          leadId={appointmentsLead.id}
+          leadName={appointmentsLead.name}
+          onSuccess={() => {
+            setAppointmentsLead(null);
+            onUpdate();
+            toast.success('Appointment scheduled', {
+              message: `${appointmentsLead.name} moved to Appointments`,
+              section: 'leads'
+            });
+          }}
         />
       )}
 

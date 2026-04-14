@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate status
-    const validStatuses = ['new', 'leads', 'working', 'bad', 'later', 'signed'];
+    const validStatuses = ['new', 'leads', 'appointments', 'working', 'proposal', 'bad', 'later', 'signed'];
     if (!validStatuses.includes(status)) {
       return NextResponse.json(
         { error: 'Invalid status' },

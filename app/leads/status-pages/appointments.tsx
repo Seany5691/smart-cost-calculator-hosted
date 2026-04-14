@@ -82,9 +82,17 @@ function getNextReminderForLead(leadId: string, reminders: LeadReminder[]): Lead
 
 // Helper to format reminder date/time
 function formatReminderDateTime(date: string, time: string | null): string {
+  console.log(`[formatReminderDateTime] Input: date="${date}" time="${time}"`);
+  
   // Extract just the date part (YYYY-MM-DD) from the date string
   const dateOnly = date.split('T')[0];
-  const d = new Date(`${dateOnly}T${time || '00:00:00'}`);
+  console.log(`[formatReminderDateTime] Extracted dateOnly="${dateOnly}"`);
+  
+  const dateTimeString = `${dateOnly}T${time || '00:00:00'}`;
+  console.log(`[formatReminderDateTime] Combined dateTimeString="${dateTimeString}"`);
+  
+  const d = new Date(dateTimeString);
+  console.log(`[formatReminderDateTime] Parsed Date object:`, d);
   
   // Format date as DD/MM/YYYY
   const day = d.getDate().toString().padStart(2, '0');
@@ -97,7 +105,10 @@ function formatReminderDateTime(date: string, time: string | null): string {
   const ampm = hours >= 12 ? 'pm' : 'am';
   hours = hours % 12 || 12;
   
-  return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
+  const result = `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
+  console.log(`[formatReminderDateTime] Result="${result}"`);
+  
+  return result;
 }
 
 export default function AppointmentsContent({ highlightLeadId }: AppointmentsContentProps) {
@@ -206,14 +217,12 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
   const leadReminders = useMemo(() => {
     console.log('[APPOINTMENTS] Building leadReminders map');
     console.log('[APPOINTMENTS] Total reminders:', allReminders.length);
-    console.log('[APPOINTMENTS] All reminders:', allReminders);
-    console.log('[APPOINTMENTS] Sorted leads:', sortedLeads.map(l => ({ id: l.id, name: l.name })));
     
     const map: Record<string, { date: string; time: string | null } | null> = {};
     sortedLeads.forEach(lead => {
       const reminder = getNextReminderForLead(lead.id, allReminders);
-      console.log(`[APPOINTMENTS] Lead ${lead.name} (${lead.id}):`, reminder);
       if (reminder) {
+        console.log(`[APPOINTMENTS] Lead ${lead.name}: Found reminder with date="${reminder.reminder_date}" time="${reminder.reminder_time}"`);
         map[lead.id] = {
           date: reminder.reminder_date,
           time: reminder.reminder_time

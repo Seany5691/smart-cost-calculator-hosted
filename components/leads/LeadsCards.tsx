@@ -10,6 +10,7 @@ import EditLeadModal from './EditLeadModal';
 import LaterStageModal from './LaterStageModal';
 import SignedModal from './SignedModal';
 import ProposalModal from './ProposalModal';
+import AppointmentsModal from './AppointmentsModal';
 import AddNoteModal from './AddNoteModal';
 import AddReminderModal from './AddReminderModal';
 import ShareLeadModal from './ShareLeadModal';
@@ -84,6 +85,7 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
   const [laterStageLead, setLaterStageLead] = useState<Lead | null>(null);
   const [signedLead, setSignedLead] = useState<Lead | null>(null);
   const [proposalLead, setProposalLead] = useState<Lead | null>(null);
+  const [appointmentsLead, setAppointmentsLead] = useState<Lead | null>(null);
   const [attachmentsModalLead, setAttachmentsModalLead] = useState<Lead | null>(null);
   const [highlightedLeadId, setHighlightedLeadId] = useState<string | null>(null);
 
@@ -249,6 +251,7 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
     const colors = {
       new: 'bg-blue-100 text-blue-800 border-blue-200',
       leads: 'bg-purple-100 text-purple-800 border-purple-200',
+      appointments: 'bg-pink-100 text-pink-800 border-pink-200',
       working: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       proposal: 'bg-indigo-100 text-indigo-800 border-indigo-200',
       bad: 'bg-red-100 text-red-800 border-red-200',
@@ -404,7 +407,7 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
   };
 
   const handleStatusChange = async (lead: Lead, newStatus: string) => {
-    // Show modal for proposal, later or signed status
+    // Show modal for proposal, later, signed, or appointments status
     if (newStatus === 'proposal') {
       setProposalLead(lead);
       return;
@@ -417,6 +420,11 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
     
     if (newStatus === 'signed') {
       setSignedLead(lead);
+      return;
+    }
+    
+    if (newStatus === 'appointments') {
+      setAppointmentsLead(lead);
       return;
     }
     
@@ -658,6 +666,7 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
                   >
                     <option value="new">New (Main Sheet)</option>
                     <option value="leads">Leads (Active Pipeline)</option>
+                    <option value="appointments">Appointments</option>
                     <option value="working">Working On</option>
                     <option value="proposal">Proposal</option>
                     <option value="later">Later Stage</option>
@@ -1135,6 +1144,20 @@ export default function LeadsCards({ leads, onUpdate, disableBackgroundColor = f
           isOpen={true}
           onClose={() => setProposalLead(null)}
           onConfirm={handleProposalConfirm}
+        />
+      )}
+
+      {/* Appointments Modal */}
+      {appointmentsLead && (
+        <AppointmentsModal
+          isOpen={true}
+          onClose={() => setAppointmentsLead(null)}
+          leadId={appointmentsLead.id}
+          leadName={appointmentsLead.name}
+          onSuccess={() => {
+            setAppointmentsLead(null);
+            onUpdate();
+          }}
         />
       )}
     </>

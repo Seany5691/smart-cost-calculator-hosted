@@ -30,6 +30,7 @@ interface DashboardStats {
   totalLeads: number;
   newCount: number;
   leadsCount: number;
+  appointmentsCount: number;
   workingCount: number;
   laterCount: number;
   badCount: number;
@@ -174,6 +175,13 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
       gradient: 'from-emerald-500 to-teal-500'
     },
     { 
+      count: stats.appointmentsCount, 
+      label: 'Appointments', 
+      description: 'Scheduled meetings',
+      tab: 'appointments',
+      gradient: 'from-pink-500 to-rose-500'
+    },
+    { 
       count: stats.workingCount, 
       label: 'Working On', 
       description: 'In progress',
@@ -243,8 +251,8 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
         </p>
       </div>
 
-      {/* Requirement: 2.3-2.6 - Statistics Grid with 6 clickable cards in a single horizontal line */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* Requirement: 2.3-2.6 - Statistics Grid with 7 clickable cards in a single horizontal line */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {statisticCards.map((card, index) => (
           <button
             key={index}

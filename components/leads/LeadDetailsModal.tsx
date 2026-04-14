@@ -227,6 +227,7 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
     const statusToTab: Record<string, string> = {
       'new': 'main-sheet', // Main Sheet
       'leads': 'leads',
+      'appointments': 'appointments',
       'working': 'working',
       'proposal': 'proposal',
       'later': 'later',

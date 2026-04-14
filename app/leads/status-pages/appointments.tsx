@@ -58,14 +58,18 @@ function getNextReminderForLead(leadId: string, reminders: LeadReminder[]): Lead
   // Filter to future reminders
   const upcomingReminders = uncompletedReminders
     .filter(r => {
-      const reminderDateTime = new Date(`${r.reminder_date}T${r.reminder_time || '00:00:00'}`);
+      // Extract just the date part (YYYY-MM-DD) from reminder_date
+      const dateOnly = r.reminder_date.split('T')[0];
+      const reminderDateTime = new Date(`${dateOnly}T${r.reminder_time || '00:00:00'}`);
       const isFuture = reminderDateTime >= now;
-      console.log(`[getNextReminderForLead] Reminder ${r.id}: ${r.reminder_date} ${r.reminder_time} -> ${reminderDateTime} -> isFuture: ${isFuture}`);
+      console.log(`[getNextReminderForLead] Reminder ${r.id}: ${dateOnly} ${r.reminder_time} -> ${reminderDateTime} -> isFuture: ${isFuture}`);
       return isFuture;
     })
     .sort((a, b) => {
-      const dateA = new Date(`${a.reminder_date}T${a.reminder_time || '00:00:00'}`);
-      const dateB = new Date(`${b.reminder_date}T${b.reminder_time || '00:00:00'}`);
+      const dateOnlyA = a.reminder_date.split('T')[0];
+      const dateOnlyB = b.reminder_date.split('T')[0];
+      const dateA = new Date(`${dateOnlyA}T${a.reminder_time || '00:00:00'}`);
+      const dateB = new Date(`${dateOnlyB}T${b.reminder_time || '00:00:00'}`);
       return dateA.getTime() - dateB.getTime();
     });
   
@@ -78,7 +82,9 @@ function getNextReminderForLead(leadId: string, reminders: LeadReminder[]): Lead
 
 // Helper to format reminder date/time
 function formatReminderDateTime(date: string, time: string | null): string {
-  const d = new Date(`${date}T${time || '00:00:00'}`);
+  // Extract just the date part (YYYY-MM-DD) from the date string
+  const dateOnly = date.split('T')[0];
+  const d = new Date(`${dateOnly}T${time || '00:00:00'}`);
   
   // Format date as DD/MM/YYYY
   const day = d.getDate().toString().padStart(2, '0');

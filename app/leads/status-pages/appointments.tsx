@@ -205,9 +205,11 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
       if (!reminderA) return 1;
       if (!reminderB) return -1;
       
-      // Compare reminder dates/times
-      const dateA = new Date(`${reminderA.reminder_date}T${reminderA.reminder_time || '00:00:00'}`);
-      const dateB = new Date(`${reminderB.reminder_date}T${reminderB.reminder_time || '00:00:00'}`);
+      // Compare reminder dates/times - extract date part first
+      const dateOnlyA = reminderA.reminder_date.split('T')[0];
+      const dateOnlyB = reminderB.reminder_date.split('T')[0];
+      const dateA = new Date(`${dateOnlyA}T${reminderA.reminder_time || '00:00:00'}`);
+      const dateB = new Date(`${dateOnlyB}T${reminderB.reminder_time || '00:00:00'}`);
       
       return dateA.getTime() - dateB.getTime();
     });
@@ -372,10 +374,21 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
           </div>
         </div>
         
-        {/* View Toggle */}
-        <div className="flex gap-2 bg-white/10 p-1 rounded-lg">
+        {/* Refresh Button and View Toggle */}
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setViewMode('table')}
+            onClick={handleUpdate}
+            disabled={loading || remindersLoading}
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+            title="Refresh appointments"
+          >
+            <Loader2 className={`w-4 h-4 ${(loading || remindersLoading) ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+          
+          <div className="flex gap-2 bg-white/10 p-1 rounded-lg">
+            <button
+              onClick={() => setViewMode('table')}
             className={`px-4 py-2 rounded-md transition-colors ${
               viewMode === 'table'
                 ? 'bg-emerald-500 text-white'
@@ -394,6 +407,7 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
           >
             Cards
           </button>
+        </div>
         </div>
       </div>
 

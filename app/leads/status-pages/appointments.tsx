@@ -43,13 +43,25 @@ function getAuthToken(): string | null {
 function getNextReminderForLead(leadId: string, reminders: LeadReminder[]): LeadReminder | null {
   const now = new Date();
   
-  // Filter to this lead's uncompleted future reminders
-  const upcomingReminders = reminders
-    .filter(r => r.lead_id === leadId)
-    .filter(r => !r.completed && r.status !== 'completed')
+  console.log(`[getNextReminderForLead] Looking for reminders for lead ${leadId}`);
+  console.log(`[getNextReminderForLead] Current time:`, now);
+  console.log(`[getNextReminderForLead] Total reminders to search:`, reminders.length);
+  
+  // Filter to this lead's reminders
+  const leadReminders = reminders.filter(r => r.lead_id === leadId);
+  console.log(`[getNextReminderForLead] Found ${leadReminders.length} reminders for this lead:`, leadReminders);
+  
+  // Filter to uncompleted reminders
+  const uncompletedReminders = leadReminders.filter(r => !r.completed && r.status !== 'completed');
+  console.log(`[getNextReminderForLead] Uncompleted reminders:`, uncompletedReminders);
+  
+  // Filter to future reminders
+  const upcomingReminders = uncompletedReminders
     .filter(r => {
       const reminderDateTime = new Date(`${r.reminder_date}T${r.reminder_time || '00:00:00'}`);
-      return reminderDateTime >= now;
+      const isFuture = reminderDateTime >= now;
+      console.log(`[getNextReminderForLead] Reminder ${r.id}: ${r.reminder_date} ${r.reminder_time} -> ${reminderDateTime} -> isFuture: ${isFuture}`);
+      return isFuture;
     })
     .sort((a, b) => {
       const dateA = new Date(`${a.reminder_date}T${a.reminder_time || '00:00:00'}`);
@@ -57,7 +69,11 @@ function getNextReminderForLead(leadId: string, reminders: LeadReminder[]): Lead
       return dateA.getTime() - dateB.getTime();
     });
   
-  return upcomingReminders[0] || null;
+  console.log(`[getNextReminderForLead] Upcoming reminders after filtering:`, upcomingReminders);
+  const result = upcomingReminders[0] || null;
+  console.log(`[getNextReminderForLead] Returning:`, result);
+  
+  return result;
 }
 
 // Helper to format reminder date/time

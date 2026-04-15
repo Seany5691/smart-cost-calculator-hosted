@@ -133,9 +133,12 @@ function formatReminderEmail(data: ReminderEmailData, type: 'created' | '1day' |
               ${data.leadName ? `
               <!-- Lead Information (Primary) -->
               <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 24px; border-radius: 4px; margin-bottom: 24px;">
-                <h2 style="margin: 0 0 16px 0; color: #1e40af; font-size: 22px; font-weight: bold;">
+                <h2 style="margin: 0 0 12px 0; color: #1e40af; font-size: 22px; font-weight: bold;">
                   ${data.leadName}
                 </h2>
+                <p style="margin: 0 0 12px 0; color: #374151; font-size: 15px;">
+                  <strong>📅 Due:</strong> ${timeInfo}
+                </p>
                 ${data.leadPhone ? `
                 <p style="margin: 0 0 8px 0; color: #374151; font-size: 15px;">
                   <strong>📞 Phone:</strong> <a href="tel:${data.leadPhone}" style="color: #2563eb; text-decoration: none;">${data.leadPhone}</a>
@@ -152,32 +155,31 @@ function formatReminderEmail(data: ReminderEmailData, type: 'created' | '1day' |
                 </p>
                 ` : ''}
                 ${data.leadTown ? `
-                <p style="margin: 0 0 8px 0; color: #374151; font-size: 15px;">
+                <p style="margin: 0 0 12px 0; color: #374151; font-size: 15px;">
                   <strong>🏙️ Town:</strong> ${data.leadTown}
                 </p>
                 ` : ''}
-                ${data.leadMapsAddress ? `
-                <p style="margin: 0 0 8px 0;">
-                  <a href="${data.leadMapsAddress}" target="_blank" style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 14px; font-weight: bold;">
+                <p style="margin: 0 0 20px 0; color: #374151; font-size: 15px; line-height: 1.6;">
+                  <strong>📝 Notes:</strong> ${data.reminderMessage}
+                </p>
+                
+                <!-- Action Buttons -->
+                <div style="margin-top: 0;">
+                  ${data.leadMapsAddress ? `
+                  <a href="${data.leadMapsAddress}" target="_blank" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: bold; margin-right: 10px;">
                     🗺️ Open in Google Maps
                   </a>
-                </p>
-                ` : ''}
-              </div>
-              ` : ''}
-              
-              <!-- Reminder Details -->
-              <div style="background-color: #f9fafb; border-left: 4px solid ${urgencyColor}; padding: 20px; margin-bottom: 20px; border-radius: 4px;">
-                <div style="margin-bottom: 12px;">
-                  <span style="display: inline-block; background-color: ${priorityColor}; color: #ffffff; padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
-                    ${data.priority} Priority
-                  </span>
-                  ${data.reminderType ? `
-                  <span style="display: inline-block; background-color: #6b7280; color: #ffffff; padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-left: 8px;">
-                    ${data.reminderType}
-                  </span>
+                  ` : ''}
+                  ${data.leadId ? `
+                  <a href="https://deals.smartintegrate.co.za/leads?openModal=${data.leadId}" target="_blank" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: bold;">
+                    View Lead Details
+                  </a>
                   ` : ''}
                 </div>
+              </div>
+              ` : `
+              <!-- Reminder Details (No Lead) -->
+              <div style="background-color: #f9fafb; border-left: 4px solid ${urgencyColor}; padding: 20px; margin-bottom: 20px; border-radius: 4px;">
                 <h3 style="margin: 0 0 12px 0; color: #111827; font-size: 18px; font-weight: bold;">
                   ${data.reminderTitle}
                 </h3>
@@ -188,15 +190,7 @@ function formatReminderEmail(data: ReminderEmailData, type: 'created' | '1day' |
                   <strong>📅 Due:</strong> ${timeInfo}
                 </p>
               </div>
-              
-              ${data.leadId ? `
-              <!-- View Lead Button -->
-              <div style="text-align: center; margin: 24px 0;">
-                <a href="https://deals.smartintegrate.co.za/leads?leadId=${data.leadId}" target="_blank" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: bold;">
-                  View Lead Details
-                </a>
-              </div>
-              ` : ''}
+              `}
               
               <!-- Footer Note -->
               <p style="margin: 20px 0 0 0; color: #9ca3af; font-size: 13px; line-height: 1.5; text-align: center;">
@@ -326,10 +320,13 @@ function formatBatchedReminderEmail(data: BatchedReminderEmailData): { subject: 
       <div style="background-color: #ffffff; border: 2px solid #e5e7eb; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
         ${reminder.leadName ? `
         <!-- Lead Information -->
-        <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; border-radius: 4px; margin-bottom: 16px;">
+        <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; border-radius: 4px;">
           <h3 style="margin: 0 0 12px 0; color: #1e40af; font-size: 20px; font-weight: bold;">
             ${reminder.leadName}
           </h3>
+          <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">
+            <strong>📅 Due:</strong> ${timeInfo}
+          </p>
           ${reminder.leadPhone ? `
           <p style="margin: 0 0 6px 0; color: #374151; font-size: 14px;">
             <strong>📞 Phone:</strong> <a href="tel:${reminder.leadPhone}" style="color: #2563eb; text-decoration: none;">${reminder.leadPhone}</a>
@@ -346,45 +343,40 @@ function formatBatchedReminderEmail(data: BatchedReminderEmailData): { subject: 
           </p>
           ` : ''}
           ${reminder.leadTown ? `
-          <p style="margin: 0 0 6px 0; color: #374151; font-size: 14px;">
+          <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">
             <strong>🏙️ Town:</strong> ${reminder.leadTown}
           </p>
           ` : ''}
-          ${reminder.leadMapsAddress ? `
-          <p style="margin: 8px 0 0 0;">
-            <a href="${reminder.leadMapsAddress}" target="_blank" style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold;">
+          <p style="margin: 0 0 16px 0; color: #374151; font-size: 14px; line-height: 1.6;">
+            <strong>📝 Notes:</strong> ${reminder.reminderMessage}
+          </p>
+          
+          <!-- Action Buttons -->
+          <div style="margin-top: 0;">
+            ${reminder.leadMapsAddress ? `
+            <a href="${reminder.leadMapsAddress}" target="_blank" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; margin-right: 8px;">
               🗺️ Open in Google Maps
             </a>
-          </p>
-          ` : ''}
+            ` : ''}
+            ${reminder.leadId ? `
+            <a href="https://deals.smartintegrate.co.za/leads?openModal=${reminder.leadId}" target="_blank" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold;">
+              View Lead Details
+            </a>
+            ` : ''}
+          </div>
         </div>
-        ` : ''}
-        
-        <!-- Reminder Details -->
-        <div style="margin-bottom: 12px;">
-          <span style="display: inline-block; background-color: ${priorityColor}; color: #ffffff; padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
-            ${reminder.priority}
-          </span>
-          <span style="display: inline-block; background-color: #6b7280; color: #ffffff; padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-left: 8px;">
-            ${reminder.reminderType}
-          </span>
-        </div>
+        ` : `
+        <!-- Reminder without Lead -->
         <h4 style="margin: 0 0 10px 0; color: #111827; font-size: 18px; font-weight: bold;">
           ${reminder.reminderTitle}
         </h4>
         <p style="margin: 0 0 10px 0; color: #374151; font-size: 15px; line-height: 1.6;">
           ${reminder.reminderMessage}
         </p>
-        <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px;">
+        <p style="margin: 0; color: #6b7280; font-size: 14px;">
           <strong>📅 Due:</strong> ${timeInfo}
         </p>
-        ${reminder.leadId ? `
-        <div style="margin-top: 12px;">
-          <a href="https://deals.smartintegrate.co.za/leads?leadId=${reminder.leadId}" target="_blank" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: bold;">
-            View Lead Details
-          </a>
-        </div>
-        ` : ''}
+        `}
       </div>
     `;
   }).join('');

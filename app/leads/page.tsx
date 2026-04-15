@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth-simple';
 import { useLeadsStore } from '@/lib/store/leads';
 import { Loader2 } from 'lucide-react';
+import TestEmailButton from '@/components/TestEmailButton';
 
 // Tab configuration with labels
 // Requirements: 1.1, 1.6
@@ -384,6 +385,9 @@ export default function LeadsPage() {
           transform: scale(1.02);
         }
       `}</style>
+
+      {/* TEMPORARY: Test Email Button - Remove after testing */}
+      <TestEmailButton />
     </div>
   );
 }

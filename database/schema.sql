@@ -171,6 +171,9 @@ CREATE TABLE IF NOT EXISTS reminders (
   recurrence_pattern VARCHAR(50),
   completed BOOLEAN DEFAULT false,
   completed_at TIMESTAMP,
+  email_sent_created BOOLEAN DEFAULT false,
+  email_sent_1day BOOLEAN DEFAULT false,
+  email_sent_30min BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -178,6 +181,7 @@ CREATE TABLE IF NOT EXISTS reminders (
 CREATE INDEX IF NOT EXISTS idx_reminders_lead_id ON reminders(lead_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_user_id ON reminders(user_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_due_date ON reminders(due_date);
+CREATE INDEX IF NOT EXISTS idx_reminders_email_notifications ON reminders(completed, email_sent_created, email_sent_1day, email_sent_30min) WHERE completed = false;
 CREATE INDEX IF NOT EXISTS idx_reminders_completed ON reminders(completed);
 
 -- Routes Table

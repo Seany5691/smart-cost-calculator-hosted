@@ -280,8 +280,9 @@ export async function POST(
       const lead = leadInfo.rows[0];
 
       // Get all user IDs who received the reminder
+      const currentUserId = authResult.user.userId;
       const userIds = creatorWantsReminder 
-        ? [authResult.user.userId, ...shared_with_user_ids.filter((id: string) => id !== authResult.user.userId)]
+        ? [currentUserId, ...shared_with_user_ids.filter((id: string) => id !== currentUserId)]
         : shared_with_user_ids;
 
       // Send email to each user who received the reminder

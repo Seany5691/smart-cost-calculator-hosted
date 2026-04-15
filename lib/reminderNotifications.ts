@@ -126,7 +126,12 @@ export async function processReminderNotifications(): Promise<{
         }
 
         // Check if we need to send "1 day before" notification - GROUP BY USER
-        if (!reminder.email_sent_1day && hoursDiff <= 24 && hoursDiff > 0) {
+        // Only send at 5pm (17:00) the day before
+        const currentHour = now.getHours();
+        const isWithin1DayWindow = hoursDiff <= 24 && hoursDiff > 0;
+        const is5pmHour = currentHour === 17; // 5pm
+        
+        if (!reminder.email_sent_1day && isWithin1DayWindow && is5pmHour) {
           const userId = reminder.user_id;
           if (!userRemindersFor1Day.has(userId)) {
             userRemindersFor1Day.set(userId, []);

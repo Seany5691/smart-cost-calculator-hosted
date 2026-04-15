@@ -38,9 +38,14 @@ export async function POST(request: NextRequest) {
         r.priority,
         u.email as user_email,
         u.name as user_name,
+        l.id as lead_id,
         l.name as lead_name,
         l.contact_person as lead_contact_person,
-        l.phone as lead_phone
+        l.phone as lead_phone,
+        l.provider as lead_provider,
+        l.address as lead_address,
+        l.town as lead_town,
+        l.maps_address as lead_maps_address
       FROM reminders r
       JOIN users u ON r.user_id = u.id
       LEFT JOIN leads l ON r.lead_id = l.id
@@ -82,9 +87,14 @@ export async function POST(request: NextRequest) {
         reminderTime: r.reminder_time || undefined,
         priority: r.priority,
         reminderType: r.reminder_type,
+        leadId: r.lead_id || undefined,
         leadName: r.lead_name || undefined,
         leadContact: r.lead_contact_person || undefined,
         leadPhone: r.lead_phone || undefined,
+        leadProvider: r.lead_provider || undefined,
+        leadAddress: r.lead_address || undefined,
+        leadTown: r.lead_town || undefined,
+        leadMapsAddress: r.lead_maps_address || undefined,
       })),
     };
 

@@ -126,27 +126,10 @@ export async function processReminderNotifications(): Promise<{
         };
 
         // Check if we need to send "created" notification
-        // Only send creation emails for reminders created recently (within last hour)
-        // This prevents sending creation emails for old reminders after migration
-        const reminderCreatedAt = new Date(reminder.created_at);
-        const hoursSinceCreation = (now.getTime() - reminderCreatedAt.getTime()) / (1000 * 60 * 60);
-        const isRecentlyCreated = hoursSinceCreation <= 1; // Within last hour
-        
-        if (!reminder.email_sent_created && isRecentlyCreated) {
-          console.log(`[REMINDER NOTIFICATIONS] Sending creation email for reminder ${reminder.id}`);
-          const result = await sendReminderEmail(emailData, 'created');
-          
-          if (result.success) {
-            await query(
-              'UPDATE reminders SET email_sent_created = true WHERE id = $1',
-              [reminder.id]
-            );
-            stats.sent++;
-          } else {
-            stats.errors++;
-          }
-        } else if (!reminder.email_sent_created && !isRecentlyCreated) {
-          // Mark old reminders as having sent creation email (skip sending)
+        // Creation emails are ONLY sent immediately when the reminder is created
+        // The cron job should NEVER send creation emails
+        // Just mark old reminders as having sent creation email (skip sending)
+        if (!reminder.email_sent_created) {
           await query(
             'UPDATE reminders SET email_sent_created = true WHERE id = $1',
             [reminder.id]

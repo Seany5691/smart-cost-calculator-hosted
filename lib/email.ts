@@ -39,9 +39,14 @@ interface ReminderEmailData {
   reminderTime?: string;
   priority: string;
   reminderType?: string;
+  leadId?: string;
   leadName?: string;
   leadContact?: string;
   leadPhone?: string;
+  leadProvider?: string;
+  leadAddress?: string;
+  leadTown?: string;
+  leadMapsAddress?: string;
 }
 
 interface BatchedReminderEmailData {
@@ -54,9 +59,14 @@ interface BatchedReminderEmailData {
     reminderTime?: string;
     priority: string;
     reminderType: string;
+    leadId?: string;
     leadName?: string;
     leadContact?: string;
     leadPhone?: string;
+    leadProvider?: string;
+    leadAddress?: string;
+    leadTown?: string;
+    leadMapsAddress?: string;
   }>;
 }
 
@@ -120,49 +130,76 @@ function formatReminderEmail(data: ReminderEmailData, type: 'created' | '1day' |
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
-              <!-- Reminder Title -->
-              <h2 style="margin: 0 0 20px 0; color: #111827; font-size: 20px;">
-                ${data.reminderTitle}
-              </h2>
-              
-              <!-- Reminder Details -->
-              <div style="background-color: #f9fafb; border-left: 4px solid ${urgencyColor}; padding: 20px; margin-bottom: 20px; border-radius: 4px;">
-                <p style="margin: 0 0 10px 0; color: #374151; font-size: 16px; line-height: 1.5;">
-                  <strong>Message:</strong><br>
-                  ${data.reminderMessage}
-                </p>
-                <p style="margin: 10px 0 0 0; color: #6b7280; font-size: 14px;">
-                  <strong>Due:</strong> ${timeInfo}
-                </p>
-                <p style="margin: 5px 0 0 0;">
-                  <span style="display: inline-block; background-color: ${priorityColor}; color: #ffffff; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
-                    ${data.priority} Priority
-                  </span>
-                </p>
-              </div>
-              
               ${data.leadName ? `
-              <!-- Lead Information -->
-              <div style="background-color: #eff6ff; padding: 20px; border-radius: 4px; margin-bottom: 20px;">
-                <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 16px;">Lead Information</h3>
-                <p style="margin: 5px 0; color: #374151; font-size: 14px;">
-                  <strong>Name:</strong> ${data.leadName}
-                </p>
-                ${data.leadContact ? `
-                <p style="margin: 5px 0; color: #374151; font-size: 14px;">
-                  <strong>Contact:</strong> ${data.leadContact}
+              <!-- Lead Information (Primary) -->
+              <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 24px; border-radius: 4px; margin-bottom: 24px;">
+                <h2 style="margin: 0 0 16px 0; color: #1e40af; font-size: 22px; font-weight: bold;">
+                  ${data.leadName}
+                </h2>
+                ${data.leadPhone ? `
+                <p style="margin: 0 0 8px 0; color: #374151; font-size: 15px;">
+                  <strong>📞 Phone:</strong> <a href="tel:${data.leadPhone}" style="color: #2563eb; text-decoration: none;">${data.leadPhone}</a>
                 </p>
                 ` : ''}
-                ${data.leadPhone ? `
-                <p style="margin: 5px 0; color: #374151; font-size: 14px;">
-                  <strong>Phone:</strong> ${data.leadPhone}
+                ${data.leadProvider ? `
+                <p style="margin: 0 0 8px 0; color: #374151; font-size: 15px;">
+                  <strong>🏢 Provider:</strong> ${data.leadProvider}
+                </p>
+                ` : ''}
+                ${data.leadAddress ? `
+                <p style="margin: 0 0 8px 0; color: #374151; font-size: 15px;">
+                  <strong>📍 Address:</strong> ${data.leadAddress}
+                </p>
+                ` : ''}
+                ${data.leadTown ? `
+                <p style="margin: 0 0 8px 0; color: #374151; font-size: 15px;">
+                  <strong>🏙️ Town:</strong> ${data.leadTown}
+                </p>
+                ` : ''}
+                ${data.leadMapsAddress ? `
+                <p style="margin: 0 0 8px 0;">
+                  <a href="${data.leadMapsAddress}" target="_blank" style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 14px; font-weight: bold;">
+                    🗺️ Open in Google Maps
+                  </a>
                 </p>
                 ` : ''}
               </div>
               ` : ''}
               
+              <!-- Reminder Details -->
+              <div style="background-color: #f9fafb; border-left: 4px solid ${urgencyColor}; padding: 20px; margin-bottom: 20px; border-radius: 4px;">
+                <div style="margin-bottom: 12px;">
+                  <span style="display: inline-block; background-color: ${priorityColor}; color: #ffffff; padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
+                    ${data.priority} Priority
+                  </span>
+                  ${data.reminderType ? `
+                  <span style="display: inline-block; background-color: #6b7280; color: #ffffff; padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-left: 8px;">
+                    ${data.reminderType}
+                  </span>
+                  ` : ''}
+                </div>
+                <h3 style="margin: 0 0 12px 0; color: #111827; font-size: 18px; font-weight: bold;">
+                  ${data.reminderTitle}
+                </h3>
+                <p style="margin: 0 0 12px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                  ${data.reminderMessage}
+                </p>
+                <p style="margin: 0; color: #6b7280; font-size: 14px;">
+                  <strong>📅 Due:</strong> ${timeInfo}
+                </p>
+              </div>
+              
+              ${data.leadId ? `
+              <!-- View Lead Button -->
+              <div style="text-align: center; margin: 24px 0;">
+                <a href="https://deals.smartintegrate.co.za/leads?leadId=${data.leadId}" target="_blank" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-size: 16px; font-weight: bold;">
+                  View Lead Details
+                </a>
+              </div>
+              ` : ''}
+              
               <!-- Footer Note -->
-              <p style="margin: 20px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+              <p style="margin: 20px 0 0 0; color: #9ca3af; font-size: 13px; line-height: 1.5; text-align: center;">
                 This is an automated reminder notification from Smart Calculator.
               </p>
             </td>
@@ -285,29 +322,67 @@ function formatBatchedReminderEmail(data: BatchedReminderEmailData): { subject: 
       : reminder.reminderDate;
 
     return `
-      <div style="background-color: #f9fafb; border-left: 4px solid ${urgencyColor}; padding: 20px; margin-bottom: 15px; border-radius: 4px;">
-        <div style="display: flex; align-items: center; margin-bottom: 10px;">
-          <span style="display: inline-block; background-color: ${priorityColor}; color: #ffffff; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-right: 10px;">
+      <!-- Reminder ${index + 1} -->
+      <div style="background-color: #ffffff; border: 2px solid #e5e7eb; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        ${reminder.leadName ? `
+        <!-- Lead Information -->
+        <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; border-radius: 4px; margin-bottom: 16px;">
+          <h3 style="margin: 0 0 12px 0; color: #1e40af; font-size: 20px; font-weight: bold;">
+            ${reminder.leadName}
+          </h3>
+          ${reminder.leadPhone ? `
+          <p style="margin: 0 0 6px 0; color: #374151; font-size: 14px;">
+            <strong>📞 Phone:</strong> <a href="tel:${reminder.leadPhone}" style="color: #2563eb; text-decoration: none;">${reminder.leadPhone}</a>
+          </p>
+          ` : ''}
+          ${reminder.leadProvider ? `
+          <p style="margin: 0 0 6px 0; color: #374151; font-size: 14px;">
+            <strong>🏢 Provider:</strong> ${reminder.leadProvider}
+          </p>
+          ` : ''}
+          ${reminder.leadAddress ? `
+          <p style="margin: 0 0 6px 0; color: #374151; font-size: 14px;">
+            <strong>📍 Address:</strong> ${reminder.leadAddress}
+          </p>
+          ` : ''}
+          ${reminder.leadTown ? `
+          <p style="margin: 0 0 6px 0; color: #374151; font-size: 14px;">
+            <strong>🏙️ Town:</strong> ${reminder.leadTown}
+          </p>
+          ` : ''}
+          ${reminder.leadMapsAddress ? `
+          <p style="margin: 8px 0 0 0;">
+            <a href="${reminder.leadMapsAddress}" target="_blank" style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold;">
+              🗺️ Open in Google Maps
+            </a>
+          </p>
+          ` : ''}
+        </div>
+        ` : ''}
+        
+        <!-- Reminder Details -->
+        <div style="margin-bottom: 12px;">
+          <span style="display: inline-block; background-color: ${priorityColor}; color: #ffffff; padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
             ${reminder.priority}
           </span>
-          <span style="color: #6b7280; font-size: 14px;">${reminder.reminderType}</span>
+          <span style="display: inline-block; background-color: #6b7280; color: #ffffff; padding: 6px 14px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase; margin-left: 8px;">
+            ${reminder.reminderType}
+          </span>
         </div>
-        <h3 style="margin: 0 0 10px 0; color: #111827; font-size: 18px;">
-          ${index + 1}. ${reminder.reminderTitle}
-        </h3>
-        <p style="margin: 0 0 10px 0; color: #374151; font-size: 15px; line-height: 1.5;">
+        <h4 style="margin: 0 0 10px 0; color: #111827; font-size: 18px; font-weight: bold;">
+          ${reminder.reminderTitle}
+        </h4>
+        <p style="margin: 0 0 10px 0; color: #374151; font-size: 15px; line-height: 1.6;">
           ${reminder.reminderMessage}
         </p>
-        <p style="margin: 0; color: #6b7280; font-size: 14px;">
-          <strong>Due:</strong> ${timeInfo}
+        <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px;">
+          <strong>📅 Due:</strong> ${timeInfo}
         </p>
-        ${reminder.leadName ? `
-        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
-          <p style="margin: 0; color: #6b7280; font-size: 13px;">
-            <strong>Lead:</strong> ${reminder.leadName}
-            ${reminder.leadContact ? ` - ${reminder.leadContact}` : ''}
-            ${reminder.leadPhone ? ` - ${reminder.leadPhone}` : ''}
-          </p>
+        ${reminder.leadId ? `
+        <div style="margin-top: 12px;">
+          <a href="https://deals.smartintegrate.co.za/leads?leadId=${reminder.leadId}" target="_blank" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: bold;">
+            View Lead Details
+          </a>
         </div>
         ` : ''}
       </div>

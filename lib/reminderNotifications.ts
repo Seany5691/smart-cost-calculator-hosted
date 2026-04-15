@@ -21,9 +21,14 @@ interface ReminderWithUser {
   lead_name: string | null;
   lead_contact_person: string | null;
   lead_phone: string | null;
+  lead_provider: string | null;
+  lead_address: string | null;
+  lead_town: string | null;
+  lead_maps_address: string | null;
   email_sent_created: boolean;
   email_sent_1day: boolean;
   email_sent_30min: boolean;
+  created_at: string;
 }
 
 /**
@@ -55,11 +60,17 @@ export async function processReminderNotifications(): Promise<{
         r.email_sent_created,
         r.email_sent_1day,
         r.email_sent_30min,
+        r.created_at,
         u.email as user_email,
         u.name as user_name,
+        l.id as lead_id,
         l.name as lead_name,
         l.contact_person as lead_contact_person,
-        l.phone as lead_phone
+        l.phone as lead_phone,
+        l.provider as lead_provider,
+        l.address as lead_address,
+        l.town as lead_town,
+        l.maps_address as lead_maps_address
       FROM reminders r
       JOIN users u ON r.user_id = u.id
       LEFT JOIN leads l ON r.lead_id = l.id
@@ -104,13 +115,24 @@ export async function processReminderNotifications(): Promise<{
           reminderTime: reminder.reminder_time || undefined,
           priority: reminder.priority,
           reminderType: reminder.reminder_type,
+          leadId: reminder.lead_id || undefined,
           leadName: reminder.lead_name || undefined,
           leadContact: reminder.lead_contact_person || undefined,
           leadPhone: reminder.lead_phone || undefined,
+          leadProvider: reminder.lead_provider || undefined,
+          leadAddress: reminder.lead_address || undefined,
+          leadTown: reminder.lead_town || undefined,
+          leadMapsAddress: reminder.lead_maps_address || undefined,
         };
 
         // Check if we need to send "created" notification
-        if (!reminder.email_sent_created) {
+        // Only send creation emails for reminders created recently (within last hour)
+        // This prevents sending creation emails for old reminders after migration
+        const reminderCreatedAt = new Date(reminder.created_at);
+        const hoursSinceCreation = (now.getTime() - reminderCreatedAt.getTime()) / (1000 * 60 * 60);
+        const isRecentlyCreated = hoursSinceCreation <= 1; // Within last hour
+        
+        if (!reminder.email_sent_created && isRecentlyCreated) {
           console.log(`[REMINDER NOTIFICATIONS] Sending creation email for reminder ${reminder.id}`);
           const result = await sendReminderEmail(emailData, 'created');
           
@@ -123,15 +145,27 @@ export async function processReminderNotifications(): Promise<{
           } else {
             stats.errors++;
           }
+        } else if (!reminder.email_sent_created && !isRecentlyCreated) {
+          // Mark old reminders as having sent creation email (skip sending)
+          await query(
+            'UPDATE reminders SET email_sent_created = true WHERE id = $1',
+            [reminder.id]
+          );
         }
 
         // Check if we need to send "1 day before" notification - GROUP BY USER
-        // Only send at 5pm (17:00) the day before
+        // Only send at 5pm (17:00) for reminders that are TOMORROW
         const currentHour = now.getHours();
-        const isWithin1DayWindow = hoursDiff <= 24 && hoursDiff > 0;
         const is5pmHour = currentHour === 17; // 5pm
         
-        if (!reminder.email_sent_1day && isWithin1DayWindow && is5pmHour) {
+        // Check if reminder is tomorrow (not just within 24 hours)
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowDateStr = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD
+        const reminderDateStr = reminder.reminder_date; // Already in YYYY-MM-DD format
+        const isReminderTomorrow = reminderDateStr === tomorrowDateStr;
+        
+        if (!reminder.email_sent_1day && isReminderTomorrow && is5pmHour) {
           const userId = reminder.user_id;
           if (!userRemindersFor1Day.has(userId)) {
             userRemindersFor1Day.set(userId, []);
@@ -180,9 +214,14 @@ export async function processReminderNotifications(): Promise<{
             reminderTime: r.reminder_time || undefined,
             priority: r.priority,
             reminderType: r.reminder_type,
+            leadId: r.lead_id || undefined,
             leadName: r.lead_name || undefined,
             leadContact: r.lead_contact_person || undefined,
             leadPhone: r.lead_phone || undefined,
+            leadProvider: r.lead_provider || undefined,
+            leadAddress: r.lead_address || undefined,
+            leadTown: r.lead_town || undefined,
+            leadMapsAddress: r.lead_maps_address || undefined,
           })),
         };
 

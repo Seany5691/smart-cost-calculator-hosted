@@ -71,6 +71,9 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Store userId to avoid TypeScript errors later
+    const currentUserId = authResult.user.userId;
+
     const { id: leadId } = await params;
     const {
       title,
@@ -151,7 +154,7 @@ export async function POST(
     // Check if the creator is in the shared_with_user_ids array
     // If they are NOT in the array, they don't want the reminder for themselves
     const creatorWantsReminder = Array.isArray(shared_with_user_ids) && 
-                                  shared_with_user_ids.includes(authResult.user.userId);
+                                  shared_with_user_ids.includes(currentUserId);
 
     let reminder;
 
@@ -274,7 +277,7 @@ export async function POST(
     try {
       // Get lead info for the email
       const leadInfo = await query(
-        `SELECT name, contact_person, phone FROM leads WHERE id = $1`,
+        `SELECT id, name, contact_person, phone, provider, address, town, maps_address FROM leads WHERE id = $1`,
         [leadId]
       );
       const lead = leadInfo.rows[0];
@@ -308,9 +311,14 @@ export async function POST(
             reminderTime: reminder_time || undefined,
             priority: priority,
             reminderType: reminder_type,
+            leadId: lead?.id || undefined,
             leadName: lead?.name || undefined,
             leadContact: lead?.contact_person || undefined,
             leadPhone: lead?.phone || undefined,
+            leadProvider: lead?.provider || undefined,
+            leadAddress: lead?.address || undefined,
+            leadTown: lead?.town || undefined,
+            leadMapsAddress: lead?.maps_address || undefined,
           };
 
           await sendReminderEmail(emailData, 'created');

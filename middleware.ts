@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Routes that don't require authentication
-const publicRoutes = ['/login', '/api/auth/login'];
+const publicRoutes = [
+  '/login', 
+  '/api/auth/login',
+  '/api/reminders/notifications', // Allow cron job access
+];
 
 // Routes that require authentication
 const protectedRoutes = [

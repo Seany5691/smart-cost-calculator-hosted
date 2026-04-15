@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { verifyAuth } from '@/lib/middleware';
+import { sendReminderEmail } from '@/lib/email';
 
 // GET /api/reminders - Get all reminders for the authenticated user
 // Uses EXACT same pattern as events API
@@ -338,7 +339,42 @@ export async function POST(request: NextRequest) {
       false
     ]);
 
-    return NextResponse.json(result.rows[0], { status: 201 });
+    const reminder = result.rows[0];
+
+    // Send creation email notification immediately
+    try {
+      const userInfo = await query(
+        `SELECT email, name FROM users WHERE id = $1`,
+        [authResult.user.userId]
+      );
+      
+      if (userInfo.rows.length > 0 && userInfo.rows[0].email) {
+        const user = userInfo.rows[0];
+        
+        const emailData = {
+          recipientEmail: user.email,
+          recipientName: user.name,
+          reminderTitle: title || message || 'Reminder',
+          reminderMessage: message || title || '',
+          reminderDate: new Date(dateOnly).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          }),
+          reminderTime: reminder_time || undefined,
+          priority: priority || 'medium',
+          reminderType: reminder_type || 'task',
+        };
+
+        await sendReminderEmail(emailData, 'created');
+        console.log(`[REMINDER CREATED] Sent creation email to ${user.email}`);
+      }
+    } catch (emailError) {
+      console.error('[REMINDER CREATED] Error sending creation email:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    return NextResponse.json(reminder, { status: 201 });
   } catch (error) {
     console.error('Error creating reminder:', error);
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');

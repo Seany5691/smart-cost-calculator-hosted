@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { verifyAuth } from '@/lib/middleware';
+import { sendReminderEmail } from '@/lib/email';
 
 // GET /api/leads/[id]/reminders - Get all reminders for a lead
 export async function GET(
@@ -268,6 +269,57 @@ export async function POST(
         }),
       ]
     );
+
+    // Send creation email notification immediately
+    try {
+      // Get lead info for the email
+      const leadInfo = await query(
+        `SELECT name, contact_person, phone FROM leads WHERE id = $1`,
+        [leadId]
+      );
+      const lead = leadInfo.rows[0];
+
+      // Get all user IDs who received the reminder
+      const userIds = creatorWantsReminder 
+        ? [authResult.user.userId, ...shared_with_user_ids.filter((id: string) => id !== authResult.user.userId)]
+        : shared_with_user_ids;
+
+      // Send email to each user who received the reminder
+      for (const userId of userIds) {
+        const userInfo = await query(
+          `SELECT email, name FROM users WHERE id = $1`,
+          [userId]
+        );
+        
+        if (userInfo.rows.length > 0 && userInfo.rows[0].email) {
+          const user = userInfo.rows[0];
+          
+          const emailData = {
+            recipientEmail: user.email,
+            recipientName: user.name,
+            reminderTitle: title || message || 'Reminder',
+            reminderMessage: message || title || '',
+            reminderDate: new Date(reminder_date).toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            }),
+            reminderTime: reminder_time || undefined,
+            priority: priority,
+            reminderType: reminder_type,
+            leadName: lead?.name || undefined,
+            leadContact: lead?.contact_person || undefined,
+            leadPhone: lead?.phone || undefined,
+          };
+
+          await sendReminderEmail(emailData, 'created');
+          console.log(`[REMINDER CREATED] Sent creation email to ${user.email}`);
+        }
+      }
+    } catch (emailError) {
+      console.error('[REMINDER CREATED] Error sending creation email:', emailError);
+      // Don't fail the request if email fails
+    }
 
     return NextResponse.json({ reminder }, { status: 201 });
   } catch (error) {

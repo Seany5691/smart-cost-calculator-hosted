@@ -17,6 +17,7 @@
     "migrate:reminder-emails": "node scripts/migrate-reminder-emails.js",
     "test:reminder-emails": "node scripts/test-reminder-emails.js",
     "test:send-email": "node scripts/send-test-email.js",
+    "check:reminders": "node scripts/run-reminder-check.js",
     "migration:export": "node scripts/supabase-export.js",
     "migration:import": "node scripts/supabase-import.js",
     "migration:import-text": "node scripts/import-from-text.js",

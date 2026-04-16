@@ -209,6 +209,7 @@ export async function processReminderNotifications(): Promise<{
 
         // Check if we need to send "follow-up" notification - INDIVIDUAL
         // Send 30 minutes AFTER the reminder time has passed
+        // This mirrors the 30-min-before logic but for AFTER the time
         // minutesDiff will be negative when time has passed
         // We want: -30 <= minutesDiff < 0 (between 0 and 30 minutes after)
         if (!reminder.email_sent_followup && minutesDiff >= -30 && minutesDiff < 0) {
@@ -226,6 +227,8 @@ export async function processReminderNotifications(): Promise<{
             console.error(`[REMINDER NOTIFICATIONS] Failed to send follow-up email for reminder ${reminder.id}:`, result.error);
             stats.errors++;
           }
+        } else if (!reminder.email_sent_followup && minutesDiff < 0) {
+          console.log(`[REMINDER NOTIFICATIONS] Reminder ${reminder.id} time passed (minutesDiff=${minutesDiff.toFixed(2)}) but outside 30-min follow-up window`);
         }
       } catch (error) {
         console.error(`[REMINDER NOTIFICATIONS] Error processing reminder ${reminder.id}:`, error);

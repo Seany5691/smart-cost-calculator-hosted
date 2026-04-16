@@ -65,7 +65,6 @@ export async function processReminderNotifications(): Promise<{
         r.created_at,
         u.email as user_email,
         u.name as user_name,
-        l.id as lead_id,
         l.name as lead_name,
         l.contact_person as lead_contact_person,
         l.phone as lead_phone,
@@ -77,7 +76,7 @@ export async function processReminderNotifications(): Promise<{
       JOIN users u ON r.user_id = u.id
       LEFT JOIN leads l ON r.lead_id = l.id
       WHERE r.completed = false
-        AND r.status != 'completed'
+        AND (r.status IS NULL OR r.status != 'completed')
         AND u.email IS NOT NULL
         AND u.email != ''
     `);
@@ -95,14 +94,24 @@ export async function processReminderNotifications(): Promise<{
 
       try {
         // Parse reminder date/time
-        const reminderDateTime = reminder.reminder_time
-          ? new Date(`${reminder.reminder_date}T${reminder.reminder_time}`)
-          : new Date(reminder.reminder_date);
+        // IMPORTANT: reminder_date is stored as DATE (YYYY-MM-DD), not timestamp
+        const reminderDateStr = reminder.reminder_date; // This should be YYYY-MM-DD string
+        
+        let reminderDateTime;
+        if (reminder.reminder_time) {
+          // Combine date and time
+          reminderDateTime = new Date(`${reminderDateStr}T${reminder.reminder_time}`);
+        } else {
+          // No time specified, use start of day
+          reminderDateTime = new Date(`${reminderDateStr}T00:00:00`);
+        }
 
         // Calculate time differences
         const timeDiff = reminderDateTime.getTime() - now.getTime();
         const hoursDiff = timeDiff / (1000 * 60 * 60);
         const minutesDiff = timeDiff / (1000 * 60);
+        
+        console.log(`[REMINDER NOTIFICATIONS] Reminder ${reminder.id}: date=${reminderDateStr}, time=${reminder.reminder_time}, minutesDiff=${minutesDiff.toFixed(2)}, hoursDiff=${hoursDiff.toFixed(2)}`);
 
         const emailData = {
           recipientEmail: reminder.user_email,

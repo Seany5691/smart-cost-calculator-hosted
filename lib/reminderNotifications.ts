@@ -94,9 +94,12 @@ export async function processReminderNotifications(): Promise<{
 
       try {
         // Parse reminder date/time
-        // IMPORTANT: reminder_date is stored as DATE (YYYY-MM-DD), but PostgreSQL might return it with timestamp
-        // Extract date-only part (same pattern as appointments tab)
-        const dateOnly = reminder.reminder_date.split('T')[0]; // Extract YYYY-MM-DD
+        // IMPORTANT: reminder_date can be returned as Date object or string from PostgreSQL
+        // Convert to string first, then extract date-only part
+        const dateStr = typeof reminder.reminder_date === 'string'
+          ? reminder.reminder_date
+          : new Date(reminder.reminder_date).toISOString();
+        const dateOnly = dateStr.split('T')[0]; // Extract YYYY-MM-DD
         
         let reminderDateTime;
         if (reminder.reminder_time) {
@@ -211,26 +214,31 @@ export async function processReminderNotifications(): Promise<{
         const batchedEmailData = {
           recipientEmail: firstReminder.user_email,
           recipientName: firstReminder.user_name,
-          reminders: userReminders.map(r => ({
-            reminderTitle: r.title || r.message,
-            reminderMessage: r.message || r.title,
-            reminderDate: new Date(r.reminder_date.split('T')[0]).toLocaleDateString('en-GB', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            }),
-            reminderTime: r.reminder_time || undefined,
-            priority: r.priority,
-            reminderType: r.reminder_type,
-            leadId: r.lead_id || undefined,
-            leadName: r.lead_name || undefined,
-            leadContact: r.lead_contact_person || undefined,
-            leadPhone: r.lead_phone || undefined,
-            leadProvider: r.lead_provider || undefined,
-            leadAddress: r.lead_address || undefined,
-            leadTown: r.lead_town || undefined,
-            leadMapsAddress: r.lead_maps_address || undefined,
-          })),
+          reminders: userReminders.map(r => {
+            const rDateStr = typeof r.reminder_date === 'string'
+              ? r.reminder_date
+              : new Date(r.reminder_date).toISOString();
+            return {
+              reminderTitle: r.title || r.message,
+              reminderMessage: r.message || r.title,
+              reminderDate: new Date(rDateStr.split('T')[0]).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              }),
+              reminderTime: r.reminder_time || undefined,
+              priority: r.priority,
+              reminderType: r.reminder_type,
+              leadId: r.lead_id || undefined,
+              leadName: r.lead_name || undefined,
+              leadContact: r.lead_contact_person || undefined,
+              leadPhone: r.lead_phone || undefined,
+              leadProvider: r.lead_provider || undefined,
+              leadAddress: r.lead_address || undefined,
+              leadTown: r.lead_town || undefined,
+              leadMapsAddress: r.lead_maps_address || undefined,
+            };
+          }),
         };
 
         const result = await sendBatchedReminderEmail(batchedEmailData);

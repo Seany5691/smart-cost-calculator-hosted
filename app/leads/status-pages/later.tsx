@@ -3,7 +3,13 @@
 import LeadsManager from '@/components/leads/LeadsManager';
 import AddLeadButton from '@/components/leads/AddLeadButton';
 
-export default function LaterStatusPage({ highlightLeadId }: { highlightLeadId?: string | null }) {
+export default function LaterStatusPage({ 
+  highlightLeadId,
+  openModalLeadId 
+}: { 
+  highlightLeadId?: string | null;
+  openModalLeadId?: string | null;
+}) {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -15,7 +21,12 @@ export default function LaterStatusPage({ highlightLeadId }: { highlightLeadId?:
         </div>
         <AddLeadButton defaultStatus="later" />
       </div>
-      <LeadsManager key="later-status" statusFilter="later" highlightLeadId={highlightLeadId} />
+      <LeadsManager 
+        key="later-status" 
+        statusFilter="later" 
+        highlightLeadId={highlightLeadId}
+        openModalLeadId={openModalLeadId}
+      />
     </div>
   );
 }

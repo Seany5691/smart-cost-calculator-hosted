@@ -10,6 +10,7 @@ import type { Lead } from '@/lib/leads/types';
 
 interface AppointmentsContentProps {
   highlightLeadId?: string | null;
+  openModalLeadId?: string | null;
 }
 
 interface LeadReminder {
@@ -111,7 +112,7 @@ function formatReminderDateTime(date: string, time: string | null): string {
   return result;
 }
 
-export default function AppointmentsContent({ highlightLeadId }: AppointmentsContentProps) {
+export default function AppointmentsContent({ highlightLeadId, openModalLeadId }: AppointmentsContentProps) {
   const { leads, fetchLeads, loading } = useLeadsStore();
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [mounted, setMounted] = useState(false);
@@ -525,6 +526,7 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
           leads={sortedLeads}
           onUpdate={handleUpdate}
           highlightLeadId={highlightLeadId}
+          openModalLeadId={openModalLeadId}
           showDateInfo={true}
           leadReminders={leadReminders}
           // Route selection props
@@ -538,6 +540,7 @@ export default function AppointmentsContent({ highlightLeadId }: AppointmentsCon
           leads={sortedLeads}
           onUpdate={handleUpdate}
           highlightLeadId={highlightLeadId}
+          openModalLeadId={openModalLeadId}
           showDateInfo={true}
           leadReminders={leadReminders}
           // Route selection props

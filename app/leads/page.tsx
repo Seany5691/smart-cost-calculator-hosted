@@ -87,6 +87,15 @@ export default function LeadsPage() {
     return null;
   });
   
+  // Extract openModal parameter from URL (for email links)
+  const [openModalLeadId, setOpenModalLeadId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('openModal');
+    }
+    return null;
+  });
+  
   // Add a refresh key that changes when tab changes to force component remount
   const [refreshKey, setRefreshKey] = useState(0);
   
@@ -131,6 +140,7 @@ export default function LeadsPage() {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab') as TabId;
       const highlightLead = params.get('highlightLead');
+      const openModal = params.get('openModal');
       
       if (tab && TABS.some(t => t.id === tab)) {
         setActiveTab(tab);
@@ -141,6 +151,7 @@ export default function LeadsPage() {
       }
       
       setHighlightLeadId(highlightLead);
+      setOpenModalLeadId(openModal);
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -155,6 +166,7 @@ export default function LeadsPage() {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab') as TabId;
       const highlightLead = params.get('highlightLead');
+      const openModal = params.get('openModal');
       
       if (tab && TABS.some(t => t.id === tab) && tab !== activeTab) {
         setActiveTab(tab);
@@ -163,6 +175,10 @@ export default function LeadsPage() {
       
       if (highlightLead !== highlightLeadId) {
         setHighlightLeadId(highlightLead);
+      }
+      
+      if (openModal !== openModalLeadId) {
+        setOpenModalLeadId(openModal);
       }
     };
 
@@ -173,7 +189,7 @@ export default function LeadsPage() {
     const interval = setInterval(checkUrlParams, 100);
     
     return () => clearInterval(interval);
-  }, [activeTab, highlightLeadId]);
+  }, [activeTab, highlightLeadId, openModalLeadId]);
 
   // Clear highlightLead URL parameter after highlighting is complete
   useEffect(() => {
@@ -333,14 +349,14 @@ export default function LeadsPage() {
             {/* Requirement: 1.12, 1.13 - Lazy load with Suspense and loading states */}
             <Suspense key={`${activeTab}-${refreshKey}`} fallback={<TabLoadingFallback tabName={currentTab.name} />}>
               {activeTab === 'dashboard' && <DashboardContent stats={stats} />}
-              {activeTab === 'main-sheet' && <MainSheetContent key={refreshKey} />}
-              {activeTab === 'leads' && <LeadsContent key={refreshKey} highlightLeadId={highlightLeadId} />}
-              {activeTab === 'appointments' && <AppointmentsContent key={refreshKey} highlightLeadId={highlightLeadId} />}
-              {activeTab === 'working' && <WorkingContent key={refreshKey} highlightLeadId={highlightLeadId} />}
-              {activeTab === 'proposal' && <ProposalContent key={refreshKey} highlightLeadId={highlightLeadId} />}
-              {activeTab === 'later' && <LaterContent key={refreshKey} highlightLeadId={highlightLeadId} />}
-              {activeTab === 'bad' && <BadContent key={refreshKey} highlightLeadId={highlightLeadId} />}
-              {activeTab === 'signed' && <SignedContent key={refreshKey} highlightLeadId={highlightLeadId} />}
+              {activeTab === 'main-sheet' && <MainSheetContent key={refreshKey} openModalLeadId={openModalLeadId} />}
+              {activeTab === 'leads' && <LeadsContent key={refreshKey} highlightLeadId={highlightLeadId} openModalLeadId={openModalLeadId} />}
+              {activeTab === 'appointments' && <AppointmentsContent key={refreshKey} highlightLeadId={highlightLeadId} openModalLeadId={openModalLeadId} />}
+              {activeTab === 'working' && <WorkingContent key={refreshKey} highlightLeadId={highlightLeadId} openModalLeadId={openModalLeadId} />}
+              {activeTab === 'proposal' && <ProposalContent key={refreshKey} highlightLeadId={highlightLeadId} openModalLeadId={openModalLeadId} />}
+              {activeTab === 'later' && <LaterContent key={refreshKey} highlightLeadId={highlightLeadId} openModalLeadId={openModalLeadId} />}
+              {activeTab === 'bad' && <BadContent key={refreshKey} highlightLeadId={highlightLeadId} openModalLeadId={openModalLeadId} />}
+              {activeTab === 'signed' && <SignedContent key={refreshKey} highlightLeadId={highlightLeadId} openModalLeadId={openModalLeadId} />}
               {activeTab === 'routes' && <RoutesContent key={refreshKey} />}
               {activeTab === 'reminders' && <RemindersContent key={refreshKey} />}
             </Suspense>

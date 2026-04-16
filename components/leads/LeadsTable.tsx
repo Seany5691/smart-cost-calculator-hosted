@@ -112,6 +112,7 @@ interface LeadsTableProps {
   disableBackgroundColor?: boolean; // Don't show background_color styling
   showDateInfo?: boolean; // Show Date Info column (for Later Stage and Signed tabs)
   highlightLeadId?: string | null; // Lead ID to highlight and scroll to
+  openModalLeadId?: string | null; // Lead ID to open modal for (from email links)
   leadReminders?: Record<string, { date: string; time: string | null } | null>; // Next reminder for each lead (Appointments tab)
   // Route selection props (Appointments tab only)
   isAppointmentsTab?: boolean;
@@ -126,6 +127,7 @@ export default function LeadsTable({
   disableBackgroundColor = false, 
   showDateInfo = false, 
   highlightLeadId = null,
+  openModalLeadId = null,
   leadReminders,
   isAppointmentsTab = false,
   selectedLeads: appointmentsSelectedLeads,
@@ -191,6 +193,29 @@ export default function LeadsTable({
       };
     }
   }, [highlightLeadId]);
+
+  // Open modal when openModalLeadId prop is provided (from email links)
+  useEffect(() => {
+    if (openModalLeadId) {
+      console.log('[LeadsTable] Opening modal for lead:', openModalLeadId);
+      const lead = leads.find(l => l.id === openModalLeadId);
+      if (lead) {
+        setDetailsLead(lead);
+        // Also highlight the lead
+        setHighlightedLeadId(openModalLeadId);
+        
+        // Scroll to the lead row
+        setTimeout(() => {
+          const leadRow = document.getElementById(`lead-row-${openModalLeadId}`);
+          if (leadRow) {
+            leadRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      } else {
+        console.warn('[LeadsTable] Lead not found for openModalLeadId:', openModalLeadId);
+      }
+    }
+  }, [openModalLeadId, leads]);
 
   // Clear highlight on any user interaction (with delay to avoid clearing immediately)
   useEffect(() => {

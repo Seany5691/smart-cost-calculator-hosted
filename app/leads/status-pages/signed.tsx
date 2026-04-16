@@ -3,7 +3,13 @@
 import LeadsManager from '@/components/leads/LeadsManager';
 import AddLeadButton from '@/components/leads/AddLeadButton';
 
-export default function SignedStatusPage({ highlightLeadId }: { highlightLeadId?: string | null }) {
+export default function SignedStatusPage({ 
+  highlightLeadId,
+  openModalLeadId 
+}: { 
+  highlightLeadId?: string | null;
+  openModalLeadId?: string | null;
+}) {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -15,7 +21,12 @@ export default function SignedStatusPage({ highlightLeadId }: { highlightLeadId?
         </div>
         <AddLeadButton defaultStatus="signed" />
       </div>
-      <LeadsManager key="signed-status" statusFilter="signed" highlightLeadId={highlightLeadId} />
+      <LeadsManager 
+        key="signed-status" 
+        statusFilter="signed" 
+        highlightLeadId={highlightLeadId}
+        openModalLeadId={openModalLeadId}
+      />
     </div>
   );
 }

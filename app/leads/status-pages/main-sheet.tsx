@@ -49,7 +49,7 @@ function getAuthToken(): string | null {
   return null;
 }
 
-export default function MainSheetPage() {
+export default function MainSheetPage({ openModalLeadId }: { openModalLeadId?: string | null }) {
   const { leads, loading, setLeads, setLoading } = useLeadsStore();
   
   const [workingLeads, setWorkingLeads] = useState<Lead[]>([]);

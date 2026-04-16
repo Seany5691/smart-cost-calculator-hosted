@@ -103,11 +103,15 @@ export async function processReminderNotifications(): Promise<{
         
         let reminderDateTime;
         if (reminder.reminder_time) {
-          // Combine date and time
-          reminderDateTime = new Date(`${dateOnly}T${reminder.reminder_time}`);
+          // CRITICAL FIX: Times are stored in SAST (UTC+2) format but treated as UTC
+          // We need to subtract 2 hours to convert SAST time to actual UTC time
+          // Example: User enters "16:36 SAST" → stored as "16:36:00" → should be "14:36 UTC"
+          const sastDateTime = new Date(`${dateOnly}T${reminder.reminder_time}Z`); // Parse as UTC first
+          // Subtract 2 hours to convert from SAST to UTC
+          reminderDateTime = new Date(sastDateTime.getTime() - (2 * 60 * 60 * 1000));
         } else {
           // No time specified, use start of day
-          reminderDateTime = new Date(`${dateOnly}T00:00:00`);
+          reminderDateTime = new Date(`${dateOnly}T00:00:00Z`);
         }
 
         // Calculate time differences
@@ -152,9 +156,10 @@ export async function processReminderNotifications(): Promise<{
         }
 
         // Check if we need to send "1 day before" notification - GROUP BY USER
-        // Only send at 5pm (17:00) SAST (South African Standard Time = UTC+2) for reminders that are TOMORROW
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
+        // Only send at 5pm SAST (South African Standard Time = UTC+2)
+        // Server runs in UTC, so 5pm SAST = 3pm UTC (15:00 UTC)
+        const currentHour = now.getUTCHours(); // Use UTC hours
+        const currentMinute = now.getUTCMinutes();
         
         // Check if reminder is tomorrow (not just within 24 hours)
         // IMPORTANT: Use local date comparison, extract date-only from both sides
@@ -165,13 +170,13 @@ export async function processReminderNotifications(): Promise<{
         
         // Log for debugging
         if (isReminderTomorrow) {
-          console.log(`[REMINDER NOTIFICATIONS] Reminder ${reminder.id} is tomorrow. Current hour: ${currentHour}, email_sent_1day: ${reminder.email_sent_1day}`);
+          console.log(`[REMINDER NOTIFICATIONS] Reminder ${reminder.id} is tomorrow. Current UTC hour: ${currentHour}, email_sent_1day: ${reminder.email_sent_1day}`);
         }
         
-        // Check if it's 5pm hour (17:00-17:59)
-        const is5pmHour = currentHour === 17;
+        // Check if it's 3pm UTC (5pm SAST) - hour 15 in UTC
+        const is5pmSAST = currentHour === 15;
         
-        if (!reminder.email_sent_1day && isReminderTomorrow && is5pmHour) {
+        if (!reminder.email_sent_1day && isReminderTomorrow && is5pmSAST) {
           console.log(`[REMINDER NOTIFICATIONS] Adding reminder ${reminder.id} to 1-day batch for user ${reminder.user_id}`);
           const userId = reminder.user_id;
           if (!userRemindersFor1Day.has(userId)) {

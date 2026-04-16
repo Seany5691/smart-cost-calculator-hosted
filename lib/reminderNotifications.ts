@@ -94,16 +94,17 @@ export async function processReminderNotifications(): Promise<{
 
       try {
         // Parse reminder date/time
-        // IMPORTANT: reminder_date is stored as DATE (YYYY-MM-DD), not timestamp
-        const reminderDateStr = reminder.reminder_date; // This should be YYYY-MM-DD string
+        // IMPORTANT: reminder_date is stored as DATE (YYYY-MM-DD), but PostgreSQL might return it with timestamp
+        // Extract date-only part (same pattern as appointments tab)
+        const dateOnly = reminder.reminder_date.split('T')[0]; // Extract YYYY-MM-DD
         
         let reminderDateTime;
         if (reminder.reminder_time) {
           // Combine date and time
-          reminderDateTime = new Date(`${reminderDateStr}T${reminder.reminder_time}`);
+          reminderDateTime = new Date(`${dateOnly}T${reminder.reminder_time}`);
         } else {
           // No time specified, use start of day
-          reminderDateTime = new Date(`${reminderDateStr}T00:00:00`);
+          reminderDateTime = new Date(`${dateOnly}T00:00:00`);
         }
 
         // Calculate time differences
@@ -111,14 +112,14 @@ export async function processReminderNotifications(): Promise<{
         const hoursDiff = timeDiff / (1000 * 60 * 60);
         const minutesDiff = timeDiff / (1000 * 60);
         
-        console.log(`[REMINDER NOTIFICATIONS] Reminder ${reminder.id}: date=${reminderDateStr}, time=${reminder.reminder_time}, minutesDiff=${minutesDiff.toFixed(2)}, hoursDiff=${hoursDiff.toFixed(2)}`);
+        console.log(`[REMINDER NOTIFICATIONS] Reminder ${reminder.id}: dateOnly=${dateOnly}, time=${reminder.reminder_time}, reminderDateTime=${reminderDateTime.toISOString()}, minutesDiff=${minutesDiff.toFixed(2)}, hoursDiff=${hoursDiff.toFixed(2)}`);
 
         const emailData = {
           recipientEmail: reminder.user_email,
           recipientName: reminder.user_name,
           reminderTitle: reminder.title || reminder.message,
           reminderMessage: reminder.message || reminder.title,
-          reminderDate: new Date(reminder.reminder_date).toLocaleDateString('en-GB', {
+          reminderDate: new Date(dateOnly).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short',
             year: 'numeric',
@@ -153,11 +154,11 @@ export async function processReminderNotifications(): Promise<{
         const currentMinute = now.getMinutes();
         
         // Check if reminder is tomorrow (not just within 24 hours)
+        // IMPORTANT: Use local date comparison, extract date-only from both sides
         const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowDateStr = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD
-        const reminderDateStr = reminder.reminder_date; // Already in YYYY-MM-DD format
-        const isReminderTomorrow = reminderDateStr === tomorrowDateStr;
+        const tomorrowDateStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+        const isReminderTomorrow = dateOnly === tomorrowDateStr;
         
         // Log for debugging
         if (isReminderTomorrow) {
@@ -213,7 +214,7 @@ export async function processReminderNotifications(): Promise<{
           reminders: userReminders.map(r => ({
             reminderTitle: r.title || r.message,
             reminderMessage: r.message || r.title,
-            reminderDate: new Date(r.reminder_date).toLocaleDateString('en-GB', {
+            reminderDate: new Date(r.reminder_date.split('T')[0]).toLocaleDateString('en-GB', {
               day: '2-digit',
               month: 'short',
               year: 'numeric',

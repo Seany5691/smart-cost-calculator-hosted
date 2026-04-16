@@ -44,6 +44,8 @@ export async function processReminderNotifications(): Promise<{
 
   try {
     console.log('[REMINDER NOTIFICATIONS] Starting notification check...');
+    console.log('[REMINDER NOTIFICATIONS] Current server time:', new Date().toISOString());
+    console.log('[REMINDER NOTIFICATIONS] Current server hour:', new Date().getHours());
 
     // Get all pending reminders with user and lead info
     const result = await query(`
@@ -137,9 +139,9 @@ export async function processReminderNotifications(): Promise<{
         }
 
         // Check if we need to send "1 day before" notification - GROUP BY USER
-        // Only send at 5pm (17:00) for reminders that are TOMORROW
+        // Only send at 5pm (17:00) SAST (South African Standard Time = UTC+2) for reminders that are TOMORROW
         const currentHour = now.getHours();
-        const is5pmHour = currentHour === 17; // 5pm
+        const currentMinute = now.getMinutes();
         
         // Check if reminder is tomorrow (not just within 24 hours)
         const tomorrow = new Date(now);
@@ -148,7 +150,16 @@ export async function processReminderNotifications(): Promise<{
         const reminderDateStr = reminder.reminder_date; // Already in YYYY-MM-DD format
         const isReminderTomorrow = reminderDateStr === tomorrowDateStr;
         
+        // Log for debugging
+        if (isReminderTomorrow) {
+          console.log(`[REMINDER NOTIFICATIONS] Reminder ${reminder.id} is tomorrow. Current hour: ${currentHour}, email_sent_1day: ${reminder.email_sent_1day}`);
+        }
+        
+        // Check if it's 5pm hour (17:00-17:59)
+        const is5pmHour = currentHour === 17;
+        
         if (!reminder.email_sent_1day && isReminderTomorrow && is5pmHour) {
+          console.log(`[REMINDER NOTIFICATIONS] Adding reminder ${reminder.id} to 1-day batch for user ${reminder.user_id}`);
           const userId = reminder.user_id;
           if (!userRemindersFor1Day.has(userId)) {
             userRemindersFor1Day.set(userId, []);
@@ -158,7 +169,7 @@ export async function processReminderNotifications(): Promise<{
 
         // Check if we need to send "30 minutes before" notification - INDIVIDUAL
         if (!reminder.email_sent_30min && minutesDiff <= 30 && minutesDiff > 0) {
-          console.log(`[REMINDER NOTIFICATIONS] Sending 30-min email for reminder ${reminder.id}`);
+          console.log(`[REMINDER NOTIFICATIONS] Sending 30-min email for reminder ${reminder.id} (minutesDiff: ${minutesDiff.toFixed(2)})`);
           const result = await sendReminderEmail(emailData, '30min');
           
           if (result.success) {
@@ -167,9 +178,13 @@ export async function processReminderNotifications(): Promise<{
               [reminder.id]
             );
             stats.sent++;
+            console.log(`[REMINDER NOTIFICATIONS] Successfully sent 30-min email for reminder ${reminder.id}`);
           } else {
+            console.error(`[REMINDER NOTIFICATIONS] Failed to send 30-min email for reminder ${reminder.id}:`, result.error);
             stats.errors++;
           }
+        } else if (!reminder.email_sent_30min && minutesDiff <= 30) {
+          console.log(`[REMINDER NOTIFICATIONS] Reminder ${reminder.id} is within 30min window but minutesDiff=${minutesDiff.toFixed(2)} (already passed or exactly 0)`);
         }
       } catch (error) {
         console.error(`[REMINDER NOTIFICATIONS] Error processing reminder ${reminder.id}:`, error);

@@ -28,6 +28,7 @@ interface ReminderWithUser {
   email_sent_created: boolean;
   email_sent_1day: boolean;
   email_sent_30min: boolean;
+  email_sent_followup: boolean;
   created_at: string;
 }
 
@@ -62,6 +63,7 @@ export async function processReminderNotifications(): Promise<{
         r.email_sent_created,
         r.email_sent_1day,
         r.email_sent_30min,
+        r.email_sent_followup,
         r.created_at,
         u.email as user_email,
         u.name as user_name,
@@ -203,6 +205,27 @@ export async function processReminderNotifications(): Promise<{
           }
         } else if (!reminder.email_sent_30min && minutesDiff <= 30) {
           console.log(`[REMINDER NOTIFICATIONS] Reminder ${reminder.id} is within 30min window but minutesDiff=${minutesDiff.toFixed(2)} (already passed or exactly 0)`);
+        }
+
+        // Check if we need to send "follow-up" notification - INDIVIDUAL
+        // Send 30 minutes AFTER the reminder time has passed
+        // minutesDiff will be negative when time has passed
+        // We want: -30 <= minutesDiff < 0 (between 0 and 30 minutes after)
+        if (!reminder.email_sent_followup && minutesDiff >= -30 && minutesDiff < 0) {
+          console.log(`[REMINDER NOTIFICATIONS] Sending follow-up email for reminder ${reminder.id} (minutesDiff: ${minutesDiff.toFixed(2)})`);
+          const result = await sendReminderEmail(emailData, 'followup');
+          
+          if (result.success) {
+            await query(
+              'UPDATE reminders SET email_sent_followup = true WHERE id = $1',
+              [reminder.id]
+            );
+            stats.sent++;
+            console.log(`[REMINDER NOTIFICATIONS] Successfully sent follow-up email for reminder ${reminder.id}`);
+          } else {
+            console.error(`[REMINDER NOTIFICATIONS] Failed to send follow-up email for reminder ${reminder.id}:`, result.error);
+            stats.errors++;
+          }
         }
       } catch (error) {
         console.error(`[REMINDER NOTIFICATIONS] Error processing reminder ${reminder.id}:`, error);

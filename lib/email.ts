@@ -70,7 +70,7 @@ interface BatchedReminderEmailData {
   }>;
 }
 
-function formatReminderEmail(data: ReminderEmailData, type: 'created' | '1day' | '30min'): { subject: string; html: string; text: string } {
+function formatReminderEmail(data: ReminderEmailData, type: 'created' | '1day' | '30min' | 'followup'): { subject: string; html: string; text: string } {
   const timeInfo = data.reminderTime 
     ? `${data.reminderDate} at ${data.reminderTime}`
     : data.reminderDate;
@@ -93,6 +93,11 @@ function formatReminderEmail(data: ReminderEmailData, type: 'created' | '1day' |
       subject = `⚠️ Reminder in 30 Minutes: ${data.reminderTitle}`;
       urgencyText = 'This reminder is due in 30 minutes!';
       urgencyColor = '#ef4444'; // red
+      break;
+    case 'followup':
+      subject = `✅ Reminder Complete: ${data.reminderTitle}`;
+      urgencyText = 'Time to update your lead!';
+      urgencyColor = '#10b981'; // green
       break;
   }
 
@@ -162,6 +167,24 @@ function formatReminderEmail(data: ReminderEmailData, type: 'created' | '1day' |
                 <p style="margin: 0 0 20px 0; color: #374151; font-size: 15px; line-height: 1.6;">
                   <strong>📝 Notes:</strong> ${data.reminderMessage}
                 </p>
+                
+                ${type === 'followup' ? `
+                <!-- Follow-up Action Required Box -->
+                <div style="background-color: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                  <h3 style="margin: 0 0 12px 0; color: #065f46; font-size: 18px; font-weight: bold;">
+                    ✅ Action Required
+                  </h3>
+                  <p style="margin: 0 0 12px 0; color: #047857; font-size: 15px; line-height: 1.6;">
+                    Your reminder time has passed. Now is the perfect time to:
+                  </p>
+                  <ul style="margin: 0 0 0 20px; padding: 0; color: #047857; font-size: 14px; line-height: 1.8;">
+                    <li>Update the lead status if needed</li>
+                    <li>Add notes about your interaction</li>
+                    <li>Set new reminders for follow-up actions</li>
+                    <li>Move the lead to the next stage in your pipeline</li>
+                  </ul>
+                </div>
+                ` : ''}
                 
                 <!-- Action Buttons -->
                 <div style="margin-top: 0;">
@@ -243,7 +266,7 @@ This is an automated reminder notification from Smart Calculator.
  */
 export async function sendReminderEmail(
   data: ReminderEmailData,
-  type: 'created' | '1day' | '30min'
+  type: 'created' | '1day' | '30min' | 'followup'
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Check if email is configured

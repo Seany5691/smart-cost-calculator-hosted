@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Calendar, Clock, FileText, AlertCircle } from 'lucide-react';
 import type { Lead } from '@/lib/leads/types';
+import WheelTimePicker from './WheelTimePicker';
 
 interface LaterStageModalProps {
   lead: Lead;
@@ -254,7 +255,7 @@ export default function LaterStageModal({
           </div>
 
           {/* Date and Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-white font-medium mb-2">
                 <Calendar className="w-4 h-4 inline mr-1" />
@@ -276,47 +277,21 @@ export default function LaterStageModal({
                 <Clock className="w-4 h-4 inline mr-1" />
                 Time
               </label>
-              <div className="space-y-2">
-                {!isAllDay && (
-                  <div className="flex gap-2">
-                    <select
-                      value={callbackTime.split(':')[0]}
-                      onChange={(e) => setCallbackTime(`${e.target.value}:${callbackTime.split(':')[1]}`)}
-                      disabled={loading}
-                      className="flex-1 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-                    >
-                      {Array.from({ length: 24 }, (_, i) => i).map(hour => (
-                        <option key={hour} value={hour.toString().padStart(2, '0')}>
-                          {hour.toString().padStart(2, '0')}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="flex items-center text-gray-300 font-semibold">:</span>
-                    <select
-                      value={callbackTime.split(':')[1]}
-                      onChange={(e) => setCallbackTime(`${callbackTime.split(':')[0]}:${e.target.value}`)}
-                      disabled={loading}
-                      className="flex-1 px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-                    >
-                      {['00', '15', '30', '45'].map(minute => (
-                        <option key={minute} value={minute}>
-                          {minute}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={isAllDay}
-                    onChange={(e) => setIsAllDay(e.target.checked)}
-                    disabled={loading}
-                    className="rounded border-emerald-500/30 bg-white/10 text-emerald-500 focus:ring-emerald-500"
-                  />
-                  <span className="text-sm text-gray-300">All Day</span>
-                </label>
-              </div>
+              <WheelTimePicker
+                value={callbackTime}
+                onChange={setCallbackTime}
+                disabled={isAllDay || loading}
+              />
+              <label className="flex items-center gap-2 mt-3">
+                <input
+                  type="checkbox"
+                  checked={isAllDay}
+                  onChange={(e) => setIsAllDay(e.target.checked)}
+                  disabled={loading}
+                  className="rounded border-emerald-500/30 bg-white/10 text-emerald-500 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-gray-300">All Day</span>
+              </label>
             </div>
           </div>
 

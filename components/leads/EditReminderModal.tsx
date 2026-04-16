@@ -22,6 +22,7 @@ import { useRemindersStore } from '@/lib/store/reminders';
 import { useLeadsStore } from '@/lib/store/leads';
 import type { LeadReminder, ReminderType, ReminderPriority, RecurrencePattern, UpdateReminderRequest } from '@/lib/leads/types';
 import { getReminderTypeIcon, getReminderTypeLabel } from '@/lib/leads/types';
+import WheelTimePicker from './WheelTimePicker';
 
 interface EditReminderModalProps {
   isOpen: boolean;
@@ -265,7 +266,7 @@ export default function EditReminderModal({ isOpen, onClose, reminder }: EditRem
             </div>
 
             {/* Date and Time */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
                 <label className="block text-white font-medium mb-2">
                   Date <span className="text-red-400">*</span>
@@ -291,35 +292,11 @@ export default function EditReminderModal({ isOpen, onClose, reminder }: EditRem
                 <label className="block text-white font-medium mb-2">
                   Time
                 </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400 pointer-events-none z-10" />
-                  <select
-                    value={formData.reminder_time}
-                    onChange={(e) => handleChange('reminder_time', e.target.value)}
-                    disabled={formData.is_all_day}
-                    className="w-full pl-10 pr-10 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed appearance-none cursor-pointer"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'right 0.5rem center',
-                      backgroundSize: '1.5em 1.5em'
-                    }}
-                  >
-                    {Array.from({ length: 96 }, (_, i) => {
-                      const hours = Math.floor(i / 4);
-                      const minutes = (i % 4) * 15;
-                      const time24 = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                      const isPM = hours >= 12;
-                      const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                      const time12 = `${hours12}:${minutes.toString().padStart(2, '0')} ${isPM ? 'PM' : 'AM'}`;
-                      return (
-                        <option key={time24} value={time24}>
-                          {time12}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
+                <WheelTimePicker
+                  value={formData.reminder_time}
+                  onChange={(time) => handleChange('reminder_time', time)}
+                  disabled={formData.is_all_day}
+                />
               </div>
             </div>
 

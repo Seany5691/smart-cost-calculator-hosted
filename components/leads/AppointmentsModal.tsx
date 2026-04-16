@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Users, Bell, Calendar, Clock, Check, AlertCircle, Loader2 } from 'lucide-react';
+import WheelTimePicker from './WheelTimePicker';
 
 interface User {
   id: string;
@@ -548,34 +549,11 @@ export default function AppointmentsModal({
                   <Clock className="w-4 h-4 inline mr-1" />
                   Time <span className="text-red-400">*</span>
                 </label>
-                <select
+                <WheelTimePicker
                   value={reminderTime}
-                  onChange={(e) => setReminderTime(e.target.value)}
-                  required
+                  onChange={setReminderTime}
                   disabled={loading}
-                  className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 0.5rem center',
-                    backgroundSize: '1.5em 1.5em',
-                    paddingRight: '2.5rem'
-                  }}
-                >
-                  {Array.from({ length: 96 }, (_, i) => {
-                    const hours = Math.floor(i / 4);
-                    const minutes = (i % 4) * 15;
-                    const time24 = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                    const isPM = hours >= 12;
-                    const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                    const time12 = `${hours12}:${minutes.toString().padStart(2, '0')} ${isPM ? 'PM' : 'AM'}`;
-                    return (
-                      <option key={time24} value={time24}>
-                        {time12}
-                      </option>
-                    );
-                  })}
-                </select>
+                />
               </div>
             </div>
 

@@ -118,6 +118,63 @@ export default function LeadsPage() {
     setMounted(true);
   }, []);
 
+  // Auto-navigate to correct tab when openModal parameter is present
+  useEffect(() => {
+    if (openModalLeadId && mounted && isAuthenticated) {
+      // Fetch the lead to get its status
+      const fetchLeadAndNavigate = async () => {
+        try {
+          const token = useAuthStore.getState().token;
+          if (!token) return;
+
+          const response = await fetch(`/api/leads/${openModalLeadId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const lead = await response.json();
+            console.log('[LEADS PAGE] Fetched lead for openModal:', lead);
+            
+            // Map lead status to tab ID
+            const statusToTab: Record<string, TabId> = {
+              'new': 'main-sheet',
+              'leads': 'leads',
+              'appointments': 'appointments',
+              'working': 'working',
+              'proposal': 'proposal',
+              'later': 'later',
+              'bad': 'bad',
+              'signed': 'signed',
+            };
+
+            const targetTab = statusToTab[lead.status] || 'leads';
+            console.log('[LEADS PAGE] Navigating to tab:', targetTab, 'for status:', lead.status);
+            
+            // Navigate to the correct tab
+            if (targetTab !== activeTab) {
+              setActiveTab(targetTab);
+              setRefreshKey(prev => prev + 1);
+              
+              // Update URL
+              const url = new URL(window.location.href);
+              url.searchParams.set('tab', targetTab);
+              url.searchParams.set('openModal', openModalLeadId);
+              window.history.replaceState({}, '', url.toString());
+            }
+          } else {
+            console.error('[LEADS PAGE] Failed to fetch lead:', response.status);
+          }
+        } catch (error) {
+          console.error('[LEADS PAGE] Error fetching lead for openModal:', error);
+        }
+      };
+
+      fetchLeadAndNavigate();
+    }
+  }, [openModalLeadId, mounted, isAuthenticated, activeTab]);
+
   // Listen for custom tab change events from dashboard
   useEffect(() => {
     const handleTabChangeEvent = (event: CustomEvent) => {

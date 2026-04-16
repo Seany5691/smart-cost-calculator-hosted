@@ -254,45 +254,44 @@ export default function LaterStageModal({
             </div>
           </div>
 
-          {/* Date and Time */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-white font-medium mb-2">
-                <Calendar className="w-4 h-4 inline mr-1" />
-                Callback Date <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="date"
-                value={callbackDate}
-                onChange={(e) => setCallbackDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-                disabled={loading}
-                required
-              />
-            </div>
+          {/* Date */}
+          <div>
+            <label className="block text-white font-medium mb-2">
+              <Calendar className="w-4 h-4 inline mr-1" />
+              Callback Date <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="date"
+              value={callbackDate}
+              onChange={(e) => setCallbackDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              disabled={loading}
+              required
+            />
+          </div>
 
-            <div>
-              <label className="block text-white font-medium mb-2">
-                <Clock className="w-4 h-4 inline mr-1" />
-                Time
-              </label>
-              <WheelTimePicker
-                value={callbackTime}
-                onChange={setCallbackTime}
-                disabled={isAllDay || loading}
+          {/* Time */}
+          <div>
+            <label className="block text-white font-medium mb-2">
+              <Clock className="w-4 h-4 inline mr-1" />
+              Time
+            </label>
+            <WheelTimePicker
+              value={callbackTime}
+              onChange={setCallbackTime}
+              disabled={isAllDay || loading}
+            />
+            <label className="flex items-center gap-2 mt-3">
+              <input
+                type="checkbox"
+                checked={isAllDay}
+                onChange={(e) => setIsAllDay(e.target.checked)}
+                disabled={loading}
+                className="rounded border-emerald-500/30 bg-white/10 text-emerald-500 focus:ring-emerald-500"
               />
-              <label className="flex items-center gap-2 mt-3">
-                <input
-                  type="checkbox"
-                  checked={isAllDay}
-                  onChange={(e) => setIsAllDay(e.target.checked)}
-                  disabled={loading}
-                  className="rounded border-emerald-500/30 bg-white/10 text-emerald-500 focus:ring-emerald-500"
-                />
-                <span className="text-sm text-gray-300">All Day</span>
-              </label>
-            </div>
+              <span className="text-sm text-gray-300">All Day</span>
+            </label>
           </div>
 
           {/* Error Message */}

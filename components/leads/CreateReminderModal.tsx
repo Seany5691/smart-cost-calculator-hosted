@@ -284,36 +284,35 @@ export default function CreateReminderModal({ isOpen, onClose, leadId, routeId }
             </div>
           </div>
 
-          {/* Date and Time */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-white font-medium mb-2">
-                Date <span className="text-red-400">*</span>
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" />
-                <input
-                  type="date"
-                  value={formData.reminder_date}
-                  onChange={(e) => handleChange('reminder_date', e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              {errors.reminder_date && (
-                <p className="mt-1 text-sm text-red-400">{errors.reminder_date}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-white font-medium mb-2">
-                Time
-              </label>
-              <WheelTimePicker
-                value={formData.reminder_time}
-                onChange={(time) => handleChange('reminder_time', time)}
-                disabled={formData.is_all_day}
+          {/* Date */}
+          <div>
+            <label className="block text-white font-medium mb-2">
+              Date <span className="text-red-400">*</span>
+            </label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" />
+              <input
+                type="date"
+                value={formData.reminder_date}
+                onChange={(e) => handleChange('reminder_date', e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
               />
             </div>
+            {errors.reminder_date && (
+              <p className="mt-1 text-sm text-red-400">{errors.reminder_date}</p>
+            )}
+          </div>
+
+          {/* Time */}
+          <div>
+            <label className="block text-white font-medium mb-2">
+              Time
+            </label>
+            <WheelTimePicker
+              value={formData.reminder_time}
+              onChange={(time) => handleChange('reminder_time', time)}
+              disabled={formData.is_all_day}
+            />
           </div>
 
           {/* All Day Toggle */}

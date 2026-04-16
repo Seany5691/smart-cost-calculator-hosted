@@ -526,35 +526,34 @@ export default function AppointmentsModal({
               </div>
             </div>
 
-            {/* Date and Time */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-white font-medium mb-2">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  Date <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={reminderDate}
-                  onChange={(e) => setReminderDate(e.target.value)}
-                  required
-                  min={new Date().toISOString().split('T')[0]}
-                  disabled={loading}
-                  className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
-                />
-              </div>
+            {/* Date */}
+            <div>
+              <label className="block text-white font-medium mb-2">
+                <Calendar className="w-4 h-4 inline mr-1" />
+                Date <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="date"
+                value={reminderDate}
+                onChange={(e) => setReminderDate(e.target.value)}
+                required
+                min={new Date().toISOString().split('T')[0]}
+                disabled={loading}
+                className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
+              />
+            </div>
 
-              <div>
-                <label className="block text-white font-medium mb-2">
-                  <Clock className="w-4 h-4 inline mr-1" />
-                  Time <span className="text-red-400">*</span>
-                </label>
-                <WheelTimePicker
-                  value={reminderTime}
-                  onChange={setReminderTime}
-                  disabled={loading}
-                />
-              </div>
+            {/* Time */}
+            <div>
+              <label className="block text-white font-medium mb-2">
+                <Clock className="w-4 h-4 inline mr-1" />
+                Time <span className="text-red-400">*</span>
+              </label>
+              <WheelTimePicker
+                value={reminderTime}
+                onChange={setReminderTime}
+                disabled={loading}
+              />
             </div>
 
             {/* Share Reminder With */}

@@ -42,7 +42,6 @@ export default function WheelTimePicker({ value, onChange, disabled = false }: W
   const [selectedHour, setSelectedHour] = useState(initialHours);
   const [selectedMinute, setSelectedMinute] = useState(initialMinutes);
   const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>(initialIsPM ? 'PM' : 'AM');
-  const [showWheels, setShowWheels] = useState(false);
 
   const hourRef = useRef<HTMLDivElement>(null);
   const minuteRef = useRef<HTMLDivElement>(null);
@@ -200,8 +199,8 @@ export default function WheelTimePicker({ value, onChange, disabled = false }: W
   }
 
   return (
-    <div className="space-y-3">
-      {/* Manual Input Fields */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Left Side: Manual Input Fields */}
       <div className="bg-white/5 border border-emerald-500/30 rounded-lg p-4">
         <div className="flex items-center gap-2 mb-3">
           <Clock className="w-4 h-4 text-emerald-400" />
@@ -265,52 +264,41 @@ export default function WheelTimePicker({ value, onChange, disabled = false }: W
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Toggle Button */}
-      <button
-        type="button"
-        onClick={() => setShowWheels(!showWheels)}
-        className="w-full px-4 py-2 bg-white/5 border border-emerald-500/30 rounded-lg text-emerald-300 text-sm font-medium hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
-      >
-        {showWheels ? '▲ Hide Wheel Picker' : '▼ Show Wheel Picker'}
-      </button>
-
-      {/* Wheel Picker (Collapsible) */}
-      {showWheels && (
-        <div className="bg-gradient-to-br from-white/5 to-emerald-500/5 border border-emerald-500/30 rounded-lg p-4">
-          <div className="text-center text-sm text-emerald-300 mb-3 font-medium">
-            Scroll or use mouse wheel to select
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {/* Hours */}
-            <div>
-              <div className="text-center text-xs text-emerald-300/70 mb-2 font-medium">Hour</div>
-              {renderWheel(hours, selectedHour, hourRef, setSelectedHour, (h) => h.toString().padStart(2, '0'))}
-            </div>
-
-            {/* Minutes */}
-            <div>
-              <div className="text-center text-xs text-emerald-300/70 mb-2 font-medium">Minute</div>
-              {renderWheel(minutes, selectedMinute, minuteRef, setSelectedMinute, (m) => m.toString().padStart(2, '0'))}
-            </div>
-
-            {/* AM/PM */}
-            <div>
-              <div className="text-center text-xs text-emerald-300/70 mb-2 font-medium">Period</div>
-              {renderWheel(periods, selectedPeriod, periodRef, setSelectedPeriod)}
-            </div>
-          </div>
-
-          {/* Selected time display */}
-          <div className="mt-4 text-center bg-emerald-500/10 rounded-lg py-3 border border-emerald-500/30">
-            <div className="text-xs text-emerald-300/70 mb-1">Selected Time</div>
-            <div className="text-2xl font-bold text-emerald-400">
-              {selectedHour.toString().padStart(2, '0')}:{selectedMinute.toString().padStart(2, '0')} {selectedPeriod}
-            </div>
+        {/* Selected time display */}
+        <div className="mt-4 text-center bg-emerald-500/10 rounded-lg py-3 border border-emerald-500/30">
+          <div className="text-xs text-emerald-300/70 mb-1">Selected Time</div>
+          <div className="text-2xl font-bold text-emerald-400">
+            {selectedHour.toString().padStart(2, '0')}:{selectedMinute.toString().padStart(2, '0')} {selectedPeriod}
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Right Side: Wheel Picker (Always Visible) */}
+      <div className="bg-gradient-to-br from-white/5 to-emerald-500/5 border border-emerald-500/30 rounded-lg p-4">
+        <div className="text-center text-sm text-emerald-300 mb-3 font-medium">
+          Scroll or use mouse wheel
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {/* Hours */}
+          <div>
+            <div className="text-center text-xs text-emerald-300/70 mb-2 font-medium">Hour</div>
+            {renderWheel(hours, selectedHour, hourRef, setSelectedHour, (h) => h.toString().padStart(2, '0'))}
+          </div>
+
+          {/* Minutes */}
+          <div>
+            <div className="text-center text-xs text-emerald-300/70 mb-2 font-medium">Min</div>
+            {renderWheel(minutes, selectedMinute, minuteRef, setSelectedMinute, (m) => m.toString().padStart(2, '0'))}
+          </div>
+
+          {/* AM/PM */}
+          <div>
+            <div className="text-center text-xs text-emerald-300/70 mb-2 font-medium">Period</div>
+            {renderWheel(periods, selectedPeriod, periodRef, setSelectedPeriod)}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

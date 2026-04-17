@@ -509,3 +509,70 @@ select[multiple] option {
 select[multiple] option:checked {
   background: linear-gradient(90deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
 }
+
+/* Date Picker Styling - Emerald Glassmorphic Theme */
+input[type="date"] {
+  position: relative;
+  color-scheme: dark;
+}
+
+/* Style the calendar icon */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(1) brightness(1.2) sepia(1) saturate(5) hue-rotate(100deg);
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Firefox date picker styling */
+input[type="date"]::-moz-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(1) brightness(1.2) sepia(1) saturate(5) hue-rotate(100deg);
+  opacity: 0.8;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) - Calendar dropdown */
+input[type="date"]::-webkit-datetime-edit {
+  color: white;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color: white;
+}
+
+input[type="date"]::-webkit-datetime-edit-text {
+  color: rgba(16, 185, 129, 0.6);
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: white;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field:focus,
+input[type="date"]::-webkit-datetime-edit-day-field:focus,
+input[type="date"]::-webkit-datetime-edit-year-field:focus {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: rgb(16, 185, 129);
+  outline: none;
+}
+
+/* Style the clear button */
+input[type="date"]::-webkit-clear-button {
+  filter: invert(1) brightness(1.2) sepia(1) saturate(5) hue-rotate(100deg);
+  opacity: 0.6;
+}
+
+input[type="date"]::-webkit-clear-button:hover {
+  opacity: 1;
+}
+
+/* Firefox specific */
+input[type="date"]::-moz-focus-inner {
+  border: 0;
+}

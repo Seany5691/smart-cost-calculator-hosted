@@ -51,11 +51,6 @@ export default function WheelTimePicker({ value, onChange, disabled = false }: W
   const minutes = Array.from({ length: 60 }, (_, i) => i);
   const periods: ('AM' | 'PM')[] = ['AM', 'PM'];
 
-  // Generate arrays
-  const hours = Array.from({ length: 12 }, (_, i) => i + 1);
-  const minutes = Array.from({ length: 60 }, (_, i) => i);
-  const periods: ('AM' | 'PM')[] = ['AM', 'PM'];
-
   // Convert to 24-hour format and notify parent
   useEffect(() => {
     let hours24 = selectedHour;

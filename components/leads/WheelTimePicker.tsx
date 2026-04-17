@@ -3,24 +3,22 @@
 /**
  * WheelTimePicker Component
  * 
- * iOS-style wheel time picker with separate scrollable wheels for:
- * - Hours (1-12)
- * - Minutes (0-59)
- * - AM/PM
+ * User-friendly time picker with:
+ * - Manual input fields (hour, minute, AM/PM dropdowns)
+ * - Optional collapsible wheel picker
+ * - All 60 minutes available
  * 
  * Features:
- * - Smooth scrolling wheel interface
- * - Manual input fields for direct entry
- * - Mouse wheel support
- * - Touch and mouse support
- * - Snap-to-center behavior
- * - Visual highlight for selected time
- * - Glassmorphic emerald theme matching app UI
+ * - Easy manual entry with proper input fields
+ * - Dropdown selectors for hour/minute/AM-PM
+ * - Optional wheel picker (collapsible)
+ * - Mouse wheel support on wheels
+ * - Glassmorphic emerald theme
  * - Returns time in 24-hour format (HH:MM)
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface WheelTimePickerProps {
   value: string; // 24-hour format "HH:MM"
@@ -42,10 +40,16 @@ export default function WheelTimePicker({ value, onChange, disabled = false }: W
   const [selectedHour, setSelectedHour] = useState(initialHours);
   const [selectedMinute, setSelectedMinute] = useState(initialMinutes);
   const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>(initialIsPM ? 'PM' : 'AM');
+  const [showWheels, setShowWheels] = useState(false);
 
   const hourRef = useRef<HTMLDivElement>(null);
   const minuteRef = useRef<HTMLDivElement>(null);
   const periodRef = useRef<HTMLDivElement>(null);
+
+  // Generate arrays
+  const hours = Array.from({ length: 12 }, (_, i) => i + 1);
+  const minutes = Array.from({ length: 60 }, (_, i) => i);
+  const periods: ('AM' | 'PM')[] = ['AM', 'PM'];
 
   // Generate arrays
   const hours = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -117,14 +121,14 @@ export default function WheelTimePicker({ value, onChange, disabled = false }: W
     }
   };
 
-  const handleManualHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleManualHourChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = parseInt(e.target.value);
     if (!isNaN(val) && val >= 1 && val <= 12) {
       setSelectedHour(val);
     }
   };
 
-  const handleManualMinuteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleManualMinuteChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = parseInt(e.target.value);
     if (!isNaN(val) && val >= 0 && val <= 59) {
       setSelectedMinute(val);
@@ -199,106 +203,133 @@ export default function WheelTimePicker({ value, onChange, disabled = false }: W
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {/* Left Side: Manual Input Fields */}
+    <div className="space-y-3">
+      {/* Manual Time Input - Full Width Row */}
       <div className="bg-white/5 border border-emerald-500/30 rounded-lg p-4">
         <div className="flex items-center gap-2 mb-3">
           <Clock className="w-4 h-4 text-emerald-400" />
-          <span className="text-sm text-emerald-300 font-medium">Manual Entry</span>
+          <span className="text-sm text-emerald-300 font-medium">Select Time</span>
         </div>
-        <div className="grid grid-cols-7 gap-2 items-center">
-          {/* Hour Input */}
+        
+        <div className="grid grid-cols-7 gap-3 items-center">
+          {/* Hour Dropdown */}
           <div className="col-span-2">
-            <input
-              type="number"
-              min="1"
-              max="12"
-              value={selectedHour.toString().padStart(2, '0')}
+            <select
+              value={selectedHour}
               onChange={handleManualHourChange}
-              className="w-full px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-center text-lg font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/50"
-              placeholder="HH"
-            />
+              className="w-full px-3 py-2.5 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-center text-base font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/50 cursor-pointer appearance-none"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 0.25rem center',
+                backgroundSize: '1.25em 1.25em'
+              }}
+            >
+              {hours.map(h => (
+                <option key={h} value={h}>{h.toString().padStart(2, '0')}</option>
+              ))}
+            </select>
             <div className="text-xs text-emerald-300/70 text-center mt-1">Hour</div>
           </div>
 
           {/* Separator */}
           <div className="text-2xl text-emerald-400 font-bold text-center">:</div>
 
-          {/* Minute Input */}
+          {/* Minute Dropdown */}
           <div className="col-span-2">
-            <input
-              type="number"
-              min="0"
-              max="59"
-              value={selectedMinute.toString().padStart(2, '0')}
+            <select
+              value={selectedMinute}
               onChange={handleManualMinuteChange}
-              className="w-full px-3 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-center text-lg font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/50"
-              placeholder="MM"
-            />
-            <div className="text-xs text-emerald-300/70 text-center mt-1">Min</div>
+              className="w-full px-3 py-2.5 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-center text-base font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/50 cursor-pointer appearance-none"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 0.25rem center',
+                backgroundSize: '1.25em 1.25em'
+              }}
+            >
+              {minutes.map(m => (
+                <option key={m} value={m}>{m.toString().padStart(2, '0')}</option>
+              ))}
+            </select>
+            <div className="text-xs text-emerald-300/70 text-center mt-1">Minute</div>
           </div>
 
-          {/* AM/PM Buttons */}
-          <div className="col-span-2 flex flex-col gap-1">
-            <button
-              type="button"
-              onClick={() => setSelectedPeriod('AM')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                selectedPeriod === 'AM'
-                  ? 'bg-emerald-500/30 border-2 border-emerald-500 text-emerald-300'
-                  : 'bg-white/5 border border-emerald-500/20 text-white/60 hover:bg-white/10'
-              }`}
+          {/* AM/PM Dropdown */}
+          <div className="col-span-2">
+            <select
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value as 'AM' | 'PM')}
+              className="w-full px-3 py-2.5 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-center text-base font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/50 cursor-pointer appearance-none"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 0.25rem center',
+                backgroundSize: '1.25em 1.25em'
+              }}
             >
-              AM
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedPeriod('PM')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                selectedPeriod === 'PM'
-                  ? 'bg-emerald-500/30 border-2 border-emerald-500 text-emerald-300'
-                  : 'bg-white/5 border border-emerald-500/20 text-white/60 hover:bg-white/10'
-              }`}
-            >
-              PM
-            </button>
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
+            <div className="text-xs text-emerald-300/70 text-center mt-1">Period</div>
           </div>
         </div>
 
         {/* Selected time display */}
-        <div className="mt-4 text-center bg-emerald-500/10 rounded-lg py-3 border border-emerald-500/30">
+        <div className="mt-4 text-center bg-emerald-500/10 rounded-lg py-2.5 border border-emerald-500/30">
           <div className="text-xs text-emerald-300/70 mb-1">Selected Time</div>
-          <div className="text-2xl font-bold text-emerald-400">
+          <div className="text-xl font-bold text-emerald-400">
             {selectedHour.toString().padStart(2, '0')}:{selectedMinute.toString().padStart(2, '0')} {selectedPeriod}
           </div>
         </div>
       </div>
 
-      {/* Right Side: Wheel Picker (Always Visible) */}
-      <div className="bg-gradient-to-br from-white/5 to-emerald-500/5 border border-emerald-500/30 rounded-lg p-4">
-        <div className="text-center text-sm text-emerald-300 mb-3 font-medium">
-          Scroll or use mouse wheel
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {/* Hours */}
-          <div>
-            <div className="text-center text-xs text-emerald-300/70 mb-2 font-medium">Hour</div>
-            {renderWheel(hours, selectedHour, hourRef, setSelectedHour, (h) => h.toString().padStart(2, '0'))}
-          </div>
+      {/* Toggle Button for Wheel Picker */}
+      <button
+        type="button"
+        onClick={() => setShowWheels(!showWheels)}
+        className="w-full px-4 py-2.5 bg-white/5 border border-emerald-500/30 rounded-lg text-emerald-300 text-sm font-medium hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+      >
+        {showWheels ? (
+          <>
+            <ChevronUp className="w-4 h-4" />
+            Hide Wheel Picker
+          </>
+        ) : (
+          <>
+            <ChevronDown className="w-4 h-4" />
+            Show Wheel Picker
+          </>
+        )}
+      </button>
 
-          {/* Minutes */}
-          <div>
-            <div className="text-center text-xs text-emerald-300/70 mb-2 font-medium">Min</div>
-            {renderWheel(minutes, selectedMinute, minuteRef, setSelectedMinute, (m) => m.toString().padStart(2, '0'))}
+      {/* Wheel Picker (Collapsible) */}
+      {showWheels && (
+        <div className="bg-gradient-to-br from-white/5 to-emerald-500/5 border border-emerald-500/30 rounded-lg p-4">
+          <div className="text-center text-sm text-emerald-300 mb-3 font-medium">
+            Scroll or use mouse wheel
           </div>
+          <div className="grid grid-cols-3 gap-3">
+            {/* Hours */}
+            <div>
+              <div className="text-center text-xs text-emerald-300/70 mb-2 font-medium">Hour</div>
+              {renderWheel(hours, selectedHour, hourRef, setSelectedHour, (h) => h.toString().padStart(2, '0'))}
+            </div>
 
-          {/* AM/PM */}
-          <div>
-            <div className="text-center text-xs text-emerald-300/70 mb-2 font-medium">Period</div>
-            {renderWheel(periods, selectedPeriod, periodRef, setSelectedPeriod)}
+            {/* Minutes */}
+            <div>
+              <div className="text-center text-xs text-emerald-300/70 mb-2 font-medium">Min</div>
+              {renderWheel(minutes, selectedMinute, minuteRef, setSelectedMinute, (m) => m.toString().padStart(2, '0'))}
+            </div>
+
+            {/* AM/PM */}
+            <div>
+              <div className="text-center text-xs text-emerald-300/70 mb-2 font-medium">Period</div>
+              {renderWheel(periods, selectedPeriod, periodRef, setSelectedPeriod)}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

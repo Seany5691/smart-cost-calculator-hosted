@@ -43,6 +43,7 @@ export default function EmailTemplateModal({
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [error, setError] = useState('');
   const [missingFields, setMissingFields] = useState<string[]>([]);
+  const [missingFieldsData, setMissingFieldsData] = useState<Record<string, { label: string; source: string; value: string }>>({});
   const [generatedEmail, setGeneratedEmail] = useState('');
   const [copied, setCopied] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState<string | null>(null);
@@ -68,6 +69,7 @@ export default function EmailTemplateModal({
       setFieldValues({});
       setError('');
       setMissingFields([]);
+      setMissingFieldsData({});
       setGeneratedEmail('');
       setCopied(false);
       setShowDatePicker(null);
@@ -136,6 +138,7 @@ export default function EmailTemplateModal({
 
   const checkMissingLeadFields = (template: EmailTemplate) => {
     const missing: string[] = [];
+    const missingData: Record<string, { label: string; source: string; value: string }> = {};
     
     if (template.fields) {
       for (const field of template.fields) {
@@ -143,12 +146,18 @@ export default function EmailTemplateModal({
           const leadValue = lead[field.lead_field_source as keyof Lead];
           if (!leadValue || (typeof leadValue === 'string' && !leadValue.trim())) {
             missing.push(field.field_label);
+            missingData[field.field_key] = {
+              label: field.field_label,
+              source: field.lead_field_source,
+              value: ''
+            };
           }
         }
       }
     }
     
     setMissingFields(missing);
+    setMissingFieldsData(missingData);
   };
 
   const handleFieldChange = (fieldKey: string, value: any) => {
@@ -199,9 +208,63 @@ export default function EmailTemplateModal({
   const handleGenerateEmail = async () => {
     if (!selectedTemplate) return;
     
+    // Check if there are missing fields that need to be filled
     if (missingFields.length > 0) {
-      setError(`Please add the following fields to the lead first: ${missingFields.join(', ')}`);
-      return;
+      // Validate that all missing fields have been filled in
+      const emptyFields = Object.entries(missingFieldsData).filter(([_, data]) => !data.value.trim());
+      if (emptyFields.length > 0) {
+        setError(`Please fill in all required fields: ${emptyFields.map(([_, data]) => data.label).join(', ')}`);
+        return;
+      }
+
+      // Save missing fields to the lead first
+      setLoading(true);
+      setError('');
+
+      try {
+        const token = getAuthToken();
+        if (!token) {
+          throw new Error('Not authenticated');
+        }
+
+        // Update lead with missing fields
+        const updateData: Record<string, string> = {};
+        Object.entries(missingFieldsData).forEach(([_, data]) => {
+          updateData[data.source] = data.value.trim();
+        });
+
+        const updateResponse = await fetch(`/api/leads/${lead.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(updateData)
+        });
+
+        if (!updateResponse.ok) {
+          throw new Error('Failed to update lead with missing fields');
+        }
+
+        // Update local lead object
+        Object.entries(missingFieldsData).forEach(([_, data]) => {
+          (lead as any)[data.source] = data.value.trim();
+        });
+
+        // Clear missing fields
+        setMissingFields([]);
+        setMissingFieldsData({});
+
+        toast.success('Lead updated', {
+          message: 'Missing fields have been added to the lead',
+          section: 'leads'
+        });
+      } catch (err) {
+        console.error('Error updating lead:', err);
+        setError(err instanceof Error ? err.message : 'Failed to update lead');
+        setLoading(false);
+        return;
+      }
     }
 
     setLoading(true);
@@ -327,21 +390,38 @@ export default function EmailTemplateModal({
             </div>
           )}
 
-          {/* Missing Fields Warning */}
+          {/* Missing Fields - Allow filling them in */}
           {missingFields.length > 0 && !error && (
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
               <div className="flex items-start space-x-3">
                 <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-yellow-400 font-medium mb-1">Missing Required Fields</p>
-                  <p className="text-sm text-yellow-300">
-                    Please add the following fields to the lead before creating this template:
+                  <p className="text-yellow-400 font-medium mb-3">Missing Required Fields</p>
+                  <p className="text-sm text-yellow-300 mb-4">
+                    Please enter the following fields. They will be saved to the lead when you generate the email:
                   </p>
-                  <ul className="list-disc list-inside text-sm text-yellow-300 mt-2">
-                    {missingFields.map((field, idx) => (
-                      <li key={idx}>{field}</li>
+                  <div className="space-y-3">
+                    {Object.entries(missingFieldsData).map(([key, data]) => (
+                      <div key={key}>
+                        <label className="block text-yellow-200 font-medium mb-1 text-sm">
+                          {data.label} <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={data.value}
+                          onChange={(e) => {
+                            setMissingFieldsData(prev => ({
+                              ...prev,
+                              [key]: { ...prev[key], value: e.target.value }
+                            }));
+                          }}
+                          placeholder={`Enter ${data.label.toLowerCase()}`}
+                          className="w-full px-4 py-2 bg-white/10 border border-yellow-500/30 rounded-lg text-white placeholder-yellow-300/50 focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500"
+                          disabled={loading}
+                        />
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               </div>
             </div>
@@ -547,13 +627,13 @@ export default function EmailTemplateModal({
             <button
               type="button"
               onClick={handleGenerateEmail}
-              disabled={loading || !selectedTemplate || missingFields.length > 0}
+              disabled={loading || !selectedTemplate}
               className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-semibold"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Generating...</span>
+                  <span>{missingFields.length > 0 ? 'Saving & Generating...' : 'Generating...'}</span>
                 </>
               ) : (
                 <>

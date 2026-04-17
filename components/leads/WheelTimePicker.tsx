@@ -116,17 +116,46 @@ export default function WheelTimePicker({ value, onChange, disabled = false }: W
     }
   };
 
-  const handleManualHourChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = parseInt(e.target.value);
-    if (!isNaN(val) && val >= 1 && val <= 12) {
-      setSelectedHour(val);
+  const handleManualHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // Allow empty or partial input while typing
+    if (val === '') {
+      return;
+    }
+    const numVal = parseInt(val);
+    if (!isNaN(numVal) && numVal >= 1 && numVal <= 12) {
+      setSelectedHour(numVal);
     }
   };
 
-  const handleManualMinuteChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = parseInt(e.target.value);
-    if (!isNaN(val) && val >= 0 && val <= 59) {
-      setSelectedMinute(val);
+  const handleManualMinuteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // Allow empty or partial input while typing
+    if (val === '') {
+      return;
+    }
+    const numVal = parseInt(val);
+    if (!isNaN(numVal) && numVal >= 0 && numVal <= 59) {
+      setSelectedMinute(numVal);
+    }
+  };
+
+  const handleHourBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === '' || parseInt(val) < 1 || parseInt(val) > 12) {
+      // Reset to current value if invalid
+      e.target.value = selectedHour.toString();
+    }
+  };
+
+  const handleMinuteBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === '' || parseInt(val) < 0 || parseInt(val) > 59) {
+      // Reset to current value if invalid
+      e.target.value = selectedMinute.toString().padStart(2, '0');
+    } else {
+      // Pad with zero if valid
+      e.target.value = parseInt(val).toString().padStart(2, '0');
     }
   };
 
@@ -207,66 +236,65 @@ export default function WheelTimePicker({ value, onChange, disabled = false }: W
         </div>
         
         <div className="grid grid-cols-7 gap-3 items-center">
-          {/* Hour Dropdown */}
+          {/* Hour Input - Editable */}
           <div className="col-span-2">
-            <select
-              value={selectedHour}
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={selectedHour.toString().padStart(2, '0')}
               onChange={handleManualHourChange}
-              className="w-full px-3 py-2.5 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-center text-base font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/50 cursor-pointer appearance-none"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 0.25rem center',
-                backgroundSize: '1.25em 1.25em'
-              }}
-            >
-              {hours.map(h => (
-                <option key={h} value={h}>{h.toString().padStart(2, '0')}</option>
-              ))}
-            </select>
-            <div className="text-xs text-emerald-300/70 text-center mt-1">Hour</div>
+              onBlur={handleHourBlur}
+              maxLength={2}
+              className="w-full px-3 py-2.5 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-center text-base font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/50"
+              placeholder="HH"
+            />
+            <div className="text-xs text-emerald-300/70 text-center mt-1">Hour (1-12)</div>
           </div>
 
           {/* Separator */}
           <div className="text-2xl text-emerald-400 font-bold text-center">:</div>
 
-          {/* Minute Dropdown */}
+          {/* Minute Input - Editable */}
           <div className="col-span-2">
-            <select
-              value={selectedMinute}
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={selectedMinute.toString().padStart(2, '0')}
               onChange={handleManualMinuteChange}
-              className="w-full px-3 py-2.5 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-center text-base font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/50 cursor-pointer appearance-none"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 0.25rem center',
-                backgroundSize: '1.25em 1.25em'
-              }}
-            >
-              {minutes.map(m => (
-                <option key={m} value={m}>{m.toString().padStart(2, '0')}</option>
-              ))}
-            </select>
-            <div className="text-xs text-emerald-300/70 text-center mt-1">Minute</div>
+              onBlur={handleMinuteBlur}
+              maxLength={2}
+              className="w-full px-3 py-2.5 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-center text-base font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/50"
+              placeholder="MM"
+            />
+            <div className="text-xs text-emerald-300/70 text-center mt-1">Minute (0-59)</div>
           </div>
 
-          {/* AM/PM Dropdown */}
-          <div className="col-span-2">
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value as 'AM' | 'PM')}
-              className="w-full px-3 py-2.5 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-center text-base font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/50 cursor-pointer appearance-none"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2310b981'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 0.25rem center',
-                backgroundSize: '1.25em 1.25em'
-              }}
+          {/* AM/PM Buttons */}
+          <div className="col-span-2 flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => setSelectedPeriod('AM')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                selectedPeriod === 'AM'
+                  ? 'bg-emerald-500/30 border-2 border-emerald-500 text-emerald-300'
+                  : 'bg-white/5 border border-emerald-500/20 text-white/60 hover:bg-white/10'
+              }`}
             >
-              <option value="AM">AM</option>
-              <option value="PM">PM</option>
-            </select>
-            <div className="text-xs text-emerald-300/70 text-center mt-1">Period</div>
+              AM
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedPeriod('PM')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                selectedPeriod === 'PM'
+                  ? 'bg-emerald-500/30 border-2 border-emerald-500 text-emerald-300'
+                  : 'bg-white/5 border border-emerald-500/20 text-white/60 hover:bg-white/10'
+              }`}
+            >
+              PM
+            </button>
           </div>
         </div>
 

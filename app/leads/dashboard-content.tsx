@@ -189,6 +189,13 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
       gradient: 'from-blue-500 to-cyan-500'
     },
     { 
+      count: stats.proposalCount, 
+      label: 'Proposals', 
+      description: 'Awaiting proposals',
+      tab: 'proposal',
+      gradient: 'from-amber-500 to-orange-500'
+    },
+    { 
       count: stats.laterCount, 
       label: 'Later Stage', 
       description: 'Scheduled callbacks',
@@ -251,8 +258,8 @@ export default function DashboardContent({ stats }: DashboardContentProps) {
         </p>
       </div>
 
-      {/* Requirement: 2.3-2.6 - Statistics Grid with 7 clickable cards in a single horizontal line */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      {/* Requirement: 2.3-2.6 - Statistics Grid with 8 clickable cards in a single horizontal line */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         {statisticCards.map((card, index) => (
           <button
             key={index}

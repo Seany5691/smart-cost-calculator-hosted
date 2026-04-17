@@ -19,6 +19,7 @@ import DeleteNoteModal from './DeleteNoteModal';
 import DeleteReminderModal from './DeleteReminderModal';
 import DeleteLeadModal from './DeleteLeadModal';
 import AttachmentsSection from './AttachmentsSection';
+import EmailTemplateModal from './EmailTemplateModal';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/Toast/useToast';
 
@@ -126,6 +127,7 @@ export default function LeadsCards({
   const [proposalLead, setProposalLead] = useState<Lead | null>(null);
   const [appointmentsLead, setAppointmentsLead] = useState<Lead | null>(null);
   const [attachmentsModalLead, setAttachmentsModalLead] = useState<Lead | null>(null);
+  const [emailTemplateModalLead, setEmailTemplateModalLead] = useState<Lead | null>(null);
   const [highlightedLeadId, setHighlightedLeadId] = useState<string | null>(null);
 
   // Scroll to and highlight lead when highlightLeadId prop changes
@@ -1061,7 +1063,7 @@ export default function LeadsCards({
                 </div>
                 
                 {/* Secondary Actions Row */}
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <button
                     onClick={() => setShareModalLead(lead)}
                     className="flex flex-col items-center justify-center p-3 min-h-[60px] text-cyan-400 hover:bg-cyan-500/20 rounded-lg transition-colors"
@@ -1069,6 +1071,14 @@ export default function LeadsCards({
                   >
                     <Share2 className="w-5 h-5 mb-1" />
                     <span className="text-xs">Share</span>
+                  </button>
+                  <button
+                    onClick={() => setEmailTemplateModalLead(lead)}
+                    className="flex flex-col items-center justify-center p-3 min-h-[60px] text-green-400 hover:bg-green-500/20 rounded-lg transition-colors"
+                    title="Email Template"
+                  >
+                    <Mail className="w-5 h-5 mb-1" />
+                    <span className="text-xs">Email</span>
                   </button>
                   {lead.maps_address && (
                     <a
@@ -1193,6 +1203,15 @@ export default function LeadsCards({
           leadId={attachmentsModalLead.id}
           leadName={attachmentsModalLead.name}
           onClose={() => setAttachmentsModalLead(null)}
+        />
+      )}
+
+      {/* Email Template Modal */}
+      {emailTemplateModalLead && (
+        <EmailTemplateModal
+          isOpen={true}
+          onClose={() => setEmailTemplateModalLead(null)}
+          lead={emailTemplateModalLead}
         />
       )}
 

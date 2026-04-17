@@ -9,8 +9,9 @@ import LicensingConfig from '@/components/admin/LicensingConfig';
 import FactorsConfig from '@/components/admin/FactorsConfig';
 import ScalesConfig from '@/components/admin/ScalesConfig';
 import UserManagement from '@/components/admin/UserManagement';
+import EmailTemplatesConfig from '@/components/admin/EmailTemplatesConfig';
 
-type TabType = 'hardware' | 'connectivity' | 'licensing' | 'factors' | 'scales' | 'users';
+type TabType = 'hardware' | 'connectivity' | 'licensing' | 'factors' | 'scales' | 'users' | 'email-templates';
 
 export default function AdminPage() {
   const { user, isAuthenticated } = useAuthStore();
@@ -21,7 +22,7 @@ export default function AdminPage() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab') as TabType;
-      const validTabs: TabType[] = ['hardware', 'connectivity', 'licensing', 'factors', 'scales', 'users'];
+      const validTabs: TabType[] = ['hardware', 'connectivity', 'licensing', 'factors', 'scales', 'users', 'email-templates'];
       if (tab && validTabs.includes(tab)) {
         return tab;
       }
@@ -41,7 +42,7 @@ export default function AdminPage() {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab') as TabType;
-      const validTabs: TabType[] = ['hardware', 'connectivity', 'licensing', 'factors', 'scales', 'users'];
+      const validTabs: TabType[] = ['hardware', 'connectivity', 'licensing', 'factors', 'scales', 'users', 'email-templates'];
       if (tab && validTabs.includes(tab)) {
         setActiveTab(tab);
       } else {
@@ -72,6 +73,7 @@ export default function AdminPage() {
     { id: 'factors', label: 'Factors' },
     { id: 'scales', label: 'Scales' },
     { id: 'users', label: 'Users' },
+    { id: 'email-templates', label: 'Email Templates' },
   ];
 
   // Handle tab change with URL update
@@ -124,6 +126,7 @@ export default function AdminPage() {
           {activeTab === 'factors' && <FactorsConfig />}
           {activeTab === 'scales' && <ScalesConfig />}
           {activeTab === 'users' && <UserManagement />}
+          {activeTab === 'email-templates' && <EmailTemplatesConfig />}
         </div>
       </div>
     </div>

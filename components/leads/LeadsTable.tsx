@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useLeadsStore } from '@/lib/store/leads';
 import { useCalculatorStore } from '@/lib/store/calculator';
 import type { Lead } from '@/lib/leads/types';
-import { Eye, Edit, Trash2, Phone, MapPin, Calendar, ChevronDown, ChevronUp, StickyNote, Bell, Clock, Plus, X, FileText, Share2, Paperclip } from 'lucide-react';
+import { Eye, Edit, Trash2, Phone, MapPin, Calendar, ChevronDown, ChevronUp, StickyNote, Bell, Clock, Plus, X, FileText, Share2, Paperclip, Mail } from 'lucide-react';
 import LeadDetailsModal from './LeadDetailsModal';
 import EditLeadModal from './EditLeadModal';
 import LaterStageModal from './LaterStageModal';
@@ -19,6 +19,7 @@ import DeleteNoteModal from './DeleteNoteModal';
 import DeleteReminderModal from './DeleteReminderModal';
 import DeleteLeadModal from './DeleteLeadModal';
 import AttachmentsSection from './AttachmentsSection';
+import EmailTemplateModal from './EmailTemplateModal';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/Toast/useToast';
 
@@ -155,6 +156,7 @@ export default function LeadsTable({
   const [isDeletingNote, setIsDeletingNote] = useState(false);
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
   const [attachmentsModalLead, setAttachmentsModalLead] = useState<Lead | null>(null);
+  const [emailTemplateModalLead, setEmailTemplateModalLead] = useState<Lead | null>(null);
   const [highlightedLeadId, setHighlightedLeadId] = useState<string | null>(null);
 
   // Scroll to and highlight lead when highlightLeadId prop changes
@@ -896,6 +898,13 @@ export default function LeadsTable({
                           >
                             <Share2 className="w-4 h-4" />
                           </button>
+                          <button
+                            onClick={() => setEmailTemplateModalLead(lead)}
+                            className="text-green-400 hover:text-green-300"
+                            title="Email Template"
+                          >
+                            <Mail className="w-4 h-4" />
+                          </button>
                           {lead.maps_address && (
                             <a
                               href={lead.maps_address}
@@ -1236,6 +1245,15 @@ export default function LeadsTable({
           leadId={attachmentsModalLead.id}
           leadName={attachmentsModalLead.name}
           onClose={() => setAttachmentsModalLead(null)}
+        />
+      )}
+
+      {/* Email Template Modal */}
+      {emailTemplateModalLead && (
+        <EmailTemplateModal
+          isOpen={true}
+          onClose={() => setEmailTemplateModalLead(null)}
+          lead={emailTemplateModalLead}
         />
       )}
 

@@ -151,6 +151,12 @@ export default function EmailTemplatesConfig() {
         setError('All fields must have a key and label');
         return;
       }
+      
+      // CRITICAL: Validate that lead_field type has a lead_field_source
+      if (field.field_type === 'lead_field' && (!field.lead_field_source || !field.lead_field_source.trim())) {
+        setError(`Field "${field.field_label}" is set to "Lead Field" type but has no Lead Field Source selected. Please select a source field.`);
+        return;
+      }
     }
 
     setSaving(true);

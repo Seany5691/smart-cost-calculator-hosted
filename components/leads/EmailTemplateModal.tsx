@@ -142,42 +142,55 @@ export default function EmailTemplateModal({
     const missing: string[] = [];
     const missingData: Record<string, { label: string; source: string; value: string }> = {};
     
-    console.log('[EmailTemplate] Checking missing fields for template:', template.name);
-    console.log('[EmailTemplate] Template fields:', template.fields);
-    console.log('[EmailTemplate] Lead data:', {
-      id: lead.id,
-      name: lead.name,
-      contact_person: lead.contact_person,
-      email: lead.email
-    });
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('[EmailTemplate] CHECKING MISSING FIELDS');
+    console.log('[EmailTemplate] Template:', template.name);
+    console.log('[EmailTemplate] Lead ID:', lead.id);
+    console.log('[EmailTemplate] Lead Name:', lead.name);
+    console.log('═══════════════════════════════════════════════════════');
     
     if (template.fields) {
       for (const field of template.fields) {
-        console.log('[EmailTemplate] Checking field:', {
-          label: field.field_label,
-          type: field.field_type,
-          source: field.lead_field_source,
-          required: field.is_required
-        });
-        
-        if (field.is_required && field.field_type === 'lead_field' && field.lead_field_source) {
-          const leadValue = lead[field.lead_field_source as keyof Lead];
-          console.log('[EmailTemplate] Lead value for', field.lead_field_source, ':', leadValue);
+        if (field.field_type === 'lead_field') {
+          console.log('---');
+          console.log('[EmailTemplate] Field Label:', field.field_label);
+          console.log('[EmailTemplate] Field Type:', field.field_type);
+          console.log('[EmailTemplate] Lead Field Source:', field.lead_field_source);
+          console.log('[EmailTemplate] Is Required:', field.is_required);
           
-          if (!leadValue || (typeof leadValue === 'string' && !leadValue.trim())) {
-            console.log('[EmailTemplate] Field is missing:', field.field_label);
-            missing.push(field.field_label);
-            missingData[field.field_key] = {
-              label: field.field_label,
-              source: field.lead_field_source,
-              value: ''
-            };
+          if (!field.lead_field_source) {
+            console.error('[EmailTemplate] ⚠️ WARNING: lead_field_source is NULL or empty!');
+            console.error('[EmailTemplate] This field cannot be validated. Please fix in Admin Console.');
+          }
+          
+          if (field.is_required && field.lead_field_source) {
+            const leadValue = lead[field.lead_field_source as keyof Lead];
+            console.log('[EmailTemplate] Lead Value:', leadValue);
+            console.log('[EmailTemplate] Value Type:', typeof leadValue);
+            console.log('[EmailTemplate] Is Empty:', !leadValue || (typeof leadValue === 'string' && !leadValue.trim()));
+            
+            if (!leadValue || (typeof leadValue === 'string' && !leadValue.trim())) {
+              console.log('[EmailTemplate] ❌ MISSING - Adding to missing fields list');
+              missing.push(field.field_label);
+              missingData[field.field_key] = {
+                label: field.field_label,
+                source: field.lead_field_source,
+                value: ''
+              };
+            } else {
+              console.log('[EmailTemplate] ✅ PRESENT - Field has value');
+            }
           }
         }
       }
     }
     
-    console.log('[EmailTemplate] Missing fields:', missing);
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('[EmailTemplate] FINAL RESULT:');
+    console.log('[EmailTemplate] Missing Fields:', missing);
+    console.log('[EmailTemplate] Missing Fields Data:', missingData);
+    console.log('═══════════════════════════════════════════════════════');
+    
     setMissingFields(missing);
     setMissingFieldsData(missingData);
   };

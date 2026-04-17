@@ -142,11 +142,30 @@ export default function EmailTemplateModal({
     const missing: string[] = [];
     const missingData: Record<string, { label: string; source: string; value: string }> = {};
     
+    console.log('[EmailTemplate] Checking missing fields for template:', template.name);
+    console.log('[EmailTemplate] Template fields:', template.fields);
+    console.log('[EmailTemplate] Lead data:', {
+      id: lead.id,
+      name: lead.name,
+      contact_person: lead.contact_person,
+      email: lead.email
+    });
+    
     if (template.fields) {
       for (const field of template.fields) {
+        console.log('[EmailTemplate] Checking field:', {
+          label: field.field_label,
+          type: field.field_type,
+          source: field.lead_field_source,
+          required: field.is_required
+        });
+        
         if (field.is_required && field.field_type === 'lead_field' && field.lead_field_source) {
           const leadValue = lead[field.lead_field_source as keyof Lead];
+          console.log('[EmailTemplate] Lead value for', field.lead_field_source, ':', leadValue);
+          
           if (!leadValue || (typeof leadValue === 'string' && !leadValue.trim())) {
+            console.log('[EmailTemplate] Field is missing:', field.field_label);
             missing.push(field.field_label);
             missingData[field.field_key] = {
               label: field.field_label,
@@ -158,6 +177,7 @@ export default function EmailTemplateModal({
       }
     }
     
+    console.log('[EmailTemplate] Missing fields:', missing);
     setMissingFields(missing);
     setMissingFieldsData(missingData);
   };

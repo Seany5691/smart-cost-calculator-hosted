@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useCalculatorStore } from '@/lib/store/calculator';
 import type { Lead } from '@/lib/leads/types';
-import { X, Phone, MapPin, Calendar, Paperclip, Eye, User, Building2, Briefcase, FileText, Edit, Trash2, Share2, ExternalLink, Bell, Clock } from 'lucide-react';
+import { X, Phone, MapPin, Calendar, Paperclip, Eye, User, Building2, Briefcase, FileText, Edit, Trash2, Share2, ExternalLink, Bell, Clock, Mail, Link as LinkIcon } from 'lucide-react';
 import NotesSection from './NotesSection';
 import AttachmentsSection from './AttachmentsSection';
 import EditLeadModal from './EditLeadModal';
@@ -432,35 +432,54 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
                   <User className="w-5 h-5 text-emerald-400" />
                   Basic Information
                 </h3>
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="md:col-span-1">
-                    <label className="block text-sm font-medium text-emerald-200 mb-1">
-                      Status
-                    </label>
-                    <p className="text-white capitalize px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">{lead.status}</p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                    <span className="text-sm font-medium text-emerald-200 min-w-[140px]">Status:</span>
+                    <span className="text-white capitalize">{lead.status}</span>
                   </div>
-                  <div className="md:col-span-1">
-                    <label className="block text-sm font-medium text-emerald-200 mb-1">
-                      Name
-                    </label>
-                    <p className="text-white px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">{lead.name}</p>
+                  <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                    <span className="text-sm font-medium text-emerald-200 min-w-[140px]">Name:</span>
+                    <span className="text-white">{lead.name}</span>
                   </div>
+                  {lead.business_registration_number && (
+                    <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                      <span className="text-sm font-medium text-emerald-200 min-w-[140px]">Business Reg. No:</span>
+                      <span className="text-white">{lead.business_registration_number}</span>
+                    </div>
+                  )}
+                  {lead.vat_number && (
+                    <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                      <span className="text-sm font-medium text-emerald-200 min-w-[140px]">VAT Number:</span>
+                      <span className="text-white">{lead.vat_number}</span>
+                    </div>
+                  )}
                   {lead.type_of_business && (
-                    <div className="md:col-span-1">
-                      <label className="block text-sm font-medium text-emerald-200 mb-1">
+                    <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                      <span className="text-sm font-medium text-emerald-200 min-w-[140px]">
                         <Briefcase className="w-4 h-4 inline mr-1" />
-                        Type of Business
-                      </label>
-                      <p className="text-white px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">{lead.type_of_business}</p>
+                        Type of Business:
+                      </span>
+                      <span className="text-white">{lead.type_of_business}</span>
                     </div>
                   )}
                   {lead.contact_person && (
-                    <div className="md:col-span-1">
-                      <label className="block text-sm font-medium text-emerald-200 mb-1">
-                        <User className="w-4 h-4 inline mr-1" />
-                        Contact Person
-                      </label>
-                      <p className="text-white px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">{lead.contact_person}</p>
+                    <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                      <span className="text-sm font-medium text-emerald-200 min-w-[140px]">Contact Person:</span>
+                      <span className="text-white">{lead.contact_person}</span>
+                    </div>
+                  )}
+                  {lead.pbx_link && (
+                    <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                      <span className="text-sm font-medium text-emerald-200 min-w-[140px]">PBX Link:</span>
+                      <a
+                        href={lead.pbx_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
+                      >
+                        <LinkIcon className="w-4 h-4" />
+                        <span>Open PBX</span>
+                      </a>
                     </div>
                   )}
                 </div>
@@ -472,27 +491,50 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
                   <Phone className="w-5 h-5 text-emerald-400" />
                   Contact Information
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {lead.phone && (
-                    <div>
-                      <label className="block text-sm font-medium text-emerald-200 mb-1">
-                        Phone Number
-                      </label>
+                    <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                      <span className="text-sm font-medium text-emerald-200 min-w-[140px]">Phone Number:</span>
                       <a
                         href={`tel:${lead.phone}`}
-                        className="text-emerald-400 hover:text-emerald-300 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg block"
+                        className="text-emerald-400 hover:text-emerald-300 transition-colors"
                       >
                         {lead.phone}
                       </a>
                     </div>
                   )}
+                  {lead.cell_number && (
+                    <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                      <span className="text-sm font-medium text-emerald-200 min-w-[140px]">Cell Number:</span>
+                      <a
+                        href={`tel:${lead.cell_number}`}
+                        className="text-emerald-400 hover:text-emerald-300 transition-colors"
+                      >
+                        {lead.cell_number}
+                      </a>
+                    </div>
+                  )}
+                  {lead.email && (
+                    <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                      <span className="text-sm font-medium text-emerald-200 min-w-[140px]">
+                        <Mail className="w-4 h-4 inline mr-1" />
+                        Email Address:
+                      </span>
+                      <a
+                        href={`mailto:${lead.email}`}
+                        className="text-emerald-400 hover:text-emerald-300 transition-colors"
+                      >
+                        {lead.email}
+                      </a>
+                    </div>
+                  )}
                   {lead.provider && (
-                    <div>
-                      <label className="block text-sm font-medium text-emerald-200 mb-1">
+                    <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                      <span className="text-sm font-medium text-emerald-200 min-w-[140px]">
                         <Building2 className="w-4 h-4 inline mr-1" />
-                        Provider
-                      </label>
-                      <p className="text-white px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">{lead.provider}</p>
+                        Provider:
+                      </span>
+                      <span className="text-white">{lead.provider}</span>
                     </div>
                   )}
                 </div>
@@ -505,35 +547,30 @@ export default function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetail
                     <MapPin className="w-5 h-5 text-emerald-400" />
                     Location
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {lead.address && (
-                      <div>
-                        <label className="block text-sm font-medium text-emerald-200 mb-1">
-                          Physical Address
-                        </label>
-                        <p className="text-white px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">{lead.address}</p>
+                      <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                        <span className="text-sm font-medium text-emerald-200 min-w-[140px]">Physical Address:</span>
+                        <span className="text-white">{lead.address}</span>
                       </div>
                     )}
                     {lead.town && (
-                      <div>
-                        <label className="block text-sm font-medium text-emerald-200 mb-1">
-                          Town/City
-                        </label>
-                        <p className="text-white px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">{lead.town}</p>
+                      <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                        <span className="text-sm font-medium text-emerald-200 min-w-[140px]">Town/City:</span>
+                        <span className="text-white">{lead.town}</span>
                       </div>
                     )}
                     {lead.maps_address && (
-                      <div>
-                        <label className="block text-sm font-medium text-emerald-200 mb-1">
-                          Google Maps
-                        </label>
+                      <div className="flex items-center gap-3 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg">
+                        <span className="text-sm font-medium text-emerald-200 min-w-[140px]">Google Maps:</span>
                         <a
                           href={lead.maps_address}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-emerald-400 hover:text-emerald-300 px-3 py-2 bg-white/5 border border-emerald-500/20 rounded-lg block"
+                          className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 transition-colors"
                         >
-                          View on Google Maps
+                          <ExternalLink className="w-4 h-4" />
+                          <span>View on Google Maps</span>
                         </a>
                       </div>
                     )}

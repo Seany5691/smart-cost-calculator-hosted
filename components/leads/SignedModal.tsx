@@ -23,11 +23,55 @@ export default function SignedModal({
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Missing fields state
+  const [missingFieldsData, setMissingFieldsData] = useState<Record<string, { label: string; value: string }>>({});
 
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  // Check for missing fields when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const missing: Record<string, { label: string; value: string }> = {};
+      
+      // Check all optional lead fields
+      if (!lead.contact_person?.trim()) {
+        missing.contact_person = { label: 'Contact Person', value: '' };
+      }
+      if (!lead.email?.trim()) {
+        missing.email = { label: 'Email Address', value: '' };
+      }
+      if (!lead.cell_number?.trim()) {
+        missing.cell_number = { label: 'Cell Number', value: '' };
+      }
+      if (!lead.business_registration_number?.trim()) {
+        missing.business_registration_number = { label: 'Registration Number', value: '' };
+      }
+      if (!lead.vat_number?.trim()) {
+        missing.vat_number = { label: 'VAT Number', value: '' };
+      }
+      if (!lead.pbx_link?.trim()) {
+        missing.pbx_link = { label: 'PBX Link', value: '' };
+      }
+      if (!lead.address?.trim()) {
+        missing.address = { label: 'Address', value: '' };
+      }
+      if (!lead.town?.trim()) {
+        missing.town = { label: 'Town', value: '' };
+      }
+      if (!lead.provider?.trim()) {
+        missing.provider = { label: 'Provider', value: '' };
+      }
+      if (!lead.type_of_business?.trim()) {
+        missing.type_of_business = { label: 'Type of Business', value: '' };
+      }
+      
+      setMissingFieldsData(missing);
+    }
+  }, [isOpen, lead]);
 
   if (!isOpen) return null;
   if (!mounted) return null;
@@ -44,6 +88,55 @@ export default function SignedModal({
     setError('');
 
     try {
+      // FIRST: Update any missing fields that were filled in
+      const filledMissingFields = Object.entries(missingFieldsData).filter(([_, data]) => data.value.trim());
+      
+      if (filledMissingFields.length > 0) {
+        // Get auth token
+        const token = (() => {
+          try {
+            const stored = localStorage.getItem('auth-storage');
+            if (stored) {
+              const data = JSON.parse(stored);
+              return data.state?.token || data.token || null;
+            }
+          } catch (error) {
+            console.error('Error reading auth token:', error);
+          }
+          return null;
+        })();
+
+        if (!token) {
+          throw new Error('Not authenticated');
+        }
+
+        // Build update object
+        const updateData: Record<string, string> = {};
+        filledMissingFields.forEach(([key, data]) => {
+          updateData[key] = data.value.trim();
+        });
+
+        // Update lead with missing fields
+        const updateResponse = await fetch(`/api/leads/${lead.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(updateData)
+        });
+
+        if (!updateResponse.ok) {
+          throw new Error('Failed to update lead fields');
+        }
+
+        // Update local lead object
+        filledMissingFields.forEach(([key, data]) => {
+          (lead as any)[key] = data.value.trim();
+        });
+      }
+
+      // SECOND: Proceed with marking as signed
       await onConfirm({ 
         date_signed: dateSigned, 
         notes: notes.trim() || `Signed on ${dateSigned}` 
@@ -52,11 +145,12 @@ export default function SignedModal({
       // Reset form
       setDateSigned(new Date().toISOString().split('T')[0]);
       setNotes('');
+      setMissingFieldsData({});
       setError('');
       onClose();
     } catch (error) {
       console.error('Error updating lead:', error);
-      setError('Failed to mark lead as signed');
+      setError(error instanceof Error ? error.message : 'Failed to mark lead as signed');
     } finally {
       setLoading(false);
     }
@@ -65,6 +159,7 @@ export default function SignedModal({
   const handleCancel = () => {
     setDateSigned(new Date().toISOString().split('T')[0]);
     setNotes('');
+    setMissingFieldsData({});
     setError('');
     onClose();
   };
@@ -144,6 +239,48 @@ export default function SignedModal({
               disabled={loading}
             />
           </div>
+
+          {/* Missing Fields Section */}
+          {Object.keys(missingFieldsData).length > 0 && (
+            <div className="border-t border-emerald-500/20 pt-4">
+              <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20 mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/20">
+                    <AlertCircle className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-white font-medium mb-1">Complete Lead Information</h4>
+                    <p className="text-blue-200 text-sm">
+                      The following fields are empty. Fill them in now to complete the lead record (optional):
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {Object.entries(missingFieldsData).map(([key, data]) => (
+                  <div key={key}>
+                    <label className="block text-white font-medium mb-1 text-sm">
+                      {data.label}
+                    </label>
+                    <input
+                      type={key === 'email' ? 'email' : 'text'}
+                      value={data.value}
+                      onChange={(e) => {
+                        setMissingFieldsData(prev => ({
+                          ...prev,
+                          [key]: { ...prev[key], value: e.target.value }
+                        }));
+                      }}
+                      placeholder={`Enter ${data.label.toLowerCase()}`}
+                      className="w-full px-4 py-2 bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                      disabled={loading}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (

@@ -44,6 +44,7 @@ export default function EmailTemplateModal({
   const [error, setError] = useState('');
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [missingFieldsData, setMissingFieldsData] = useState<Record<string, { label: string; source: string; value: string }>>({});
+  const [emailAddress, setEmailAddress] = useState('');
   const [generatedEmail, setGeneratedEmail] = useState('');
   const [copied, setCopied] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState<string | null>(null);
@@ -70,12 +71,13 @@ export default function EmailTemplateModal({
       setError('');
       setMissingFields([]);
       setMissingFieldsData({});
+      setEmailAddress(lead.email || ''); // Pre-fill email if it exists
       setGeneratedEmail('');
       setCopied(false);
       setShowDatePicker(null);
       setCustomDate('');
     }
-  }, [isOpen]);
+  }, [isOpen, lead.email]);
 
   const fetchTemplates = async () => {
     setLoadingTemplates(true);
@@ -261,6 +263,30 @@ export default function EmailTemplateModal({
         });
       }
 
+      // ALSO: Update email if it was changed or filled in
+      if (emailAddress.trim() && emailAddress.trim() !== lead.email) {
+        const emailUpdateResponse = await fetch(`/api/leads/${lead.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ email: emailAddress.trim() })
+        });
+
+        if (!emailUpdateResponse.ok) {
+          throw new Error('Failed to update email address');
+        }
+
+        // Update local lead object
+        lead.email = emailAddress.trim();
+
+        toast.success('Email updated', {
+          message: 'Email address has been saved to the lead',
+          section: 'leads'
+        });
+      }
+
       // SECOND: Now generate the email with the updated lead data
       const response = await fetch('/api/email-templates/generate', {
         method: 'POST',
@@ -442,6 +468,29 @@ export default function EmailTemplateModal({
               <p className="text-sm text-emerald-300/70">{selectedTemplate.description}</p>
             )}
           </div>
+
+          {/* Email Address Field - Always visible */}
+          {selectedTemplate && (
+            <div className="space-y-2 border-t border-emerald-500/20 pt-4">
+              <label className="text-white font-medium flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Email Address (Optional)
+              </label>
+              <input
+                type="email"
+                value={emailAddress}
+                onChange={(e) => setEmailAddress(e.target.value)}
+                placeholder="Enter email address"
+                className="w-full px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                disabled={loading}
+              />
+              <p className="text-sm text-emerald-300/70">
+                {lead.email 
+                  ? 'Update the email address for this lead' 
+                  : 'Add an email address to this lead for future reference'}
+              </p>
+            </div>
+          )}
 
           {/* Dynamic Fields */}
           {selectedTemplate && selectedTemplate.fields && selectedTemplate.fields.length > 0 && (

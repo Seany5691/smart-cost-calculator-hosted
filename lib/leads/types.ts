@@ -33,11 +33,16 @@ export interface Lead {
   number: number;
   name: string;
   phone?: string;
+  cell_number?: string;
+  email?: string;
   address?: string;
   town?: string;
   contact_person?: string;
   provider?: string;
   type_of_business?: string;
+  business_registration_number?: string;
+  vat_number?: string;
+  pbx_link?: string;
   maps_address?: string;
   status: LeadStatus;
   list_name?: string;

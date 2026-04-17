@@ -79,11 +79,20 @@ export async function PUT(
       mapsAddress,
       name,
       phone,
+      cellNumber,
+      cell_number,
+      email,
       provider,
       address,
       town,
       contactPerson,
       typeOfBusiness,
+      businessRegistrationNumber,
+      business_registration_number,
+      vatNumber,
+      vat_number,
+      pbxLink,
+      pbx_link,
       status,
       notes,
       dateToCallBack,
@@ -101,6 +110,10 @@ export async function PUT(
     const callbackDate = date_to_call_back || dateToCallBack;
     const signedDate = date_signed || dateSigned;
     const proposalCreatedDate = date_proposal_created || dateProposalCreated;
+    const cellNumberValue = cell_number || cellNumber;
+    const businessRegNumber = business_registration_number || businessRegistrationNumber;
+    const vatNumberValue = vat_number || vatNumber;
+    const pbxLinkValue = pbx_link || pbxLink;
 
     // Validate status-specific requirements
     if (status === 'later' && !callbackDate) {
@@ -132,31 +145,41 @@ export async function PUT(
         maps_address = COALESCE($1, maps_address),
         name = COALESCE($2, name),
         phone = COALESCE($3, phone),
-        provider = COALESCE($4, provider),
-        address = COALESCE($5, address),
-        town = COALESCE($6, town),
-        contact_person = COALESCE($7, contact_person),
-        type_of_business = COALESCE($8, type_of_business),
-        status = COALESCE($9, status),
-        notes = COALESCE($10, notes),
-        date_to_call_back = COALESCE($11, date_to_call_back),
-        date_signed = COALESCE($12, date_signed),
-        date_proposal_created = COALESCE($13, date_proposal_created),
-        coordinates = COALESCE($14, coordinates),
-        background_color = COALESCE($15, background_color),
-        list_name = COALESCE($16, list_name),
+        cell_number = COALESCE($4, cell_number),
+        email = COALESCE($5, email),
+        provider = COALESCE($6, provider),
+        address = COALESCE($7, address),
+        town = COALESCE($8, town),
+        contact_person = COALESCE($9, contact_person),
+        type_of_business = COALESCE($10, type_of_business),
+        business_registration_number = COALESCE($11, business_registration_number),
+        vat_number = COALESCE($12, vat_number),
+        pbx_link = COALESCE($13, pbx_link),
+        status = COALESCE($14, status),
+        notes = COALESCE($15, notes),
+        date_to_call_back = COALESCE($16, date_to_call_back),
+        date_signed = COALESCE($17, date_signed),
+        date_proposal_created = COALESCE($18, date_proposal_created),
+        coordinates = COALESCE($19, coordinates),
+        background_color = COALESCE($20, background_color),
+        list_name = COALESCE($21, list_name),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $17
+      WHERE id = $22
       RETURNING *`,
       [
         mapsAddress,
         name,
         phone,
+        cellNumberValue,
+        email,
         provider,
         address,
         town,
         contactPerson,
         typeOfBusiness,
+        businessRegNumber,
+        vatNumberValue,
+        pbxLinkValue,
         status,
         notes,
         callbackDate,
@@ -292,6 +315,14 @@ export async function PATCH(
       updates.push(`phone = $${paramIndex++}`);
       values.push(body.phone);
     }
+    if (body.cellNumber !== undefined || body.cell_number !== undefined) {
+      updates.push(`cell_number = $${paramIndex++}`);
+      values.push(body.cell_number || body.cellNumber);
+    }
+    if (body.email !== undefined) {
+      updates.push(`email = $${paramIndex++}`);
+      values.push(body.email);
+    }
     if (body.provider !== undefined) {
       updates.push(`provider = $${paramIndex++}`);
       values.push(body.provider);
@@ -311,6 +342,18 @@ export async function PATCH(
     if (body.typeOfBusiness !== undefined) {
       updates.push(`type_of_business = $${paramIndex++}`);
       values.push(body.typeOfBusiness);
+    }
+    if (body.businessRegistrationNumber !== undefined || body.business_registration_number !== undefined) {
+      updates.push(`business_registration_number = $${paramIndex++}`);
+      values.push(body.business_registration_number || body.businessRegistrationNumber);
+    }
+    if (body.vatNumber !== undefined || body.vat_number !== undefined) {
+      updates.push(`vat_number = $${paramIndex++}`);
+      values.push(body.vat_number || body.vatNumber);
+    }
+    if (body.pbxLink !== undefined || body.pbx_link !== undefined) {
+      updates.push(`pbx_link = $${paramIndex++}`);
+      values.push(body.pbx_link || body.pbxLink);
     }
     if (body.status !== undefined) {
       updates.push(`status = $${paramIndex++}`);

@@ -34,12 +34,17 @@ export default function EditLeadModal({ lead, onClose, onUpdate }: EditLeadModal
   const [mounted, setMounted] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    business_registration_number: '',
+    vat_number: '',
+    type_of_business: '',
+    contact_person: '',
+    pbx_link: '',
     phone: '',
+    cell_number: '',
+    email: '',
     provider: '',
     address: '',
     town: '',
-    contact_person: '',
-    type_of_business: '',
     notes: ''
   });
 
@@ -52,12 +57,17 @@ export default function EditLeadModal({ lead, onClose, onUpdate }: EditLeadModal
     // Populate form with lead data
     setFormData({
       name: lead.name || '',
+      business_registration_number: lead.business_registration_number || '',
+      vat_number: lead.vat_number || '',
+      type_of_business: lead.type_of_business || '',
+      contact_person: lead.contact_person || '',
+      pbx_link: lead.pbx_link || '',
       phone: lead.phone || '',
+      cell_number: lead.cell_number || '',
+      email: lead.email || '',
       provider: lead.provider || '',
       address: lead.address || '',
       town: lead.town || '',
-      contact_person: lead.contact_person || '',
-      type_of_business: lead.type_of_business || '',
       notes: lead.notes || ''
     });
     setError('');
@@ -136,12 +146,17 @@ export default function EditLeadModal({ lead, onClose, onUpdate }: EditLeadModal
         },
         body: JSON.stringify({
           name: formData.name.trim(),
+          businessRegistrationNumber: formData.business_registration_number.trim() || undefined,
+          vatNumber: formData.vat_number.trim() || undefined,
+          typeOfBusiness: formData.type_of_business.trim() || undefined,
+          contactPerson: formData.contact_person.trim() || undefined,
+          pbxLink: formData.pbx_link.trim() || undefined,
           phone: formData.phone.trim() || undefined,
+          cellNumber: formData.cell_number.trim() || undefined,
+          email: formData.email.trim() || undefined,
           provider: formData.provider.trim() || undefined,
           address: formData.address.trim() || undefined,
           town: formData.town.trim() || undefined,
-          contactPerson: formData.contact_person.trim() || undefined,
-          typeOfBusiness: formData.type_of_business.trim() || undefined,
           notes: formData.notes.trim() || undefined
         })
       });
@@ -206,156 +221,251 @@ export default function EditLeadModal({ lead, onClose, onUpdate }: EditLeadModal
             </div>
           </div>
 
-          {/* Maps Address (Read-only) */}
-          <div>
-            <label className="block text-white font-medium mb-2">
-              <MapPin className="w-4 h-4 inline mr-1" />
-              Google Maps URL (Read-only)
-            </label>
-            <input
-              type="text"
-              value={lead.maps_address || 'No maps address'}
-              disabled
-              className="w-full px-4 py-3 bg-white/5 border border-emerald-500/20 rounded-lg text-gray-400 cursor-not-allowed"
-            />
-          </div>
-
-          {/* Name */}
-          <div>
-            <label className="block text-white font-medium mb-2">
-              <User className="w-4 h-4 inline mr-1" />
-              Name <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Lead name or business name"
-              required
-              disabled={loading}
-              className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="block text-white font-medium mb-2">
-              <Phone className="w-4 h-4 inline mr-1" />
-              Phone Number
-            </label>
-            <div className="flex gap-2">
+          {/* Basic Information Section */}
+          <div className="border-t border-emerald-500/20 pt-4">
+            <h3 className="text-lg font-semibold text-white mb-4">Basic Information</h3>
+            
+            {/* Name */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <User className="w-4 h-4 inline mr-1" />
+                Name <span className="text-red-400">*</span>
+              </label>
               <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+27 12 345 6789"
-                disabled={loading || isCheckingProvider}
-                className="flex-1 h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Lead name or business name"
+                required
+                disabled={loading}
+                className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
               />
-              <button
-                type="button"
-                onClick={handleCheckProvider}
-                disabled={loading || isCheckingProvider || !formData.phone.trim()}
-                className="px-4 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
-                title="Check provider using porting.co.za"
-              >
-                {isCheckingProvider ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="hidden sm:inline">Checking...</span>
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4" />
-                    <span className="hidden sm:inline">Check Provider</span>
-                  </>
-                )}
-              </button>
+            </div>
+
+            {/* Business Registration Number */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <FileText className="w-4 h-4 inline mr-1" />
+                Business Registration Number
+              </label>
+              <input
+                type="text"
+                value={formData.business_registration_number}
+                onChange={(e) => setFormData({ ...formData, business_registration_number: e.target.value })}
+                placeholder="e.g., 2021/123456/07"
+                disabled={loading}
+                className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* VAT Number */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <FileText className="w-4 h-4 inline mr-1" />
+                VAT Number
+              </label>
+              <input
+                type="text"
+                value={formData.vat_number}
+                onChange={(e) => setFormData({ ...formData, vat_number: e.target.value })}
+                placeholder="e.g., 4123456789"
+                disabled={loading}
+                className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* Business Type */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <Briefcase className="w-4 h-4 inline mr-1" />
+                Type of Business
+              </label>
+              <input
+                type="text"
+                value={formData.type_of_business}
+                onChange={(e) => setFormData({ ...formData, type_of_business: e.target.value })}
+                placeholder="e.g., Restaurant, Retail, Office"
+                disabled={loading}
+                className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* Contact Person */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <User className="w-4 h-4 inline mr-1" />
+                Contact Person
+              </label>
+              <input
+                type="text"
+                value={formData.contact_person}
+                onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                placeholder="Name of contact person"
+                disabled={loading}
+                className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* PBX Link */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <Phone className="w-4 h-4 inline mr-1" />
+                PBX Link
+              </label>
+              <input
+                type="url"
+                value={formData.pbx_link}
+                onChange={(e) => setFormData({ ...formData, pbx_link: e.target.value })}
+                placeholder="https://pbx.example.com/..."
+                disabled={loading}
+                className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              />
             </div>
           </div>
 
-          {/* Provider */}
-          <div>
-            <label className="block text-white font-medium mb-2">
-              <Building2 className="w-4 h-4 inline mr-1" />
-              Provider
-            </label>
-            <input
-              type="text"
-              value={formData.provider}
-              onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-              placeholder="e.g., Telkom, Vodacom, MTN"
-              disabled={loading || isCheckingProvider}
-              className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-            />
+          {/* Contact Information Section */}
+          <div className="border-t border-emerald-500/20 pt-4">
+            <h3 className="text-lg font-semibold text-white mb-4">Contact Information</h3>
+            
+            {/* Phone */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <Phone className="w-4 h-4 inline mr-1" />
+                Phone Number
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="+27 12 345 6789"
+                  disabled={loading || isCheckingProvider}
+                  className="flex-1 h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleCheckProvider}
+                  disabled={loading || isCheckingProvider || !formData.phone.trim()}
+                  className="px-4 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                  title="Check provider using porting.co.za"
+                >
+                  {isCheckingProvider ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="hidden sm:inline">Checking...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4" />
+                      <span className="hidden sm:inline">Check Provider</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Cell Number */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <Phone className="w-4 h-4 inline mr-1" />
+                Cell Number
+              </label>
+              <input
+                type="tel"
+                value={formData.cell_number}
+                onChange={(e) => setFormData({ ...formData, cell_number: e.target.value })}
+                placeholder="+27 82 345 6789"
+                disabled={loading}
+                className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* Email Address */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <User className="w-4 h-4 inline mr-1" />
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="contact@example.com"
+                disabled={loading}
+                className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* Provider */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <Building2 className="w-4 h-4 inline mr-1" />
+                Provider
+              </label>
+              <input
+                type="text"
+                value={formData.provider}
+                onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
+                placeholder="e.g., Telkom, Vodacom, MTN"
+                disabled={loading || isCheckingProvider}
+                className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
           </div>
 
-          {/* Address */}
-          <div>
-            <label className="block text-white font-medium mb-2">
-              <MapPin className="w-4 h-4 inline mr-1" />
-              Physical Address
-            </label>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="Street address"
-              disabled={loading}
-              className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
+          {/* Location Section */}
+          <div className="border-t border-emerald-500/20 pt-4">
+            <h3 className="text-lg font-semibold text-white mb-4">Location</h3>
+            
+            {/* Address */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <MapPin className="w-4 h-4 inline mr-1" />
+                Physical Address
+              </label>
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="Street address"
+                disabled={loading}
+                className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
 
-          {/* Town */}
-          <div>
-            <label className="block text-white font-medium mb-2">
-              <MapPin className="w-4 h-4 inline mr-1" />
-              Town/City
-            </label>
-            <input
-              type="text"
-              value={formData.town}
-              onChange={(e) => setFormData({ ...formData, town: e.target.value })}
-              placeholder="e.g., Potchefstroom, Klerksdorp"
-              disabled={loading}
-              className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
+            {/* Town */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <MapPin className="w-4 h-4 inline mr-1" />
+                Town/City
+              </label>
+              <input
+                type="text"
+                value={formData.town}
+                onChange={(e) => setFormData({ ...formData, town: e.target.value })}
+                placeholder="e.g., Potchefstroom, Klerksdorp"
+                disabled={loading}
+                className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
 
-          {/* Contact Person */}
-          <div>
-            <label className="block text-white font-medium mb-2">
-              <User className="w-4 h-4 inline mr-1" />
-              Contact Person
-            </label>
-            <input
-              type="text"
-              value={formData.contact_person}
-              onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
-              placeholder="Name of contact person"
-              disabled={loading}
-              className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-            />
-          </div>
-
-          {/* Business Type */}
-          <div>
-            <label className="block text-white font-medium mb-2">
-              <Briefcase className="w-4 h-4 inline mr-1" />
-              Type of Business
-            </label>
-            <input
-              type="text"
-              value={formData.type_of_business}
-              onChange={(e) => setFormData({ ...formData, type_of_business: e.target.value })}
-              placeholder="e.g., Restaurant, Retail, Office"
-              disabled={loading}
-              className="w-full h-12 px-4 py-3 bg-white/10 border border-emerald-500/30 rounded-lg text-white text-base placeholder-emerald-300/50 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-            />
+            {/* Maps Address (Read-only) */}
+            <div className="mb-4">
+              <label className="block text-white font-medium mb-2">
+                <MapPin className="w-4 h-4 inline mr-1" />
+                Google Maps URL (Read-only)
+              </label>
+              <input
+                type="text"
+                value={lead.maps_address || 'No maps address'}
+                disabled
+                className="w-full px-4 py-3 bg-white/5 border border-emerald-500/20 rounded-lg text-gray-400 cursor-not-allowed"
+              />
+            </div>
           </div>
 
           {/* Notes */}
-          <div>
+          <div className="border-t border-emerald-500/20 pt-4">
             <label className="block text-white font-medium mb-2">
               <FileText className="w-4 h-4 inline mr-1" />
               Notes

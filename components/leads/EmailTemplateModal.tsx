@@ -253,7 +253,7 @@ export default function EmailTemplateModal({
           (lead as any)[data.source] = data.value.trim();
         });
 
-        // Clear missing fields state
+        // Clear missing fields state immediately
         setMissingFields([]);
         setMissingFieldsData({});
 
@@ -264,6 +264,11 @@ export default function EmailTemplateModal({
 
         // Wait a moment for database to commit the transaction
         await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Re-check missing fields with the updated lead to ensure state is clean
+        if (selectedTemplate) {
+          checkMissingLeadFields(selectedTemplate);
+        }
       }
 
       // ALSO: Update email if it was changed or filled in
@@ -294,6 +299,7 @@ export default function EmailTemplateModal({
       }
 
       // SECOND: Now generate the email with the updated lead data
+      // At this point, missingFields should be empty because we cleared it above
       const response = await fetch('/api/email-templates/generate', {
         method: 'POST',
         headers: {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useLeadsStore } from '@/lib/store/leads';
+import { useAuthStore } from '@/lib/store/auth-simple';
 import LeadsTable from '@/components/leads/LeadsTable';
 import LeadsCards from '@/components/leads/LeadsCards';
 import { Loader2, Calendar, MapPin, AlertCircle, CheckCircle } from 'lucide-react';
@@ -16,6 +17,7 @@ interface AppointmentsContentProps {
 interface LeadReminder {
   id: string;
   lead_id: string;
+  user_id: string;
   reminder_date: string;
   reminder_time: string | null;
   completed: boolean;
@@ -40,11 +42,12 @@ function getAuthToken(): string | null {
   return null;
 }
 
-// Helper to get next reminder for a lead
-function getNextReminderForLead(leadId: string, reminders: LeadReminder[]): LeadReminder | null {
+// Helper to get next reminder for a lead (filtered by current user)
+function getNextReminderForLead(leadId: string, reminders: LeadReminder[], currentUserId: string | undefined): LeadReminder | null {
   const now = new Date();
   
   console.log(`[getNextReminderForLead] Looking for reminders for lead ${leadId}`);
+  console.log(`[getNextReminderForLead] Current user ID:`, currentUserId);
   console.log(`[getNextReminderForLead] Current time:`, now);
   console.log(`[getNextReminderForLead] Total reminders to search:`, reminders.length);
   
@@ -52,9 +55,15 @@ function getNextReminderForLead(leadId: string, reminders: LeadReminder[]): Lead
   const leadReminders = reminders.filter(r => r.lead_id === leadId);
   console.log(`[getNextReminderForLead] Found ${leadReminders.length} reminders for this lead:`, leadReminders);
   
+  // Filter to current user's reminders (NEW - this is the key fix)
+  const userReminders = currentUserId 
+    ? leadReminders.filter(r => r.user_id === currentUserId)
+    : leadReminders;
+  console.log(`[getNextReminderForLead] Found ${userReminders.length} reminders for current user`);
+  
   // Filter to uncompleted reminders
-  const uncompletedReminders = leadReminders.filter(r => !r.completed && r.status !== 'completed');
-  console.log(`[getNextReminderForLead] Uncompleted reminders:`, uncompletedReminders);
+  const uncompletedReminders = userReminders.filter(r => !r.completed && r.status !== 'completed');
+  console.log(`[getNextReminderForLead] Uncompleted reminders:`, uncompletedReminders.length);
   
   // Filter to future reminders
   const upcomingReminders = uncompletedReminders
@@ -74,7 +83,7 @@ function getNextReminderForLead(leadId: string, reminders: LeadReminder[]): Lead
       return dateA.getTime() - dateB.getTime();
     });
   
-  console.log(`[getNextReminderForLead] Upcoming reminders after filtering:`, upcomingReminders);
+  console.log(`[getNextReminderForLead] Upcoming reminders after filtering:`, upcomingReminders.length);
   const result = upcomingReminders[0] || null;
   console.log(`[getNextReminderForLead] Returning:`, result);
   
@@ -114,6 +123,8 @@ function formatReminderDateTime(date: string, time: string | null): string {
 
 export default function AppointmentsContent({ highlightLeadId, openModalLeadId }: AppointmentsContentProps) {
   const { leads, fetchLeads, loading } = useLeadsStore();
+  const { user } = useAuthStore();
+  const currentUserId = user?.id;
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [mounted, setMounted] = useState(false);
   
@@ -195,11 +206,11 @@ export default function AppointmentsContent({ highlightLeadId, openModalLeadId }
     fetchAllReminders();
   };
   
-  // Sort leads by next reminder date/time
+  // Sort leads by next reminder date/time (filtered by current user)
   const sortedLeads = useMemo(() => {
     return [...leads].sort((a, b) => {
-      const reminderA = getNextReminderForLead(a.id, allReminders);
-      const reminderB = getNextReminderForLead(b.id, allReminders);
+      const reminderA = getNextReminderForLead(a.id, allReminders, currentUserId);
+      const reminderB = getNextReminderForLead(b.id, allReminders, currentUserId);
       
       // Leads without reminders go to bottom
       if (!reminderA && !reminderB) return 0;
@@ -214,18 +225,19 @@ export default function AppointmentsContent({ highlightLeadId, openModalLeadId }
       
       return dateA.getTime() - dateB.getTime();
     });
-  }, [leads, allReminders]);
+  }, [leads, allReminders, currentUserId]);
   
-  // Get next reminder info for each lead
+  // Get next reminder info for each lead (filtered by current user)
   const leadReminders = useMemo(() => {
     console.log('[APPOINTMENTS] Building leadReminders map');
+    console.log('[APPOINTMENTS] Current user ID:', currentUserId);
     console.log('[APPOINTMENTS] Total reminders:', allReminders.length);
     
     const map: Record<string, { date: string; time: string | null } | null> = {};
     sortedLeads.forEach(lead => {
-      const reminder = getNextReminderForLead(lead.id, allReminders);
+      const reminder = getNextReminderForLead(lead.id, allReminders, currentUserId);
       if (reminder) {
-        console.log(`[APPOINTMENTS] Lead ${lead.name}: Found reminder with date="${reminder.reminder_date}" time="${reminder.reminder_time}"`);
+        console.log(`[APPOINTMENTS] Lead ${lead.name}: Found reminder with date="${reminder.reminder_date}" time="${reminder.reminder_time}" for user ${currentUserId}`);
         map[lead.id] = {
           date: reminder.reminder_date,
           time: reminder.reminder_time
@@ -236,7 +248,7 @@ export default function AppointmentsContent({ highlightLeadId, openModalLeadId }
     });
     console.log('[APPOINTMENTS] Final leadReminders map:', map);
     return map;
-  }, [sortedLeads, allReminders]);
+  }, [sortedLeads, allReminders, currentUserId]);
   
   // Handle lead selection (maintains order)
   const handleToggleSelect = (leadId: string) => {

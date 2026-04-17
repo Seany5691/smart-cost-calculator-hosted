@@ -59,7 +59,11 @@ export function generateEmailContent(
         // Format bullet list
         const items = fieldValues[field.field_key] as string[];
         if (items && Array.isArray(items)) {
-          value = items.map(item => `- ${item}`).join('\n');
+          // Filter out empty items and format as bullet list
+          const nonEmptyItems = items.filter(item => item && item.trim());
+          if (nonEmptyItems.length > 0) {
+            value = nonEmptyItems.map(item => `- ${item.trim()}`).join('\n');
+          }
         }
       } else if (field.field_type === 'date') {
         // Format date
@@ -72,8 +76,8 @@ export function generateEmailContent(
         value = String(fieldValues[field.field_key] || '');
       }
 
-      // Replace all occurrences of the placeholder
-      content = content.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+      // Replace all occurrences of the placeholder using split/join for safety
+      content = content.split(placeholder).join(value);
     }
   }
 

@@ -208,23 +208,23 @@ export default function EmailTemplateModal({
   const handleGenerateEmail = async () => {
     if (!selectedTemplate) return;
     
-    // Check if there are missing fields that need to be filled
-    if (missingFields.length > 0) {
-      // Validate that all missing fields have been filled in
-      const emptyFields = Object.entries(missingFieldsData).filter(([_, data]) => !data.value.trim());
-      if (emptyFields.length > 0) {
-        setError(`Please fill in all required fields: ${emptyFields.map(([_, data]) => data.label).join(', ')}`);
-        return;
+    setLoading(true);
+    setError('');
+
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('Not authenticated');
       }
 
-      // Save missing fields to the lead first
-      setLoading(true);
-      setError('');
-
-      try {
-        const token = getAuthToken();
-        if (!token) {
-          throw new Error('Not authenticated');
+      // FIRST: Check if there are missing fields that need to be saved to the lead
+      if (missingFields.length > 0) {
+        // Validate that all missing fields have been filled in
+        const emptyFields = Object.entries(missingFieldsData).filter(([_, data]) => !data.value.trim());
+        if (emptyFields.length > 0) {
+          setError(`Please fill in all required fields: ${emptyFields.map(([_, data]) => data.label).join(', ')}`);
+          setLoading(false);
+          return;
         }
 
         // Update lead with missing fields
@@ -246,12 +246,12 @@ export default function EmailTemplateModal({
           throw new Error('Failed to update lead with missing fields');
         }
 
-        // Update local lead object
+        // Update local lead object so the generate API can use the new values
         Object.entries(missingFieldsData).forEach(([_, data]) => {
           (lead as any)[data.source] = data.value.trim();
         });
 
-        // Clear missing fields
+        // Clear missing fields state
         setMissingFields([]);
         setMissingFieldsData({});
 
@@ -259,23 +259,9 @@ export default function EmailTemplateModal({
           message: 'Missing fields have been added to the lead',
           section: 'leads'
         });
-      } catch (err) {
-        console.error('Error updating lead:', err);
-        setError(err instanceof Error ? err.message : 'Failed to update lead');
-        setLoading(false);
-        return;
-      }
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const token = getAuthToken();
-      if (!token) {
-        throw new Error('Not authenticated');
       }
 
+      // SECOND: Now generate the email with the updated lead data
       const response = await fetch('/api/email-templates/generate', {
         method: 'POST',
         headers: {
@@ -293,6 +279,7 @@ export default function EmailTemplateModal({
 
       if (!response.ok) {
         if (data.missing_fields) {
+          // This shouldn't happen now, but handle it just in case
           setMissingFields(data.missing_fields);
           setError(`Missing required fields: ${data.missing_fields.join(', ')}`);
         } else {

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { template_id, lead_id, field_values } = body;
+    const { template_id, lead_id, field_values, lead_data } = body;
 
     if (!template_id || !lead_id) {
       return NextResponse.json(
@@ -64,17 +64,24 @@ export async function POST(request: NextRequest) {
 
     const template: EmailTemplate = templateResult.rows[0];
 
-    // Fetch lead
-    const leadResult = await pool.query(
-      'SELECT * FROM leads WHERE id = $1',
-      [lead_id]
-    );
+    // Use provided lead_data if available (for immediate updates), otherwise fetch from database
+    let lead: Lead;
+    if (lead_data) {
+      console.log('[Generate API] Using provided lead_data instead of fetching from database');
+      lead = lead_data as Lead;
+    } else {
+      // Fetch lead from database
+      const leadResult = await pool.query(
+        'SELECT * FROM leads WHERE id = $1',
+        [lead_id]
+      );
 
-    if (leadResult.rows.length === 0) {
-      return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+      if (leadResult.rows.length === 0) {
+        return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+      }
+
+      lead = leadResult.rows[0];
     }
-
-    const lead: Lead = leadResult.rows[0];
 
     // Validate lead fields
     const leadValidation = validateLeadFields(lead, template.fields || []);

@@ -281,12 +281,12 @@ export default function EmailTemplateModal({
           throw new Error('Failed to update lead with missing fields');
         }
 
-        // Update local lead object so the generate API can use the new values
+        // Update local lead object with the new values
         Object.entries(missingFieldsData).forEach(([_, data]) => {
           (lead as any)[data.source] = data.value.trim();
         });
 
-        // Clear missing fields state immediately
+        // Clear missing fields state
         setMissingFields([]);
         setMissingFieldsData({});
 
@@ -294,14 +294,6 @@ export default function EmailTemplateModal({
           message: 'Missing fields have been added to the lead',
           section: 'leads'
         });
-
-        // Wait a moment for database to commit the transaction
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Re-check missing fields with the updated lead to ensure state is clean
-        if (selectedTemplate) {
-          checkMissingLeadFields(selectedTemplate);
-        }
       }
 
       // ALSO: Update email if it was changed or filled in
@@ -326,13 +318,10 @@ export default function EmailTemplateModal({
           message: 'Email address has been saved to the lead',
           section: 'leads'
         });
-
-        // Wait a moment for database to commit the transaction
-        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       // SECOND: Now generate the email with the updated lead data
-      // At this point, missingFields should be empty because we cleared it above
+      // Pass the updated lead object directly to avoid database timing issues
       const response = await fetch('/api/email-templates/generate', {
         method: 'POST',
         headers: {
@@ -342,7 +331,8 @@ export default function EmailTemplateModal({
         body: JSON.stringify({
           template_id: selectedTemplate.id,
           lead_id: lead.id,
-          field_values: fieldValues
+          field_values: fieldValues,
+          lead_data: lead // Pass the updated lead object directly
         })
       });
 

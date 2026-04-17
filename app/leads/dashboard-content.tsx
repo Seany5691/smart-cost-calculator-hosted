@@ -32,6 +32,7 @@ interface DashboardStats {
   leadsCount: number;
   appointmentsCount: number;
   workingCount: number;
+  proposalCount: number;
   laterCount: number;
   badCount: number;
   signedCount: number;

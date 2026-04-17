@@ -261,6 +261,9 @@ export default function EmailTemplateModal({
           message: 'Missing fields have been added to the lead',
           section: 'leads'
         });
+
+        // Wait a moment for database to commit the transaction
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       // ALSO: Update email if it was changed or filled in
@@ -285,6 +288,9 @@ export default function EmailTemplateModal({
           message: 'Email address has been saved to the lead',
           section: 'leads'
         });
+
+        // Wait a moment for database to commit the transaction
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
 
       // SECOND: Now generate the email with the updated lead data

@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       role: payload.role,
       name: payload.name,
       email: payload.email,
+      cellphoneNumber: payload.cellphoneNumber, // NEW: Include cellphone number
     };
 
     return NextResponse.json({ user }, { status: 200 });

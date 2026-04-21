@@ -26,6 +26,7 @@ export interface User {
   role: 'admin' | 'manager' | 'user' | 'telesales';
   name: string;
   email: string;
+  cellphoneNumber?: string; // NEW: Cellphone number
   isActive: boolean;
   isSuperAdmin: boolean;
   requiresPasswordChange: boolean;
@@ -45,6 +46,7 @@ export interface TokenPayload {
   role: string;
   name: string;
   email: string;
+  cellphoneNumber?: string; // NEW: Cellphone number
   iat: number;
   exp: number;
 }
@@ -77,6 +79,7 @@ export function generateToken(user: User): string {
     role: user.role,
     name: user.name,
     email: user.email,
+    cellphoneNumber: user.cellphoneNumber, // NEW: Include cellphone number
   };
   
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
@@ -106,7 +109,7 @@ export async function login(username: string, password: string): Promise<AuthRes
   try {
     // Query database for user
     const result = await pool.query(
-      `SELECT id, username, password, role, name, email, is_active, is_super_admin, requires_password_change
+      `SELECT id, username, password, role, name, email, cellphone_number, is_active, is_super_admin, requires_password_change
        FROM users 
        WHERE username = $1`,
       [username]
@@ -146,6 +149,7 @@ export async function login(username: string, password: string): Promise<AuthRes
       role: dbUser.role,
       name: dbUser.name,
       email: dbUser.email,
+      cellphoneNumber: dbUser.cellphone_number, // NEW: Include cellphone number
       isActive: dbUser.is_active,
       isSuperAdmin: dbUser.is_super_admin || false,
       requiresPasswordChange: dbUser.requires_password_change || false,

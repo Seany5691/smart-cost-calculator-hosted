@@ -1,13 +1,5 @@
 'use client';
 
-/**
- * ProposalModal Component
- * 
- * NOTE: The "Current PDF Method" option is DEPRECATED and no longer used.
- * Only the "New HTML Template" method is actively maintained and used for proposal generation.
- * The PDF method code remains for backward compatibility but should not be used for new proposals.
- */
-
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useCalculatorStore } from '@/lib/store/calculator';
@@ -69,7 +61,8 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
     monthToMonth: false // Default: unchecked
   });
 
-  // New HTML proposal fields (PDF method is deprecated, only HTML is used)
+  // New HTML proposal fields
+  const [generationMethod, setGenerationMethod] = useState<'pdf' | 'html'>('html');
   const [clientLogo, setClientLogo] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [selectedPages, setSelectedPages] = useState({
@@ -116,7 +109,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
       const inputs = settlementDetails.calculatorInputs;
       
       if (inputs.rentalType === 'current') {
-        currentHardwareRental = inputs.rentalAmount || 0;
+        currentHardwareRental = inputs.rentalAmount;
       } else if (inputs.rentalType === 'starting' && inputs.startDate && inputs.escalationRate) {
         const startDate = new Date(inputs.startDate);
         const today = new Date();
@@ -132,7 +125,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
       const inputs = settlementDetails.connectivityLicensingCalculatorInputs;
       
       if (inputs.rentalType === 'current') {
-        currentMRC = inputs.rentalAmount || 0;
+        currentMRC = inputs.rentalAmount;
       } else if (inputs.rentalType === 'starting' && inputs.startDate && inputs.escalationRate) {
         const startDate = new Date(inputs.startDate);
         const today = new Date();
@@ -141,10 +134,6 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
         currentMRC = inputs.rentalAmount * Math.pow(1 + escalation, yearsElapsed);
       }
     }
-
-    // Ensure values are valid numbers (not NaN) and round to 2 decimal places
-    currentHardwareRental = isNaN(currentHardwareRental) ? 0 : Math.round(currentHardwareRental * 100) / 100;
-    currentMRC = isNaN(currentMRC) ? 0 : Math.round(currentMRC * 100) / 100;
 
     // Update form data with calculated values and auto-fill user email/phone
     setFormData(prev => ({
@@ -177,20 +166,10 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
   }, [isOpen]);
 
   const handleInputChange = (field: keyof ProposalData, value: string | number) => {
-    // Ensure numeric fields are valid numbers and round to 2 decimal places
-    if (field === 'currentHardwareRental' || field === 'currentMRC' || field === 'cashPrice') {
-      const numValue = typeof value === 'string' ? parseFloat(value) : value;
-      const validValue = isNaN(numValue) ? 0 : Math.round(numValue * 100) / 100;
-      setFormData(prev => ({
-        ...prev,
-        [field]: validValue
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [field]: value
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -250,47 +229,18 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
       return;
     }
     
-    // Validate comparative proposal specific fields
-    if (formData.proposalType === 'comparative') {
-      if (isNaN(formData.currentHardwareRental) || formData.currentHardwareRental < 0) {
-        toast.error('Invalid Hardware Rental', {
-          message: 'Please enter a valid current hardware rental amount',
-          section: 'calculator'
-        });
-        return;
-      }
-      if (isNaN(formData.currentMRC) || formData.currentMRC < 0) {
-        toast.error('Invalid Monthly Amount', {
-          message: 'Please enter a valid current monthly amount',
-          section: 'calculator'
-        });
-        return;
-      }
-    }
-    
-    // Validate cash proposal specific fields
-    if (formData.proposalType === 'cash') {
-      if (isNaN(formData.cashPrice || 0) || (formData.cashPrice || 0) < 0) {
-        toast.error('Invalid Cash Price', {
-          message: 'Please enter a valid cash price',
-          section: 'calculator'
-        });
-        return;
-      }
-    }
-    
-    // Always use HTML method (PDF method is deprecated)
-    if (onHtmlSubmit) {
+    if (generationMethod === 'html' && onHtmlSubmit) {
+      // Submit HTML proposal data
       const htmlProposalData: HtmlProposalData = {
         ...formData,
         monthToMonth,
         clientLogo: clientLogo || undefined,
         selectedPages,
-        generationMethod: 'html' // Always use HTML method
+        generationMethod
       };
       onHtmlSubmit(htmlProposalData);
     } else {
-      // Fallback to regular PDF method if onHtmlSubmit is not provided (backward compatibility)
+      // Submit regular PDF proposal data with monthToMonth flag
       const proposalDataWithMonthToMonth: ProposalData = {
         ...formData,
         monthToMonth
@@ -313,6 +263,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
     setMonthToMonth(false);
     setClientLogo(null);
     setLogoPreview(null);
+    setGenerationMethod('html');
     setSelectedPages({
       telephones: true,
       network: true,
@@ -357,122 +308,158 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] sm:h-[calc(100vh-80px)] custom-scrollbar space-y-4">
-          {/* Logo Upload */}
-          <div className="space-y-2">
-            <label htmlFor="clientLogo" className="text-white font-medium">
-              Client Logo (Optional)
-            </label>
-            <div className="flex items-center gap-4">
-              <input
-                type="file"
-                id="clientLogo"
-                accept="image/*"
-                onChange={handleLogoUpload}
-                className="hidden"
-              />
-              <label
-                htmlFor="clientLogo"
-                className="px-4 py-2 bg-white/10 border border-purple-500/30 rounded-lg text-white cursor-pointer hover:bg-white/20 transition-colors"
-              >
-                Choose Logo
-              </label>
-              {logoPreview && (
-                <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 border border-purple-500/30 rounded-lg overflow-hidden">
-                    <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain bg-white/10" />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleLogoRemove}
-                    className="px-3 py-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300 hover:bg-red-500/30 transition-colors text-sm"
-                    title="Remove logo"
-                  >
-                    Remove
-                  </button>
-                </div>
-              )}
-            </div>
-            <p className="text-sm text-purple-300/70">Upload a logo to display on the proposal cover page</p>
-          </div>
-
-          {/* Page Selection */}
+          {/* Generation Method Selection */}
           <div className="space-y-3 pb-4 border-b border-purple-500/20">
             <label className="text-white font-medium">
-              Include Pages
+              Generation Method <span className="text-red-400">*</span>
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
                 <input
-                  type="checkbox"
-                  checked={selectedPages.telephones}
-                  onChange={() => handlePageToggle('telephones')}
-                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  type="radio"
+                  name="generationMethod"
+                  value="html"
+                  checked={generationMethod === 'html'}
+                  onChange={(e) => setGenerationMethod(e.target.value as 'pdf' | 'html')}
+                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2"
                 />
-                <span className="text-white">Telephones</span>
+                <span className="text-white font-medium">New HTML Template</span>
               </label>
               
               <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
                 <input
-                  type="checkbox"
-                  checked={selectedPages.network}
-                  onChange={() => handlePageToggle('network')}
-                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  type="radio"
+                  name="generationMethod"
+                  value="pdf"
+                  checked={generationMethod === 'pdf'}
+                  onChange={(e) => setGenerationMethod(e.target.value as 'pdf' | 'html')}
+                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2"
                 />
-                <span className="text-white">Network Solutions</span>
-              </label>
-              
-              <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
-                <input
-                  type="checkbox"
-                  checked={selectedPages.printing}
-                  onChange={() => handlePageToggle('printing')}
-                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
-                />
-                <span className="text-white">Printing Solutions</span>
-              </label>
-              
-              <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
-                <input
-                  type="checkbox"
-                  checked={selectedPages.cctv}
-                  onChange={() => handlePageToggle('cctv')}
-                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
-                />
-                <span className="text-white">CCTV & Security</span>
-              </label>
-              
-              <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
-                <input
-                  type="checkbox"
-                  checked={selectedPages.accessControl}
-                  onChange={() => handlePageToggle('accessControl')}
-                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
-                />
-                <span className="text-white">Access Control</span>
-              </label>
-
-              <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
-                <input
-                  type="checkbox"
-                  checked={selectedPages.signalEnhancement}
-                  onChange={() => handlePageToggle('signalEnhancement')}
-                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
-                />
-                <span className="text-white">Signal Enhancement</span>
-              </label>
-
-              <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
-                <input
-                  type="checkbox"
-                  checked={selectedPages.computerSolutions}
-                  onChange={() => handlePageToggle('computerSolutions')}
-                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
-                />
-                <span className="text-white">Computer Solutions</span>
+                <span className="text-white font-medium">Current PDF Method</span>
               </label>
             </div>
-            <p className="text-sm text-purple-300/70">Select which feature pages to include in the proposal</p>
           </div>
+
+          {/* Logo Upload - Only show for HTML method */}
+          {generationMethod === 'html' && (
+            <div className="space-y-2">
+              <label htmlFor="clientLogo" className="text-white font-medium">
+                Client Logo (Optional)
+              </label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="file"
+                  id="clientLogo"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="clientLogo"
+                  className="px-4 py-2 bg-white/10 border border-purple-500/30 rounded-lg text-white cursor-pointer hover:bg-white/20 transition-colors"
+                >
+                  Choose Logo
+                </label>
+                {logoPreview && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 border border-purple-500/30 rounded-lg overflow-hidden">
+                      <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain bg-white/10" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleLogoRemove}
+                      className="px-3 py-2 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300 hover:bg-red-500/30 transition-colors text-sm"
+                      title="Remove logo"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-purple-300/70">Upload a logo to display on the proposal cover page</p>
+            </div>
+          )}
+
+          {/* Page Selection - Only show for HTML method */}
+          {generationMethod === 'html' && (
+            <div className="space-y-3 pb-4 border-b border-purple-500/20">
+              <label className="text-white font-medium">
+                Include Pages
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.telephones}
+                    onChange={() => handlePageToggle('telephones')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">Telephones</span>
+                </label>
+                
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.network}
+                    onChange={() => handlePageToggle('network')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">Network Solutions</span>
+                </label>
+                
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.printing}
+                    onChange={() => handlePageToggle('printing')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">Printing Solutions</span>
+                </label>
+                
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.cctv}
+                    onChange={() => handlePageToggle('cctv')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">CCTV & Security</span>
+                </label>
+                
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.accessControl}
+                    onChange={() => handlePageToggle('accessControl')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">Access Control</span>
+                </label>
+
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.signalEnhancement}
+                    onChange={() => handlePageToggle('signalEnhancement')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">Signal Enhancement</span>
+                </label>
+
+                <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={selectedPages.computerSolutions}
+                    onChange={() => handlePageToggle('computerSolutions')}
+                    className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                  />
+                  <span className="text-white">Computer Solutions</span>
+                </label>
+              </div>
+              <p className="text-sm text-purple-300/70">Select which feature pages to include in the proposal</p>
+            </div>
+          )}
 
           {/* Proposal Type Selection */}
           <div className="space-y-3 pb-4 border-b border-purple-500/20">
@@ -567,7 +554,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
                 type="number"
                 id="currentHardwareRental"
                 value={formData.currentHardwareRental}
-                onChange={(e) => handleInputChange('currentHardwareRental', e.target.value)}
+                onChange={(e) => handleInputChange('currentHardwareRental', parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
                 min="0"
                 step="0.01"
@@ -589,7 +576,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
                 type="number"
                 id="currentMRC"
                 value={formData.currentMRC}
-                onChange={(e) => handleInputChange('currentMRC', e.target.value)}
+                onChange={(e) => handleInputChange('currentMRC', parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
                 min="0"
                 step="0.01"
@@ -611,7 +598,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
                 type="number"
                 id="cashPrice"
                 value={formData.cashPrice || 0}
-                onChange={(e) => handleInputChange('cashPrice', e.target.value)}
+                onChange={(e) => handleInputChange('cashPrice', parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
                 min="0"
                 step="0.01"

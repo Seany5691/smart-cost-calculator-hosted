@@ -86,19 +86,14 @@ const HtmlProposalGenerator = forwardRef<HtmlProposalGeneratorRef, HtmlProposalG
 
         const result = await response.json();
 
-        // Open PDF in new tab
-        const pdfUrl = result.pdfUrl;
-        if (pdfUrl) {
-          // Use the full URL to open the PDF
-          const fullUrl = window.location.origin + pdfUrl;
-          window.open(fullUrl, '_blank');
-        }
+        // Open PDF in new tab (don't download, just open)
+        window.open(result.pdfUrl, '_blank');
 
         // Show success message
         if (leadId && leadName) {
           showToast(
             'Proposal Generated & Attached',
-            `PDF generated and attached to ${leadName}!`,
+            `PDF generated, downloaded, and attached to ${leadName}!`,
             'success'
           );
           
@@ -108,7 +103,7 @@ const HtmlProposalGenerator = forwardRef<HtmlProposalGeneratorRef, HtmlProposalG
         } else {
           showToast(
             'Proposal Generated',
-            'PDF generated successfully!',
+            'PDF generated and downloaded successfully!',
             'success'
           );
         }

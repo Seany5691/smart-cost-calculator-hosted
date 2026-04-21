@@ -135,6 +135,10 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
       }
     }
 
+    // Round to 2 decimal places to prevent floating point precision issues
+    currentHardwareRental = Math.round(currentHardwareRental * 100) / 100;
+    currentMRC = Math.round(currentMRC * 100) / 100;
+
     // Update form data with calculated values and auto-fill user email/phone
     setFormData(prev => ({
       ...prev,
@@ -166,9 +170,15 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
   }, [isOpen]);
 
   const handleInputChange = (field: keyof ProposalData, value: string | number) => {
+    // Round numeric fields to 2 decimal places to prevent floating point issues
+    let processedValue = value;
+    if (typeof value === 'number' && !isNaN(value)) {
+      processedValue = Math.round(value * 100) / 100;
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: processedValue
     }));
   };
 

@@ -91,8 +91,8 @@ export class HtmlTemplateManager {
     proposalType: string,
     mappedData: any
   ): string {
-    const normalPage = this.generateNormalProposalPage(mappedData);
-    const comparativePage = this.generateComparativeProposalPage(mappedData);
+    const normalPage = this.generateNormalProposalPage(mappedData, mappedData.monthToMonth);
+    const comparativePage = this.generateComparativeProposalPage(mappedData, mappedData.monthToMonth);
     const cashPage = this.generateCashProposalPage(mappedData);
 
     // Replace placeholders with appropriate pages
@@ -106,9 +106,15 @@ export class HtmlTemplateManager {
   /**
    * Generate Normal Proposal page (Page 3)
    */
-  private static generateNormalProposalPage(mappedData: any): string {
+  private static generateNormalProposalPage(mappedData: any, monthToMonth: boolean = false): string {
     const hardwareRows = this.generateHardwareRows(mappedData.hardwareItems);
     const monthlyServiceRows = this.generateMonthlyServiceRows(mappedData.connectivityItems, mappedData.licensingItems);
+
+    // Determine what to display for term/escalation
+    const termEscalationDisplay = monthToMonth 
+      ? '<div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">Month-To-Month</div>'
+      : `<div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">${mappedData.dealDetails.term} Months</div>
+                                        <div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">${mappedData.dealDetails.escalation}% Escalation</div>`;
 
     return `
         <!-- PAGE 3: NORMAL PROPOSAL -->
@@ -155,8 +161,7 @@ export class HtmlTemplateManager {
                                 <div class="flex items-center justify-end gap-8">
                                     <div class="font-mono text-center whitespace-nowrap">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</div>
                                     <div class="text-center">
-                                        <div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">${mappedData.dealDetails.term} Months</div>
-                                        <div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">${mappedData.dealDetails.escalation}% Escalation</div>
+                                        ${termEscalationDisplay}
                                     </div>
                                 </div>
                             </td>
@@ -201,10 +206,16 @@ export class HtmlTemplateManager {
   /**
    * Generate Comparative Proposal page (Page 4) - with all calculations
    */
-  private static generateComparativeProposalPage(mappedData: any): string {
+  private static generateComparativeProposalPage(mappedData: any, monthToMonth: boolean = false): string {
     const hardwareRows = this.generateComparativeHardwareRows(mappedData.hardwareItems, mappedData.dealDetails);
     const monthlyServiceRows = this.generateMonthlyServiceRows(mappedData.connectivityItems, mappedData.licensingItems);
     const projectionRows = this.generateProjectionRows(mappedData.projections);
+
+    // Determine what to display for term/escalation
+    const termEscalationDisplay = monthToMonth 
+      ? '<div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">Month-To-Month</div>'
+      : `<div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">${mappedData.dealDetails.term} Months</div>
+                                        <div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">${mappedData.dealDetails.escalation}% Escalation</div>`;
 
     return `
         <!-- PAGE 4: COMPARATIVE PROPOSAL -->
@@ -285,8 +296,7 @@ export class HtmlTemplateManager {
                                 <div class="flex items-center justify-end gap-8">
                                     <div class="font-mono text-center whitespace-nowrap">${HtmlProposalDataMapper.formatCurrencyWithR(mappedData.costs.hardwareRental)}</div>
                                     <div class="text-center">
-                                        <div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">${mappedData.dealDetails.term} Months</div>
-                                        <div class="text-[10px] font-normal text-zinc-600 whitespace-nowrap">${mappedData.dealDetails.escalation}% Escalation</div>
+                                        ${termEscalationDisplay}
                                     </div>
                                 </div>
                             </td>

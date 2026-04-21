@@ -12,6 +12,7 @@ const updateUserSchema = z.object({
   role: z.enum(['admin', 'manager', 'user', 'telesales']).optional(),
   name: z.string().min(1).optional(),
   email: z.string().email().optional(),
+  cellphoneNumber: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   requiresPasswordChange: z.boolean().optional(),
   password: z.string().min(8).optional(),
@@ -35,7 +36,7 @@ export const GET = withAdmin(
     try {
       const pool = getPool();
       const result = await pool.query(
-        `SELECT id, username, role, name, email, is_active as "isActive", requires_password_change as "requiresPasswordChange", is_super_admin as "isSuperAdmin", created_at as "createdAt", updated_at as "updatedAt"
+        `SELECT id, username, role, name, email, cellphone_number as "cellphoneNumber", is_active as "isActive", requires_password_change as "requiresPasswordChange", is_super_admin as "isSuperAdmin", created_at as "createdAt", updated_at as "updatedAt"
          FROM users
          WHERE id = $1`,
         [params.id]
@@ -191,6 +192,11 @@ export const PATCH = withAdmin(
         values.push(validation.data.email);
       }
 
+      if (validation.data.cellphoneNumber !== undefined) {
+        updates.push(`cellphone_number = $${paramIndex++}`);
+        values.push(validation.data.cellphoneNumber);
+      }
+
       if (validation.data.isActive !== undefined) {
         updates.push(`is_active = $${paramIndex++}`);
         values.push(validation.data.isActive);
@@ -230,7 +236,7 @@ export const PATCH = withAdmin(
         UPDATE users
         SET ${updates.join(', ')}
         WHERE id = $${paramIndex}
-        RETURNING id, username, role, name, email, is_active as "isActive", requires_password_change as "requiresPasswordChange", is_super_admin as "isSuperAdmin", created_at as "createdAt", updated_at as "updatedAt"
+        RETURNING id, username, role, name, email, cellphone_number as "cellphoneNumber", is_active as "isActive", requires_password_change as "requiresPasswordChange", is_super_admin as "isSuperAdmin", created_at as "createdAt", updated_at as "updatedAt"
       `;
 
       const result = await pool.query(query, values);
@@ -342,7 +348,7 @@ export const DELETE = withAdmin(
             timestamp: new Date().toISOString(),
           },
         },
-        { status: 500 }
+          { status: 500 }
       );
     }
   }

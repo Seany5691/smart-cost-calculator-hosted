@@ -96,6 +96,7 @@ export class HtmlProposalDataMapper {
       // Basic info
       customerName: proposalData.customerName,
       currentYear,
+      monthToMonth: proposalData.monthToMonth || false, // NEW: Month-To-Month flag
       
       // Hardware rental calculations
       currentHardwareRental,

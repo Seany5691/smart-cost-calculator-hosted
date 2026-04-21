@@ -38,7 +38,7 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
     
     // Get paginated users
     const result = await pool.query(
-      `SELECT id, username, role, name, email, is_active as "isActive", requires_password_change as "requiresPasswordChange", is_super_admin as "isSuperAdmin", created_at as "createdAt", updated_at as "updatedAt"
+      `SELECT id, username, role, name, email, cellphone_number as "cellphoneNumber", is_active as "isActive", requires_password_change as "requiresPasswordChange", is_super_admin as "isSuperAdmin", created_at as "createdAt", updated_at as "updatedAt"
        FROM users
        ORDER BY created_at DESC
        LIMIT $1 OFFSET $2`,

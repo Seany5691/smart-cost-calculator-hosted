@@ -86,8 +86,21 @@ const HtmlProposalGenerator = forwardRef<HtmlProposalGeneratorRef, HtmlProposalG
 
         const result = await response.json();
 
-        // Open PDF in new tab (don't download, just open)
-        window.open(result.pdfUrl, '_blank');
+        console.log('[HtmlProposalGenerator] PDF generated successfully:', result);
+        console.log('[HtmlProposalGenerator] PDF URL:', result.pdfUrl);
+
+        // Try to open PDF in new tab
+        const pdfWindow = window.open(result.pdfUrl, '_blank');
+        
+        if (!pdfWindow || pdfWindow.closed || typeof pdfWindow.closed == 'undefined') {
+          // Popup was blocked
+          console.error('[HtmlProposalGenerator] Popup blocked! Trying direct navigation...');
+          // Fallback: navigate current window
+          window.location.href = result.pdfUrl;
+          return;
+        }
+
+        console.log('[HtmlProposalGenerator] PDF window opened successfully');
 
         // Show success message
         if (leadId && leadName) {

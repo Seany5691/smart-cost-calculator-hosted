@@ -34,10 +34,11 @@ export async function GET(
     const fileBuffer = await readFile(filePath);
 
     // Return file with appropriate headers
+    // Use 'inline' to display in browser, users can still download via browser's download button
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': `inline; filename="${filename}"`,
         'Content-Length': fileBuffer.length.toString(),
         'Cache-Control': 'public, max-age=31536000',
       },

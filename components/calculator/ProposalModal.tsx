@@ -14,7 +14,8 @@ interface ProposalModalProps {
 
 export interface ProposalData {
   customerName: string;
-  currentMRC: number;
+  currentHardwareRental: number; // NEW - auto-filled from hardware settlement, editable
+  currentMRC: number; // Existing - now auto-filled from connectivity/licensing settlement, editable
   specialistEmail: string;
   specialistPhone: string;
   proposalType: 'normal' | 'comparative' | 'cash';
@@ -36,7 +37,7 @@ export interface HtmlProposalData extends ProposalData {
 }
 
 export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit }: ProposalModalProps) {
-  const { dealDetails, totalsData } = useCalculatorStore();
+  const { dealDetails, totalsData, settlementDetails } = useCalculatorStore();
   const modalRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
@@ -45,7 +46,8 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
   
   const [formData, setFormData] = useState<ProposalData>({
     customerName: dealDetails.customerName || '',
-    currentMRC: 0,
+    currentHardwareRental: 0, // Will be auto-filled
+    currentMRC: 0, // Will be auto-filled
     specialistEmail: '',
     specialistPhone: '',
     proposalType: 'normal',
@@ -89,6 +91,50 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
       }));
     }
   }, [totalsData?.totalPayout, formData.proposalType]);
+
+  // Auto-fill current hardware rental and current MRC from settlement calculators
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Calculate current hardware rental from hardware settlement
+    let currentHardwareRental = 0;
+    if (settlementDetails.calculatorInputs) {
+      const inputs = settlementDetails.calculatorInputs;
+      
+      if (inputs.rentalType === 'current') {
+        currentHardwareRental = inputs.rentalAmount;
+      } else if (inputs.rentalType === 'starting' && inputs.startDate && inputs.escalationRate) {
+        const startDate = new Date(inputs.startDate);
+        const today = new Date();
+        const yearsElapsed = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+        const escalation = inputs.escalationRate / 100;
+        currentHardwareRental = inputs.rentalAmount * Math.pow(1 + escalation, yearsElapsed);
+      }
+    }
+
+    // Calculate current MRC from connectivity/licensing settlement
+    let currentMRC = 0;
+    if (settlementDetails.useConnectivityLicensingSettlement && settlementDetails.connectivityLicensingCalculatorInputs) {
+      const inputs = settlementDetails.connectivityLicensingCalculatorInputs;
+      
+      if (inputs.rentalType === 'current') {
+        currentMRC = inputs.rentalAmount;
+      } else if (inputs.rentalType === 'starting' && inputs.startDate && inputs.escalationRate) {
+        const startDate = new Date(inputs.startDate);
+        const today = new Date();
+        const yearsElapsed = (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+        const escalation = inputs.escalationRate / 100;
+        currentMRC = inputs.rentalAmount * Math.pow(1 + escalation, yearsElapsed);
+      }
+    }
+
+    // Update form data with calculated values
+    setFormData(prev => ({
+      ...prev,
+      currentHardwareRental,
+      currentMRC
+    }));
+  }, [isOpen, settlementDetails]);
 
   // Handle escape key
   useEffect(() => {
@@ -192,6 +238,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
   const handleClose = () => {
     setFormData({
       customerName: dealDetails.customerName || '',
+      currentHardwareRental: 0,
       currentMRC: 0,
       specialistEmail: '',
       specialistPhone: '',
@@ -462,24 +509,49 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
             <p className="text-sm text-purple-300/70">Enter the customer's full name for the proposal</p>
           </div>
 
-          {/* Current Monthly Amounts */}
-          <div className="space-y-2">
-            <label htmlFor="currentMRC" className="text-white font-medium">
-              Current Monthly Amounts <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="number"
-              id="currentMRC"
-              value={formData.currentMRC}
-              onChange={(e) => handleInputChange('currentMRC', parseFloat(e.target.value) || 0)}
-              placeholder="0.00"
-              min="0"
-              step="0.01"
-              className="w-full px-4 py-3 h-12 bg-white/10 border border-purple-500/30 rounded-lg text-white text-base placeholder-purple-300/50 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500 transition-all"
-              required
-            />
-            <p className="text-sm text-purple-300/70">Monthly amounts excluding current hardware rental (R)</p>
-          </div>
+          {/* Current Hardware Rental - Only show for Comparative Proposal */}
+          {formData.proposalType === 'comparative' && (
+            <div className="space-y-2 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+              <label htmlFor="currentHardwareRental" className="text-white font-medium flex items-center gap-2">
+                Current Hardware Rental <span className="text-red-400">*</span>
+                <span className="text-xs text-orange-300/70 font-normal">(Auto-filled from Hardware Settlement)</span>
+              </label>
+              <input
+                type="number"
+                id="currentHardwareRental"
+                value={formData.currentHardwareRental}
+                onChange={(e) => handleInputChange('currentHardwareRental', parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                className="w-full px-4 py-3 h-12 bg-white/10 border border-orange-500/30 rounded-lg text-white text-base placeholder-orange-300/50 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 transition-all"
+                required
+              />
+              <p className="text-sm text-orange-300/70">Current hardware rental amount (R) - editable</p>
+            </div>
+          )}
+
+          {/* Current Monthly Amounts - Only show for Comparative Proposal */}
+          {formData.proposalType === 'comparative' && (
+            <div className="space-y-2 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+              <label htmlFor="currentMRC" className="text-white font-medium flex items-center gap-2">
+                Current Monthly Amounts <span className="text-red-400">*</span>
+                <span className="text-xs text-orange-300/70 font-normal">(Auto-filled from Connectivity & Licensing Settlement)</span>
+              </label>
+              <input
+                type="number"
+                id="currentMRC"
+                value={formData.currentMRC}
+                onChange={(e) => handleInputChange('currentMRC', parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                className="w-full px-4 py-3 h-12 bg-white/10 border border-orange-500/30 rounded-lg text-white text-base placeholder-orange-300/50 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 transition-all"
+                required
+              />
+              <p className="text-sm text-orange-300/70">Monthly amounts excluding hardware rental (R) - editable</p>
+            </div>
+          )}
 
           {/* Cash Price - Only show for Cash Proposal */}
           {formData.proposalType === 'cash' && (

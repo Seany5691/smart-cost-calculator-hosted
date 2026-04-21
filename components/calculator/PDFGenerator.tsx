@@ -485,7 +485,7 @@ export default function PDFGenerator({ onGenerate }: PDFGeneratorProps) {
                 </tr>
                 <tr>
                   <td>Settlement Amount</td>
-                  <td class="text-right">${formatCurrency(totalsData?.actualSettlement || 0)}</td>
+                  <td class="text-right">${formatCurrency(totalsData?.totalSettlement || 0)}</td>
                 </tr>
                 <tr>
                   <td>Finance Fee</td>

@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
     yPosition -= lineHeight;
     addText(`Representative Settlement: R ${totalsData.representativeSettlement?.toFixed(2) || '0.00'}`, leftMargin + 10, yPosition, 10);
     yPosition -= lineHeight * 0.8;
-    addText(`Actual Settlement: R ${totalsData.actualSettlement?.toFixed(2) || '0.00'}`, leftMargin + 10, yPosition, 10);
+    addText(`Total Settlement: R ${totalsData.totalSettlement?.toFixed(2) || '0.00'}`, leftMargin + 10, yPosition, 10);
     yPosition -= lineHeight * 0.8;
     addText(`Finance Fee: R ${totalsData.financeFee?.toFixed(2) || '0.00'}`, leftMargin + 10, yPosition, 10);
     yPosition -= lineHeight * 0.8;

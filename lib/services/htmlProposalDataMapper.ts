@@ -32,26 +32,8 @@ export class HtmlProposalDataMapper {
     const { sectionsData, dealDetails, totalsData, settlementDetails } = calculatorData;
     const currentYear = new Date().getFullYear();
 
-    // Calculate current hardware rental from settlement details (exact replica)
-    let currentHardwareRental = 0;
-    
-    if (dealDetails.settlement > 0 && settlementDetails.calculatorInputs) {
-      const inputs = settlementDetails.calculatorInputs;
-      
-      if (inputs.rentalType === 'current') {
-        currentHardwareRental = inputs.rentalAmount;
-      } else if (inputs.rentalType === 'starting' && inputs.startDate && inputs.escalationRate) {
-        const startDate = new Date(inputs.startDate);
-        const currentDate = new Date();
-        const escalation = inputs.escalationRate / 100;
-        
-        const yearsElapsed = Math.floor(
-          (currentDate.getTime() - startDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-        );
-        
-        currentHardwareRental = inputs.rentalAmount * Math.pow(1 + escalation, yearsElapsed);
-      }
-    }
+    // Use currentHardwareRental from proposalData (already calculated and editable in modal)
+    const currentHardwareRental = proposalData.currentHardwareRental || 0;
 
     // Calculate projections (exact replica)
     const currentEscalation = (settlementDetails.calculatorInputs?.escalationRate || 0) / 100;

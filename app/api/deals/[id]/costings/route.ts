@@ -231,11 +231,21 @@ export async function GET(
     
     console.log('[COSTINGS] ===== END DEBUG =====');
 
-    // Settlement - ALWAYS the same for both actual and rep (never changes)
-    // Use actualSettlement from the Total Costs section (what the user entered/calculated)
-    const settlement = totalsData?.actualSettlement || totalsData?.settlement || 0;
-    const settlementActual = settlement;
-    const settlementRep = settlement;
+    // Settlement - Calculate hardware, connectivity/licensing, and total settlements
+    // Hardware Settlement
+    const hardwareSettlement = totalsData?.hardwareSettlement || 0;
+    const hardwareSettlementActual = hardwareSettlement;
+    const hardwareSettlementRep = hardwareSettlement;
+    
+    // Connectivity & Licensing Settlement
+    const connectivityLicensingSettlement = totalsData?.connectivityLicensingSettlement || 0;
+    const connectivityLicensingSettlementActual = connectivityLicensingSettlement;
+    const connectivityLicensingSettlementRep = connectivityLicensingSettlement;
+    
+    // Total Settlement
+    const totalSettlement = totalsData?.totalSettlement || hardwareSettlement + connectivityLicensingSettlement;
+    const totalSettlementActual = totalSettlement;
+    const totalSettlementRep = totalSettlement;
 
     // Get term and factors
     const term = dealDetails?.term || 60;
@@ -342,8 +352,8 @@ export async function GET(
     // Gross Profit Analysis
     // =====================================================
     
-    // Actual GP: Total Payout - Finance Fee - Settlement - Installation - Hardware Total
-    const actualGP = totalPayoutActual - financeFeeActual - settlementActual - installationActual - hardwareTotalActual;
+    // Actual GP: Total Payout - Finance Fee - Total Settlement - Installation - Hardware Total
+    const actualGP = totalPayoutActual - financeFeeActual - totalSettlementActual - installationActual - hardwareTotalActual;
     
     // Rep GP from totals data (what the rep sees)
     const repGP = totalsData?.grossProfit || totalsData?.customGrossProfit || 0;
@@ -405,7 +415,9 @@ export async function GET(
         installationTotal: { actual: installationActual, rep: installationRep },
         connectivityTotal: { actual: connectivityTotalActual, rep: connectivityTotalRep },
         licensingTotal: { actual: licensingTotalActual, rep: licensingTotalRep },
-        settlement: { actual: settlementActual, rep: settlementRep },
+        hardwareSettlement: { actual: hardwareSettlementActual, rep: hardwareSettlementRep },
+        connectivityLicensingSettlement: { actual: connectivityLicensingSettlementActual, rep: connectivityLicensingSettlementRep },
+        totalSettlement: { actual: totalSettlementActual, rep: totalSettlementRep },
         financeFee: { actual: financeFeeActual, rep: financeFeeRep },
         factor: { 
           actual: parseFloat(costFactor.toFixed(5)), 

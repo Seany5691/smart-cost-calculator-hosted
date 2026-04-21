@@ -268,17 +268,38 @@ export default function TotalCostsStep() {
           representativeSettlement = 0;
         }
 
-        // 8. Determine actual settlement (manual or calculated)
-        let actualSettlement: number;
+        // 8. Determine actual settlements
+        // Hardware Settlement
+        let hardwareSettlement: number;
         if (settlementDetails.useCalculator && settlementDetails.calculatedTotal) {
-          actualSettlement = settlementDetails.calculatedTotal;
+          hardwareSettlement = settlementDetails.calculatedTotal;
         } else {
-          actualSettlement = settlementDetails.manualAmount || dealDetails.settlement || 0;
+          hardwareSettlement = settlementDetails.manualAmount || 0;
         }
         
-        if (isNaN(actualSettlement) || !isFinite(actualSettlement)) {
-          console.error('[TOTAL COSTS] Invalid actual settlement:', actualSettlement);
-          actualSettlement = 0;
+        // Connectivity & Licensing Settlement
+        let connectivityLicensingSettlement: number = 0;
+        if (settlementDetails.useConnectivityLicensingSettlement) {
+          if (settlementDetails.connectivityLicensingUseCalculator && settlementDetails.connectivityLicensingCalculatedTotal) {
+            connectivityLicensingSettlement = settlementDetails.connectivityLicensingCalculatedTotal;
+          } else {
+            connectivityLicensingSettlement = settlementDetails.connectivityLicensingManualAmount || 0;
+          }
+        }
+        
+        // Total Settlement
+        const totalSettlement = hardwareSettlement + connectivityLicensingSettlement;
+        
+        if (isNaN(hardwareSettlement) || !isFinite(hardwareSettlement)) {
+          console.error('[TOTAL COSTS] Invalid hardware settlement:', hardwareSettlement);
+          hardwareSettlement = 0;
+        }
+        if (isNaN(connectivityLicensingSettlement) || !isFinite(connectivityLicensingSettlement)) {
+          console.error('[TOTAL COSTS] Invalid connectivity/licensing settlement:', connectivityLicensingSettlement);
+          connectivityLicensingSettlement = 0;
+        }
+        if (isNaN(totalSettlement) || !isFinite(totalSettlement)) {
+          console.error('[TOTAL COSTS] Invalid total settlement:', totalSettlement);
         }
 
         // 9. Calculate gross profit
@@ -309,14 +330,14 @@ export default function TotalCostsStep() {
         const hasCustomFinanceFee = totalsData?.customFinanceFee !== undefined;
         
         try {
-          // Base total payout = hardware + installation + gross profit + settlement
-          const baseTotalPayout = hardwareTotal + installationTotal + grossProfit + actualSettlement;
+          // Base total payout = hardware + installation + gross profit + total settlement
+          const baseTotalPayout = hardwareTotal + installationTotal + grossProfit + totalSettlement;
           
           console.log('[TOTAL COSTS] ===== FINANCE FEE CALCULATION =====');
           console.log('[TOTAL COSTS] Hardware Total:', hardwareTotal);
           console.log('[TOTAL COSTS] Installation Total:', installationTotal);
           console.log('[TOTAL COSTS] Gross Profit:', grossProfit);
-          console.log('[TOTAL COSTS] Settlement:', actualSettlement);
+          console.log('[TOTAL COSTS] Total Settlement:', totalSettlement);
           console.log('[TOTAL COSTS] Base total payout (before finance fee):', baseTotalPayout);
           console.log('[TOTAL COSTS] Has custom finance fee:', hasCustomFinanceFee);
           console.log('[TOTAL COSTS] activeScales.finance_fee:', activeScales.finance_fee);
@@ -371,7 +392,7 @@ export default function TotalCostsStep() {
         } catch (error) {
           console.error('[TOTAL COSTS] Error calculating finance fee:', error);
           financeFee = 0;
-          financeAmount = hardwareTotal + installationTotal + grossProfit + actualSettlement;
+          financeAmount = hardwareTotal + installationTotal + grossProfit + totalSettlement;
           totalPayout = financeAmount;
         }
 
@@ -443,7 +464,9 @@ export default function TotalCostsStep() {
           extensionTotal,
           fuelTotal,
           representativeSettlement,
-          actualSettlement,
+          hardwareSettlement,
+          connectivityLicensingSettlement,
+          totalSettlement,
           financeFee,
           customFinanceFee: hasCustomFinanceFee ? totalsData.customFinanceFee : undefined,
           totalPayout,
@@ -982,8 +1005,20 @@ export default function TotalCostsStep() {
           </div>
           
           <div className="flex justify-between items-center">
-            <span className="text-gray-300">Settlement Amount:</span>
-            <span className="text-white font-semibold">{formatCurrency(totalsData.actualSettlement)}</span>
+            <span className="text-gray-300">Hardware Settlement:</span>
+            <span className="text-white font-semibold">{formatCurrency(totalsData.hardwareSettlement)}</span>
+          </div>
+          
+          {totalsData.connectivityLicensingSettlement > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-gray-300">Connectivity & Licenses Settlement:</span>
+              <span className="text-white font-semibold">{formatCurrency(totalsData.connectivityLicensingSettlement)}</span>
+            </div>
+          )}
+          
+          <div className="flex justify-between items-center border-t border-white/10 pt-3">
+            <span className="text-gray-300 font-semibold">Total Settlement:</span>
+            <span className="text-white font-bold">{formatCurrency(totalsData.totalSettlement)}</span>
           </div>
           <div className="border-t border-white/10 pt-3 flex justify-between items-center">
             <span className="text-gray-300 font-semibold">Total Payout:</span>

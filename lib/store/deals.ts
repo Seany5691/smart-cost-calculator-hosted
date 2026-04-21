@@ -103,7 +103,9 @@ export interface Costings {
     installationTotal: { actual: number; rep: number; };
     connectivityTotal: { actual: number; rep: number; };
     licensingTotal: { actual: number; rep: number; };
-    settlement: { actual: number; rep: number; };
+    hardwareSettlement: { actual: number; rep: number; };
+    connectivityLicensingSettlement: { actual: number; rep: number; };
+    totalSettlement: { actual: number; rep: number; };
     financeFee: { actual: number; rep: number; };
     factor: { actual: number; rep: number; }; // Added factor row
     totalPayout: { actual: number; rep: number; };

@@ -427,7 +427,7 @@ export async function POST(request: NextRequest) {
       <h2 class="section-title">Finance & Settlement</h2>
       <div class="item-row">
         <span class="item-label">Settlement Amount:</span>
-        <span class="item-value">${formatCurrency(totalsData.actualSettlement || 0)}</span>
+        <span class="item-value">${formatCurrency(totalsData.totalSettlement || 0)}</span>
       </div>
       <div class="item-row">
         <span class="item-label">Finance Fee:</span>

@@ -41,6 +41,7 @@ export interface SettlementCalculation {
 }
 
 export interface SettlementDetails {
+  // Hardware Settlement
   useCalculator: boolean;
   manualAmount: number;
   calculatorInputs?: {
@@ -52,6 +53,20 @@ export interface SettlementDetails {
   };
   calculatedBreakdown?: SettlementCalculation[];
   calculatedTotal?: number;
+  
+  // Connectivity & Licensing Settlement
+  useConnectivityLicensingSettlement: boolean; // Radio button state
+  connectivityLicensingUseCalculator: boolean;
+  connectivityLicensingManualAmount: number;
+  connectivityLicensingCalculatorInputs?: {
+    startDate: Date;
+    rentalType: 'starting' | 'current';
+    rentalAmount: number;
+    escalationRate: 0 | 5 | 10 | 15;
+    rentalTerm: 12 | 24 | 36 | 48 | 60;
+  };
+  connectivityLicensingCalculatedBreakdown?: SettlementCalculation[];
+  connectivityLicensingCalculatedTotal?: number;
 }
 
 // Selected Items (with quantities)
@@ -89,7 +104,9 @@ export interface TotalsData {
   extensionTotal: number;
   fuelTotal: number;
   representativeSettlement: number;
-  actualSettlement: number;
+  hardwareSettlement: number; // Renamed from actualSettlement
+  connectivityLicensingSettlement: number; // New
+  totalSettlement: number; // Sum of both
   financeFee: number;
   customFinanceFee?: number; // Custom finance fee set by admin
   totalPayout: number;
@@ -227,7 +244,9 @@ const initialTotalsData: TotalsData = {
   extensionTotal: 0,
   fuelTotal: 0,
   representativeSettlement: 0,
-  actualSettlement: 0,
+  hardwareSettlement: 0,
+  connectivityLicensingSettlement: 0,
+  totalSettlement: 0,
   financeFee: 0,
   totalPayout: 0,
   grossProfit: 0,
@@ -243,11 +262,20 @@ const initialTotalsData: TotalsData = {
 };
 
 const initialSettlementDetails: SettlementDetails = {
+  // Hardware Settlement
   useCalculator: false,
   manualAmount: 0,
   calculatorInputs: undefined,
   calculatedBreakdown: undefined,
   calculatedTotal: undefined,
+  
+  // Connectivity & Licensing Settlement
+  useConnectivityLicensingSettlement: false, // Default to OFF
+  connectivityLicensingUseCalculator: false,
+  connectivityLicensingManualAmount: 0,
+  connectivityLicensingCalculatorInputs: undefined,
+  connectivityLicensingCalculatedBreakdown: undefined,
+  connectivityLicensingCalculatedTotal: undefined,
 };
 
 export const useCalculatorStore = create<CalculatorState>()(

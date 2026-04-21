@@ -98,7 +98,7 @@ export default function CostingsModal({ isOpen, onClose, costings, isLoading }: 
     updatedCostings.grossProfit.actualGP = 
       updatedCostings.totals.totalPayout.actual -
       updatedCostings.totals.financeFee.actual -
-      updatedCostings.totals.settlement.actual -
+      updatedCostings.totals.totalSettlement.actual -
       updatedCostings.totals.installationTotal.actual -
       updatedCostings.hardware.totalActual;
 
@@ -634,10 +634,22 @@ function generateCostingsHTML(costings: Costings) {
                 <td class="text-right ${(costings.totals.licensingTotal.rep - costings.totals.licensingTotal.actual) > 0 ? 'positive' : (costings.totals.licensingTotal.rep - costings.totals.licensingTotal.actual) < 0 ? 'negative' : 'neutral'}">${formatCurrency(costings.totals.licensingTotal.rep - costings.totals.licensingTotal.actual)}</td>
               </tr>
               <tr>
-                <td>Settlement</td>
-                <td class="text-right">${formatCurrency(costings.totals.settlement.actual)}</td>
-                <td class="text-right">${formatCurrency(costings.totals.settlement.rep)}</td>
-                <td class="text-right ${(costings.totals.settlement.rep - costings.totals.settlement.actual) > 0 ? 'positive' : (costings.totals.settlement.rep - costings.totals.settlement.actual) < 0 ? 'negative' : 'neutral'}">${formatCurrency(costings.totals.settlement.rep - costings.totals.settlement.actual)}</td>
+                <td>Hardware Settlement</td>
+                <td class="text-right">${formatCurrency(costings.totals.hardwareSettlement.actual)}</td>
+                <td class="text-right">${formatCurrency(costings.totals.hardwareSettlement.rep)}</td>
+                <td class="text-right ${(costings.totals.hardwareSettlement.rep - costings.totals.hardwareSettlement.actual) > 0 ? 'positive' : (costings.totals.hardwareSettlement.rep - costings.totals.hardwareSettlement.actual) < 0 ? 'negative' : 'neutral'}">${formatCurrency(costings.totals.hardwareSettlement.rep - costings.totals.hardwareSettlement.actual)}</td>
+              </tr>
+              <tr>
+                <td>Connectivity & Licenses Settlement</td>
+                <td class="text-right">${formatCurrency(costings.totals.connectivityLicensingSettlement.actual)}</td>
+                <td class="text-right">${formatCurrency(costings.totals.connectivityLicensingSettlement.rep)}</td>
+                <td class="text-right ${(costings.totals.connectivityLicensingSettlement.rep - costings.totals.connectivityLicensingSettlement.actual) > 0 ? 'positive' : (costings.totals.connectivityLicensingSettlement.rep - costings.totals.connectivityLicensingSettlement.actual) < 0 ? 'negative' : 'neutral'}">${formatCurrency(costings.totals.connectivityLicensingSettlement.rep - costings.totals.connectivityLicensingSettlement.actual)}</td>
+              </tr>
+              <tr>
+                <td>Total Settlement</td>
+                <td class="text-right">${formatCurrency(costings.totals.totalSettlement.actual)}</td>
+                <td class="text-right">${formatCurrency(costings.totals.totalSettlement.rep)}</td>
+                <td class="text-right ${(costings.totals.totalSettlement.rep - costings.totals.totalSettlement.actual) > 0 ? 'positive' : (costings.totals.totalSettlement.rep - costings.totals.totalSettlement.actual) < 0 ? 'negative' : 'neutral'}">${formatCurrency(costings.totals.totalSettlement.rep - costings.totals.totalSettlement.actual)}</td>
               </tr>
               <tr>
                 <td>Finance Fee</td>

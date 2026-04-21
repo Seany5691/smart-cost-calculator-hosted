@@ -6,7 +6,9 @@ interface TotalsComparisonProps {
     installationTotal: { actual: number; rep: number };
     connectivityTotal: { actual: number; rep: number };
     licensingTotal: { actual: number; rep: number };
-    settlement: { actual: number; rep: number };
+    hardwareSettlement: { actual: number; rep: number };
+    connectivityLicensingSettlement: { actual: number; rep: number };
+    totalSettlement: { actual: number; rep: number };
     financeFee: { actual: number; rep: number };
     factor: { actual: number; rep: number };
     totalPayout: { actual: number; rep: number };
@@ -48,7 +50,9 @@ export default function TotalsComparison({ totals }: TotalsComparisonProps) {
     { label: 'Hardware Rental (Monthly)', actual: totals.hardwareRental.actual, rep: totals.hardwareRental.rep, highlight: false, isCurrency: true, isCostItem: false },
     { label: 'Connectivity Total', actual: totals.connectivityTotal.actual, rep: totals.connectivityTotal.rep, highlight: false, isCurrency: true, isCostItem: true },
     { label: 'Licensing Total', actual: totals.licensingTotal.actual, rep: totals.licensingTotal.rep, highlight: false, isCurrency: true, isCostItem: true },
-    { label: 'Settlement', actual: totals.settlement.actual, rep: totals.settlement.rep, highlight: false, isCurrency: true, isCostItem: true },
+    { label: 'Hardware Settlement', actual: totals.hardwareSettlement.actual, rep: totals.hardwareSettlement.rep, highlight: false, isCurrency: true, isCostItem: true },
+    { label: 'Connectivity & Licenses Settlement', actual: totals.connectivityLicensingSettlement.actual, rep: totals.connectivityLicensingSettlement.rep, highlight: false, isCurrency: true, isCostItem: true },
+    { label: 'Total Settlement', actual: totals.totalSettlement.actual, rep: totals.totalSettlement.rep, highlight: false, isCurrency: true, isCostItem: true },
     { label: 'Installation Total', actual: totals.installationTotal.actual, rep: totals.installationTotal.rep, highlight: false, isCurrency: true, isCostItem: true },
     { label: 'Finance Fee', actual: totals.financeFee.actual, rep: totals.financeFee.rep, highlight: false, isCurrency: true, isCostItem: true },
     { label: 'Factor', actual: totals.factor.actual, rep: totals.factor.rep, highlight: false, isCurrency: false, isCostItem: false },

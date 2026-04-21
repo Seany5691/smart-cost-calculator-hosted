@@ -116,7 +116,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
       const inputs = settlementDetails.calculatorInputs;
       
       if (inputs.rentalType === 'current') {
-        currentHardwareRental = inputs.rentalAmount;
+        currentHardwareRental = inputs.rentalAmount || 0;
       } else if (inputs.rentalType === 'starting' && inputs.startDate && inputs.escalationRate) {
         const startDate = new Date(inputs.startDate);
         const today = new Date();
@@ -132,7 +132,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
       const inputs = settlementDetails.connectivityLicensingCalculatorInputs;
       
       if (inputs.rentalType === 'current') {
-        currentMRC = inputs.rentalAmount;
+        currentMRC = inputs.rentalAmount || 0;
       } else if (inputs.rentalType === 'starting' && inputs.startDate && inputs.escalationRate) {
         const startDate = new Date(inputs.startDate);
         const today = new Date();
@@ -141,6 +141,10 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
         currentMRC = inputs.rentalAmount * Math.pow(1 + escalation, yearsElapsed);
       }
     }
+
+    // Ensure values are valid numbers (not NaN)
+    currentHardwareRental = isNaN(currentHardwareRental) ? 0 : currentHardwareRental;
+    currentMRC = isNaN(currentMRC) ? 0 : currentMRC;
 
     // Update form data with calculated values and auto-fill user email/phone
     setFormData(prev => ({
@@ -173,10 +177,20 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
   }, [isOpen]);
 
   const handleInputChange = (field: keyof ProposalData, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    // Ensure numeric fields are valid numbers
+    if (field === 'currentHardwareRental' || field === 'currentMRC' || field === 'cashPrice') {
+      const numValue = typeof value === 'string' ? parseFloat(value) : value;
+      const validValue = isNaN(numValue) ? 0 : numValue;
+      setFormData(prev => ({
+        ...prev,
+        [field]: validValue
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -234,6 +248,35 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
         section: 'calculator'
       });
       return;
+    }
+    
+    // Validate comparative proposal specific fields
+    if (formData.proposalType === 'comparative') {
+      if (isNaN(formData.currentHardwareRental) || formData.currentHardwareRental < 0) {
+        toast.error('Invalid Hardware Rental', {
+          message: 'Please enter a valid current hardware rental amount',
+          section: 'calculator'
+        });
+        return;
+      }
+      if (isNaN(formData.currentMRC) || formData.currentMRC < 0) {
+        toast.error('Invalid Monthly Amount', {
+          message: 'Please enter a valid current monthly amount',
+          section: 'calculator'
+        });
+        return;
+      }
+    }
+    
+    // Validate cash proposal specific fields
+    if (formData.proposalType === 'cash') {
+      if (isNaN(formData.cashPrice || 0) || (formData.cashPrice || 0) < 0) {
+        toast.error('Invalid Cash Price', {
+          message: 'Please enter a valid cash price',
+          section: 'calculator'
+        });
+        return;
+      }
     }
     
     // Always use HTML method (PDF method is deprecated)
@@ -524,7 +567,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
                 type="number"
                 id="currentHardwareRental"
                 value={formData.currentHardwareRental}
-                onChange={(e) => handleInputChange('currentHardwareRental', parseFloat(e.target.value) || 0)}
+                onChange={(e) => handleInputChange('currentHardwareRental', e.target.value)}
                 placeholder="0.00"
                 min="0"
                 step="0.01"
@@ -546,7 +589,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
                 type="number"
                 id="currentMRC"
                 value={formData.currentMRC}
-                onChange={(e) => handleInputChange('currentMRC', parseFloat(e.target.value) || 0)}
+                onChange={(e) => handleInputChange('currentMRC', e.target.value)}
                 placeholder="0.00"
                 min="0"
                 step="0.01"
@@ -568,7 +611,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
                 type="number"
                 id="cashPrice"
                 value={formData.cashPrice || 0}
-                onChange={(e) => handleInputChange('cashPrice', parseFloat(e.target.value) || 0)}
+                onChange={(e) => handleInputChange('cashPrice', e.target.value)}
                 placeholder="0.00"
                 min="0"
                 step="0.01"

@@ -185,6 +185,21 @@ const ProposalGenerator = forwardRef<ProposalGeneratorRef, ProposalGeneratorProp
         const projectionTotal = (projectionNew1 * 12) + (projectionNew2 * 12) + (projectionNew3 * 12) + (projectionNew4 * 12) + (projectionNew5 * 12);
         const monthlyServiceTotal = licensingCost + connectivityCost;
 
+        // Determine term and escalation display based on monthToMonth flag
+        let termDisplay: string;
+        let escalationDisplay: string;
+
+        if (proposalData.monthToMonth && 
+            (proposalData.proposalType === 'normal' || proposalData.proposalType === 'comparative')) {
+          // Month-to-Month mode: replace term and escalation with "Month-To-Month"
+          termDisplay = 'Month-To-Month';
+          escalationDisplay = 'Month-To-Month';
+        } else {
+          // Normal mode: show actual term and escalation
+          termDisplay = `${dealDetails.term} Months`;
+          escalationDisplay = `${dealDetails.escalation}% Escalation`;
+        }
+
         // Fill form fields
         const fields: Record<string, string> = {
           'Customer Name': proposalData.customerName,
@@ -217,8 +232,8 @@ const ProposalGenerator = forwardRef<ProposalGeneratorRef, ProposalGeneratorProp
           'Projection Total': formatCurrencyWithR(projectionTotal),
           
           'Total Hardware Cost': formatCurrencyWithR(totalsData?.hardwareRental || 0),
-          'Total Hardware Term': `${dealDetails.term} Months`,
-          'Total Hardware Escalation': `${dealDetails.escalation}% Escalation`,
+          'Total Hardware Term': termDisplay,
+          'Total Hardware Escalation': escalationDisplay,
           
           'Monthly Service Item 1': monthlyServiceItem1,
           'Monthly Service Item 2': monthlyServiceItem2,

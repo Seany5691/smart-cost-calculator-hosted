@@ -6,6 +6,7 @@ export interface AuthUser {
   role: 'admin' | 'manager' | 'user';
   name: string;
   email: string;
+  cellphoneNumber?: string;
 }
 
 interface AuthState {

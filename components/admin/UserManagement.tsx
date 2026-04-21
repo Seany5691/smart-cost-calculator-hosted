@@ -10,6 +10,7 @@ interface User {
   username: string;
   name: string;
   email: string;
+  cellphoneNumber?: string;
   role: 'admin' | 'manager' | 'user' | 'telesales';
   isActive: boolean;
   requiresPasswordChange: boolean;
@@ -369,6 +370,7 @@ export default function UserManagement() {
           username: editForm.username,
           name: editForm.name,
           email: editForm.email,
+          cellphoneNumber: editForm.cellphoneNumber || null,
           password: newPassword,
           role: editForm.role || 'user', // Default to 'user' if not set
         }),
@@ -652,6 +654,16 @@ export default function UserManagement() {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Cellphone Number (Optional)</label>
+                <input
+                  type="tel"
+                  placeholder="+27 XX XXX XXXX"
+                  value={editForm.cellphoneNumber || ''}
+                  onChange={(e) => setEditForm({ ...editForm, cellphoneNumber: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/10 border border-purple-500/30 rounded-lg text-white placeholder-purple-300/50 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
                 <input
                   type="password"
@@ -721,6 +733,18 @@ export default function UserManagement() {
                       className="w-full px-4 py-3 bg-white/10 border border-purple-500/30 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500"
                       disabled={user.isSuperAdmin}
                       title={user.isSuperAdmin ? "Cannot modify super admin email" : ""}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Cellphone Number</label>
+                    <input
+                      type="tel"
+                      value={editForm.cellphoneNumber !== undefined ? editForm.cellphoneNumber : (user.cellphoneNumber || '')}
+                      onChange={(e) => setEditForm({ ...editForm, cellphoneNumber: e.target.value })}
+                      placeholder="+27 XX XXX XXXX"
+                      className="w-full px-4 py-3 bg-white/10 border border-purple-500/30 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500"
+                      disabled={user.isSuperAdmin}
+                      title={user.isSuperAdmin ? "Cannot modify super admin cellphone" : ""}
                     />
                   </div>
                   <div>
@@ -897,7 +921,7 @@ export default function UserManagement() {
             <UserIcon className="w-5 h-5 text-purple-400" />
             <span>Add New User</span>
           </h3>
-          <div className="grid grid-cols-5 gap-4 mb-4">
+          <div className="grid grid-cols-6 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
               <input
@@ -925,6 +949,16 @@ export default function UserManagement() {
                 placeholder="Email Address"
                 value={editForm.email || ''}
                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                className="w-full px-4 py-3 bg-white/10 border border-purple-500/30 rounded-lg text-white placeholder-purple-300/50 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Cellphone (Optional)</label>
+              <input
+                type="tel"
+                placeholder="+27 XX XXX XXXX"
+                value={editForm.cellphoneNumber || ''}
+                onChange={(e) => setEditForm({ ...editForm, cellphoneNumber: e.target.value })}
                 className="w-full px-4 py-3 bg-white/10 border border-purple-500/30 rounded-lg text-white placeholder-purple-300/50 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500"
               />
             </div>
@@ -981,6 +1015,7 @@ export default function UserManagement() {
                 <th className="text-left py-4 px-6 font-semibold text-purple-200">Username</th>
                 <th className="text-left py-4 px-6 font-semibold text-purple-200">Name</th>
                 <th className="text-left py-4 px-6 font-semibold text-purple-200">Email</th>
+                <th className="text-left py-4 px-6 font-semibold text-purple-200">Cellphone</th>
                 <th className="text-center py-4 px-6 font-semibold text-purple-200">Role</th>
                 <th className="text-center py-4 px-6 font-semibold text-purple-200">Status</th>
                 <th className="text-center py-4 px-6 font-semibold text-purple-200">Actions</th>
@@ -1017,6 +1052,17 @@ export default function UserManagement() {
                           className="w-full px-3 py-2 bg-white/10 border border-purple-500/30 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500"
                           disabled={user.isSuperAdmin}
                           title={user.isSuperAdmin ? "Cannot modify super admin email" : ""}
+                        />
+                      </td>
+                      <td className="py-4 px-6">
+                        <input
+                          type="tel"
+                          value={editForm.cellphoneNumber !== undefined ? editForm.cellphoneNumber : (user.cellphoneNumber || '')}
+                          onChange={(e) => setEditForm({ ...editForm, cellphoneNumber: e.target.value })}
+                          placeholder="+27 XX XXX XXXX"
+                          className="w-full px-3 py-2 bg-white/10 border border-purple-500/30 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500"
+                          disabled={user.isSuperAdmin}
+                          title={user.isSuperAdmin ? "Cannot modify super admin cellphone" : ""}
                         />
                       </td>
                       <td className="py-4 px-6">
@@ -1086,6 +1132,9 @@ export default function UserManagement() {
                           <Mail className="w-4 h-4 text-purple-400" />
                           <span>{user.email}</span>
                         </div>
+                      </td>
+                      <td className="py-4 px-6 text-gray-300">
+                        {user.cellphoneNumber || '-'}
                       </td>
                       <td className="py-4 px-6 text-center">
                         <span className={`inline-block px-3 py-1 rounded-lg text-xs font-semibold ${

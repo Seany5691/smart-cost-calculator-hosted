@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useCalculatorStore } from '@/lib/store/calculator';
+import { useAuthStore } from '@/lib/store/auth-simple';
 import { useToast } from '@/components/ui/Toast/useToast';
 
 interface ProposalModalProps {
@@ -20,6 +21,7 @@ export interface ProposalData {
   specialistPhone: string;
   proposalType: 'normal' | 'comparative' | 'cash';
   cashPrice?: number; // Optional: Only used for cash proposals
+  monthToMonth: boolean; // NEW - Month-To-Month checkbox for term/escalation display
 }
 
 export interface HtmlProposalData extends ProposalData {
@@ -38,11 +40,15 @@ export interface HtmlProposalData extends ProposalData {
 
 export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit }: ProposalModalProps) {
   const { dealDetails, totalsData, settlementDetails } = useCalculatorStore();
+  const { user } = useAuthStore();
   const modalRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
   // CRITICAL: Mounted state for SSR safety - prevents hydration mismatch
   const [mounted, setMounted] = useState(false);
+  
+  // Month-To-Month checkbox state
+  const [monthToMonth, setMonthToMonth] = useState(false);
   
   const [formData, setFormData] = useState<ProposalData>({
     customerName: dealDetails.customerName || '',
@@ -51,7 +57,8 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
     specialistEmail: '',
     specialistPhone: '',
     proposalType: 'normal',
-    cashPrice: totalsData?.totalPayout || 0 // Initialize with Total Payout
+    cashPrice: totalsData?.totalPayout || 0, // Initialize with Total Payout
+    monthToMonth: false // Default: unchecked
   });
 
   // New HTML proposal fields
@@ -92,7 +99,7 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
     }
   }, [totalsData?.totalPayout, formData.proposalType]);
 
-  // Auto-fill current hardware rental and current MRC from settlement calculators
+  // Auto-fill current hardware rental, current MRC, specialist email, and specialist phone
   useEffect(() => {
     if (!isOpen) return;
 
@@ -128,13 +135,15 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
       }
     }
 
-    // Update form data with calculated values
+    // Update form data with calculated values and auto-fill user email/phone
     setFormData(prev => ({
       ...prev,
       currentHardwareRental,
-      currentMRC
+      currentMRC,
+      specialistEmail: user?.email || prev.specialistEmail,
+      specialistPhone: user?.cellphoneNumber || prev.specialistPhone
     }));
-  }, [isOpen, settlementDetails]);
+  }, [isOpen, settlementDetails, user]);
 
   // Handle escape key
   useEffect(() => {
@@ -224,14 +233,19 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
       // Submit HTML proposal data
       const htmlProposalData: HtmlProposalData = {
         ...formData,
+        monthToMonth,
         clientLogo: clientLogo || undefined,
         selectedPages,
         generationMethod
       };
       onHtmlSubmit(htmlProposalData);
     } else {
-      // Submit regular PDF proposal data
-      onSubmit(formData);
+      // Submit regular PDF proposal data with monthToMonth flag
+      const proposalDataWithMonthToMonth: ProposalData = {
+        ...formData,
+        monthToMonth
+      };
+      onSubmit(proposalDataWithMonthToMonth);
     }
   };
 
@@ -243,8 +257,10 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
       specialistEmail: '',
       specialistPhone: '',
       proposalType: 'normal',
-      cashPrice: totalsData?.totalPayout || 0
+      cashPrice: totalsData?.totalPayout || 0,
+      monthToMonth: false
     });
+    setMonthToMonth(false);
     setClientLogo(null);
     setLogoPreview(null);
     setGenerationMethod('html');
@@ -491,6 +507,24 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
               </label>
             </div>
           </div>
+
+          {/* Month-To-Month Checkbox - Only show for Normal and Comparative */}
+          {(formData.proposalType === 'normal' || formData.proposalType === 'comparative') && (
+            <div className="space-y-2 pb-4 border-b border-purple-500/20">
+              <label className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-purple-500/30 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                <input
+                  type="checkbox"
+                  checked={monthToMonth}
+                  onChange={(e) => setMonthToMonth(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 bg-white/10 border-purple-500/30 focus:ring-purple-500 focus:ring-2 rounded"
+                />
+                <span className="text-white font-medium">Month-To-Month</span>
+              </label>
+              <p className="text-sm text-purple-300/70">
+                Check this to display "Month-To-Month" instead of term and escalation on the proposal
+              </p>
+            </div>
+          )}
 
           {/* Customer Name */}
           <div className="space-y-2">

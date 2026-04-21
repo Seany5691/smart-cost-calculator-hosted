@@ -142,9 +142,9 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
       }
     }
 
-    // Ensure values are valid numbers (not NaN)
-    currentHardwareRental = isNaN(currentHardwareRental) ? 0 : currentHardwareRental;
-    currentMRC = isNaN(currentMRC) ? 0 : currentMRC;
+    // Ensure values are valid numbers (not NaN) and round to 2 decimal places
+    currentHardwareRental = isNaN(currentHardwareRental) ? 0 : Math.round(currentHardwareRental * 100) / 100;
+    currentMRC = isNaN(currentMRC) ? 0 : Math.round(currentMRC * 100) / 100;
 
     // Update form data with calculated values and auto-fill user email/phone
     setFormData(prev => ({
@@ -177,10 +177,10 @@ export default function ProposalModal({ isOpen, onClose, onSubmit, onHtmlSubmit 
   }, [isOpen]);
 
   const handleInputChange = (field: keyof ProposalData, value: string | number) => {
-    // Ensure numeric fields are valid numbers
+    // Ensure numeric fields are valid numbers and round to 2 decimal places
     if (field === 'currentHardwareRental' || field === 'currentMRC' || field === 'cashPrice') {
       const numValue = typeof value === 'string' ? parseFloat(value) : value;
-      const validValue = isNaN(numValue) ? 0 : numValue;
+      const validValue = isNaN(numValue) ? 0 : Math.round(numValue * 100) / 100;
       setFormData(prev => ({
         ...prev,
         [field]: validValue
